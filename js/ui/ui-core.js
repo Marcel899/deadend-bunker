@@ -49,9 +49,9 @@ DE.UI = (function () {
  /* ---------- top bar ---------- */
  function renderResbar() {
  const R = DE.Data.RESOURCES;
- $('#resbar').innerHTML = DE.Data.RESOURCE_ORDER.map(r => `<div class="res" data-res="${r}" title="${R[r].name}" data-action="openDrawer" data-drawer="economy">
+ $('#resbar').innerHTML = DE.Data.RESOURCE_ORDER.map(r => `<div class="res" data-res="${r}" title="${R[r].name}" style="--rc:${R[r].color}" data-action="openDrawer" data-drawer="economy">
  <span class="res-icon">${DE.Icons.res(r)}</span>
- <span class="res-body"><b class="res-amt">0</b><i class="res-rate">+0/s</i></span>
+ <span class="res-body"><small class="res-name">${R[r].name}</small><b class="res-amt">0</b><i class="res-rate">+0/s</i></span>
  <div class="res-cap"><i></i></div>
  </div>`).join('');
  $('#chips').innerHTML = `<div class="chip" id="chip-pop" data-action="openDrawer" data-drawer="survivors" title="Population / housing">${DE.Icons.img('pop')}<b>0/0</b></div>

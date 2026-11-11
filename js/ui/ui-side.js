@@ -155,7 +155,7 @@ DE.UI.Side = (function () {
  ${room.construction ? '<small class="muted">Wait for current construction.</small>' : ''}</div>`;
  } else if (room.level >= def.maxLevel) html += `<div class="card"><b class="gold">★ MAX LEVEL</b></div>`;
 
- if (!def.unique) html += `<div class="card row wrap"><button class="btn small drag-handle" data-move="${room.id}" ${room.construction ? 'disabled' : ''} title="Drag the room to a new place">${DE.Icons.img('home', 'ico-inline')} Relocate <span class="cost">${U().costText(DE.Bunker.moveCost(s, room))}</span></button><button class="btn danger small" data-action="demolish" data-id="${room.id}">Demolish (50% refund)</button></div>`;
+ if (!def.unique) html += `<div class="card row wrap"><button class="btn small drag-handle" data-move="${room.id}" ${room.construction ? 'disabled' : ''} title="Drag the room to a new place">${DE.Icons.img('move', 'ico-btn')} Relocate <span class="cost">${U().costText(DE.Bunker.moveCost(s, room))}</span></button><button class="btn danger small" data-action="demolish" data-id="${room.id}">Demolish (50% refund)</button></div>`;
  html += `<button class="btn ghost" data-action="selectNone">← Back to overview</button>`;
  return html;
  }

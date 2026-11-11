@@ -124,11 +124,13 @@ DE.UI.DayCycle = (function () {
     let amb = keyed(AMB, h); if (c.season === 'winter') amb = mix(amb, '#dfe8ff', .25 * (1 - dark));
     built.amb.style.backgroundColor = amb;
     built.lights.style.opacity = Math.min(1, dark * 1.15).toFixed(2);
+    // units are above the light layers: dim them to match (a little cooler at night, warmer at golden hour)
+    scene.style.setProperty('--unit-light', (1 - .42 * dark).toFixed(3)); scene.style.setProperty('--unit-sat', (1 - .3 * dark).toFixed(3));
     // season + weather
     if (scene.dataset.season !== c.season) scene.dataset.season = c.season;
     scene.dataset.tod = c.night ? 'night' : (h < 8 || h > 17) ? 'twilight' : 'day';
     const hh = Math.floor(h), mm = Math.floor((h % 1) * 60 / 15) * 15;
-    built.chip.innerHTML = `<b>${c.night ? '☾' : '☀'}</b> ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Day ${c.day} · ${SEASON_NAME[c.season]}`;
+    built.chip.innerHTML = `${c.season === 'winter' ? '<img class="dc-snow" src="assets/icons/snow.png" alt="">' : ''}<b>${c.night ? '☾' : '☀'}</b> ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Day ${c.day} · ${SEASON_NAME[c.season]}`;
   }
 
   return { update, clock, darkness, DAY_SEC, DAYS_PER_SEASON, SEASONS };

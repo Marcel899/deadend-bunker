@@ -7,21 +7,22 @@ DE.Icons = (function () {
   const I = 'assets/icons/', R = 'assets/rooms/';
   const MAP = {
     // resources
-    'res.food': I + 'can.png', 'res.water': I + 'drop.png', 'res.electricity': I + 'power.png', 'res.scrap': I + 'ingot.png',
+    'res.food': I + 'can.png', 'res.water': I + 'water.png', 'res.electricity': I + 'power.png', 'res.scrap': I + 'ingot.png',
     'res.concrete': I + 'brick.png', 'res.fuel': I + 'barrel.png', 'res.research': I + 'flask.png', 'res.legacy': I + 'badge.png',
     // navigation / HUD
     'nav.bunker': I + 'home.png', 'nav.survivors': I + 'people.png', 'nav.research': I + 'flask.png', 'nav.excavate': I + 'map.png',
-    'nav.defense': I + 'shield.png', 'nav.expeditions': I + 'backpack.png', 'nav.legacy': I + 'badge.png', 'nav.settings': I + 'gear.png',
+    'nav.defense': I + 'shield.png', 'nav.expeditions': I + 'truck.png', 'nav.legacy': I + 'badge.png', 'nav.settings': I + 'gear.png',
     'nav.economy': I + 'chart.png', 'brand': I + 'radiation.png', 'wave': I + 'zombie.png', 'morale': I + 'medal.png', 'pop': I + 'people.png',
     'build': I + 'factory.png', 'housing': I + 'home.png', 'warning': I + 'radiation.png', 'xp': I + 'medal.png', 'loot': I + 'backpack.png',
     'clock': I + 'gear.png', 'dig': I + 'map.png', 'facility': I + 'factory.png', 'trait': I + 'medal.png', 'rescue': I + 'people.png',
     // rooms
-    'room.quarters': R + 'quarters-thumb.png', 'room.farm': R + 'farm-thumb.png', 'room.water': I + 'drop.png', 'room.generator': R + 'generator-thumb.png',
+    'room.quarters': R + 'quarters-thumb.png', 'room.farm': R + 'farm-thumb.png', 'room.water': I + 'water.png', 'room.generator': R + 'generator-thumb.png',
     'room.workshop': R + 'workshop-thumb.png', 'room.refinery': I + 'barrel.png', 'room.lab': R + 'lab-thumb.png', 'room.storage': R + 'storage-thumb.png',
     'room.concrete': I + 'brick.png', 'room.cafeteria': I + 'can.png', 'room.medbay': I + 'flask.png', 'room.armory': I + 'shield.png',
     'room.training': I + 'medal.png', 'room.radio': I + 'factory.png', 'room.garage': I + 'scroll.png',
-    'room.geothermal': I + 'power.png', 'room.aquifer': I + 'drop.png', 'room.orevein': I + 'ingot.png', 'room.server': R + 'lab-thumb.png',
+    'room.geothermal': I + 'power.png', 'room.aquifer': I + 'water.png', 'room.orevein': I + 'ingot.png', 'room.server': R + 'lab-thumb.png',
     'room.cache': I + 'badge.png', 'room.dormitory': R + 'quarters-thumb.png',
+    'move': I + 'move.png', 'refresh': I + 'refresh.png', 'repair': I + 'refresh.png', 'snow': I + 'snow.png', 'truck': I + 'truck.png', 'vehicle': I + 'truck.png',
     // research branches
     'branch.economy': I + 'chart.png', 'branch.engineering': I + 'gear.png', 'branch.survival': I + 'shield.png',
     // people & enemies

@@ -122,8 +122,11 @@ body.no-anim .ow-svg * { animation: none !important; }
 /* ============ BATTLEFIELD (js/ui/battlefield.js) ============
    One layer in the overworld's own 1664x600 coordinate space, scaled like the SVG, so units stand
    exactly on the grass / roof lines. */
-.bf { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
-.ow-overlay { z-index: 2; }
+.bf { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 2; }
+.ow-overlay { z-index: 3; }
+/* units sit ABOVE the ambient/light layers (so light cones never wash them out) and are dimmed
+   to the time of day directly; --unit-light / --unit-sat are set by js/ui/daycycle.js */
+.bf-unit { filter: brightness(var(--unit-light, 1)) saturate(var(--unit-sat, 1)); transition: filter 1.5s linear; }
 .bf-world { position: absolute; left: 0; top: 0; width: 1664px; height: 600px; transform-origin: 0 0; }
 .bf-world > .hatch, .bf-world > .wall { pointer-events: auto; }
 .bf-world .wall-label { font-size: 17px; } .bf-world .entrance-sign { font-size: 17px; z-index: 35; } .bf-world .wall-hp { height: 12px; }

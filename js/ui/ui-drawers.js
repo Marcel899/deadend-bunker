@@ -154,7 +154,7 @@ DE.UI.Drawers = (function () {
  const wc = DE.Defense.wallUpgradeCost(s); const rc = DE.Defense.repairCost(s);
  html += `<div class="card"><h4>${DE.Icons.structure('wall', 'ico-inline')} Wall · Level ${d.wall.level} <small class="muted">${d.wall.level < 3 ? 'cracked & patched' : d.wall.level < 6 ? 'steel-plated' : 'armoured'}</small></h4>${bar(100 * d.wall.hp / maxHp, d.wall.hp / maxHp < 0.3 ? 'red' : 'brown')}<div class="row"><span>HP</span><b>${U().fmt(d.wall.hp)} / ${U().fmt(maxHp)}</b></div>
  <div class="btn-row"><button class="btn primary small ${U().canAfford(s.resources, wc) ? '' : 'cant'}" data-action="wallUpgrade" ${U().canAfford(s.resources, wc) ? '' : 'disabled'}> Upgrade <span class="cost">${U().costText(wc)}</span></button>
- <button class="btn small ${rc.scrap > 0 ? '' : 'cant'}" data-action="wallRepair" ${rc.scrap > 0 ? '' : 'disabled'}> Repair <span class="cost">${U().costText(rc)}</span></button></div></div>`;
+ <button class="btn small ${rc.scrap > 0 ? '' : 'cant'}" data-action="wallRepair" ${rc.scrap > 0 ? '' : 'disabled'}>${DE.Icons.img('refresh', 'ico-btn')} Repair <span class="cost">${U().costText(rc)}</span></button></div></div>`;
 
  const tc = DE.Defense.turretCost(s); const maxT = DE.Defense.maxTurrets(s);
  html += `<div class="card"><h4>${DE.Icons.structure('turret', 'ico-inline')} Auto-turrets · ${d.turrets}/${maxT}</h4><p class="muted">${DE.CONFIG.TURRET_DMG} dmg/s each (×${fx.turretDmgMult.toFixed(2)}), draw ${DE.CONFIG.TURRET_POWER}/s. More slots from Armory levels.</p>
@@ -182,7 +182,7 @@ DE.UI.Drawers = (function () {
  if (!DE.Expeditions.unlocked(s)) return `<div class="card"><h4>No Garage</h4><p>Build a  <b>Garage</b> (needs research: Reinforced Construction) to send survivors to the surface for loot, fuel and new recruits.</p></div>`;
  let html = '';
  const bus = DE.Events.bus(s), nextBus = DE.Events.busNext(s);
- html += `<div class="card bus-card"><h4>${DE.Icons.img('backpack', 'ico-inline')} Vehicle: ${esc(bus.name)} <small class="muted">${bus.capacity} seats · ${Math.round((1 - bus.speed) * 100)}% faster · ${Math.round(bus.safety * 100)}% safer · cargo x${bus.cargo}</small></h4><p class="muted">${esc(bus.desc)}</p>
+ html += `<div class="card bus-card"><h4>${DE.Icons.img('truck', 'ico-inline')} Vehicle: ${esc(bus.name)} <small class="muted">${bus.capacity} seats · ${Math.round((1 - bus.speed) * 100)}% faster · ${Math.round(bus.safety * 100)}% safer · cargo x${bus.cargo}</small></h4><p class="muted">${esc(bus.desc)}</p>
  ${nextBus ? `<div class="row"><span><b>Next:</b> ${esc(nextBus.name)} <small class="muted">${esc(nextBus.desc)}</small></span><button class="btn primary small ${U().canAfford(s.resources, nextBus.cost) ? '' : 'cant'}" data-action="busUpgrade" ${U().canAfford(s.resources, nextBus.cost) ? '' : 'disabled'}>Upgrade <span class="cost">${U().costText(nextBus.cost)}</span></button></div>` : '<b class="gold">Fully upgraded</b>'}
  <div class="row small"><span>Factions</span><b>${DE.Data.OVERWORLD ? Object.values(DE.Data.FACTIONS).map(f => `<span class="tag" title="${esc(f.desc)}">${esc(f.name)} ${(s.rep && s.rep[f.id]) || 0 >= 0 ? '+' : ''}${(s.rep && s.rep[f.id]) || 0}</span>`).join(' ') : ''}</b></div></div>`;
  if (s.expeditions.active.length) html += `<div class="card"><h4>Teams in the field</h4>${s.expeditions.active.map(e => { const loc = DE.Expeditions.location(e.location); return `<div class="exp-active"><b>${DE.Icons.img('location', 'ico-inline')} ${esc(loc.name)}</b> <small class="muted">${e.survivors.map(id => s.survivors[id] ? esc(s.survivors[id].name) : '?').join(', ')}</small>${bar(100 * (1 - (e.endsAt - now) / (e.duration * 1000)), 'blue')}<small class="muted">${U().fmtTime((e.endsAt - now) / 1000)} left</small></div>`; }).join('')}</div>`;
@@ -214,7 +214,7 @@ DE.UI.Drawers = (function () {
  <div class="row total"><span>Legacy Points on reset</span><b class="gold">+${gain}</b></div>
  <div class="row"><span>Resets so far</span><b>${s.prestige.resets}</b></div>
  <p class="muted">Requires floor B${DE.CONFIG.PRESTIGE_MIN_DEPTH} and at least ${DE.CONFIG.PRESTIGE_MIN_GAIN} LP.</p>
- <button class="btn danger ${c.ok ? '' : 'cant'}" data-action="prestige" ${c.ok ? '' : 'disabled'}> Reconstruct for +${gain} LP</button>${c.ok ? '' : `<small class="neg">${c.reason}</small>`}</div>`;
+ <button class="btn danger ${c.ok ? '' : 'cant'}" data-action="prestige" ${c.ok ? '' : 'disabled'}>${DE.Icons.img('refresh', 'ico-btn')} Reconstruct for +${gain} LP</button>${c.ok ? '' : `<small class="neg">${c.reason}</small>`}</div>`;
  html += `<div class="card"><h4>Legacy upgrades <small class="muted">${U().fmt(s.prestige.points)} LP available</small></h4>${DE.Data.LEGACY_ORDER.map(id => { const d = DE.Data.LEGACY[id]; const lvl = s.prestige.upgrades[id] || 0; const cost = DE.Prestige.upgradeCost(id, lvl); const maxed = lvl >= d.max; const ok = !maxed && s.prestige.points >= cost; return `<div class="lg-row"><div class="lg-icon">${DE.Icons.img('nav.legacy')}</div><div class="lg-body"><b>${esc(d.name)}</b> <small class="muted">${lvl}/${d.max}</small><div class="muted">${esc(d.desc)}</div></div>${maxed ? '<span class="tag gold">MAX</span>' : `<button class="btn primary small ${ok ? '' : 'cant'}" data-action="buyLegacy" data-id="${id}" ${ok ? '' : 'disabled'}>${cost} LP</button>`}</div>`; }).join('')}</div>`;
  return html;
  },

@@ -206,9 +206,10 @@ DE.Chars = (function () {
     if (c.kneepads) s += `<path d="M-8 ${len * .42} h16 v10 h-16 z" fill="#2a2a2a" ${sw2}/>`;
     if (c.torn) s += `<path d="M-8 ${len - 10} l4 -8 l4 8 l4 -10 l4 10" fill="url(#${id}-skin)" stroke="none"/><path d="M-8 ${len - 10} l4 -8 l4 8 l4 -10 l4 10" fill="none" ${sw2}/><path d="M-5 ${len * .6} l3 4" ${thin('#5b2a2a', 2.5)} opacity=".7"/>`;
     // boot with sole, heel and laces
-    s += `<path d="M-10 ${len - 12} h20 v10 q0 6 -6 6 h-22 q-5 0 -5 -5 q0 -11 13 -11 z" fill="url(#${id}-boots)" ${sw}/><path d="M-22 ${len + 1} h32" ${thin(dark(c.boots, .5), 3)}/><path d="M-6 ${len - 9} l6 2 M-6 ${len - 5} l6 2" ${thin(light(c.boots, .5), 1.8)} opacity=".8"/>`;
-    if (c.sneakers) s += `<path d="M-19 ${len - 1} h28" stroke="#fff" stroke-width="3"/><circle cx="-14" cy="${len - 5}" r="2" fill="#fff"/>`;
-    if (c.kind === 'zombie') s += `<path d="M-16 ${len} l-3 3" ${thin('#5b7a3f', 3)}/>`;
+    // toes point +x: the same way the character faces (aims, leans and carries items); flip mirrors all of it
+    s += `<path d="M10 ${len - 12} h-20 v10 q0 6 6 6 h22 q5 0 5 -5 q0 -11 -13 -11 z" fill="url(#${id}-boots)" ${sw}/><path d="M22 ${len + 1} h-32" ${thin(dark(c.boots, .5), 3)}/><path d="M6 ${len - 9} l-6 2 M6 ${len - 5} l-6 2" ${thin(light(c.boots, .5), 1.8)} opacity=".8"/>`;
+    if (c.sneakers) s += `<path d="M19 ${len - 1} h-28" stroke="#fff" stroke-width="3"/><circle cx="14" cy="${len - 5}" r="2" fill="#fff"/>`;
+    if (c.kind === 'zombie') s += `<path d="M16 ${len} l3 3" ${thin('#5b7a3f', 3)}/>`;
     return s;
   }
   /* Held items are drawn in the HAND's frame: origin = centre of the palm, +y points along the
