@@ -24,7 +24,7 @@ DE.UI = (function () {
  document.addEventListener('click', onClick);
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-place]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ type: el.dataset.place }, e); });
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-move]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ roomId: el.dataset.move }, e); });
- document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#modal-root').classList.contains('hidden')) closeModal(); else closeDrawer(); } });
+ document.addEventListener('keydown', e => { if (/^[1-4]$/.test(e.key)) { const b = document.querySelectorAll('#modal-root .choice')[+e.key - 1]; if (b && !b.disabled) { b.click(); return; } } if (e.key === 'Escape') { if (!$('#modal-root').classList.contains('hidden')) closeModal(); else closeDrawer(); } });
  renderResbar();
  }
 
@@ -43,21 +43,7 @@ DE.UI = (function () {
  ui.screen = name;
  $('#menu-screen').classList.toggle('hidden', name !== 'menu');
  $('#game-screen').classList.toggle('hidden', name !== 'game');
- if (name === 'menu') {
- $('#btn-continue').style.display = DE.Save.hasSave() ? '' : 'none';
- renderMenuHorde();
- }
- }
-
- function renderMenuHorde() {
- const h = $('.menu-horde'); if (!h || h.children.length) return;
- const Z = DE.Data.ZOMBIES.filter(z => !z.boss);
- let html = '';
- for (let i = 0; i < 14; i++) {
- const z = Z[i % Z.length];
- html += `<span class="mz" style="left:${(i * 8 + Math.random() * 4)}%;animation-delay:${-(Math.random() * 6).toFixed(2)}s;animation-duration:${(5 + Math.random() * 4).toFixed(2)}s;">${DE.Chars.zombie(z.id, { anim: 'walk', h: (60 + Math.random() * 40) | 0, flip: true })}</span>`;
- }
- h.innerHTML = html;
+ if (name === 'menu') DE.UI.Menu.show(); else DE.UI.Menu.hide();
  }
 
  /* ---------- top bar ---------- */
@@ -158,10 +144,16 @@ DE.UI = (function () {
  const s = state(); const buttons = ev.choices.map((c, i) => {
  const tr = c.trade; const can = !tr || U().canAfford(s.resources, tr.give);
  const label = tr ? `Give ${U().costText(tr.give)} for ${U().costText(tr.get)}` : esc(c.label);
- return `<button class="btn choice ${i === 0 ? 'primary' : ''} ${can ? '' : 'cant'}" data-action="eventChoice" data-id="${ev.id}" data-i="${i}" ${can ? '' : 'disabled'}><b>${label}</b>${c.desc ? `<small>${esc(c.desc)}</small>` : ''}</button>`; }).join('');
- const who = ev.kind === 'expedition' ? `<div class="ev-team">${(ev.ctx.members || []).map(id => s.survivors[id]).filter(Boolean).map(sv => DE.Chars.crew(sv.profession, { anim: 'idle', h: 54, title: sv.name })).join('')}</div>` : '';
- modal({ title: ev.title, icon: ev.kind === 'expedition' ? 'map' : 'scroll', cls: 'event ' + ev.kind, locked: true, html: `${who}<p class="story">${esc(ev.text)}</p><div class="choices">${buttons}</div>`, buttons: [] });
+ return `<button class="btn choice ${i === 0 ? 'primary' : ''} ${can ? '' : 'cant'}" data-action="eventChoice" data-id="${ev.id}" data-i="${i}" ${can ? '' : 'disabled'}><kbd>${i + 1}</kbd><span><b>${label}</b>${c.desc ? `<small>${esc(c.desc)}</small>` : ''}</span></button>`; }).join('');
+ // the people involved stand in the header scene
+ const ids = ev.kind === 'expedition' ? (ev.ctx.members || []) : [ev.ctx.aId, ev.ctx.bId];
+ const people = ids.map(id => s.survivors[id]).filter(Boolean).slice(0, 4);
+ const cast = people.map((sv, i) => `<figure>${DE.Chars.crew(sv.profession, { anim: i % 2 ? 'interact' : 'idle', h: 74, flip: i % 2 === 1 })}<figcaption>${esc(sv.name.split(' ')[0])}</figcaption></figure>`).join('');
+ const kind = ev.kind === 'expedition' ? 'Expedition report' : 'Bunker event';
+ modal({ title: `<span class="ev-kind">${kind}</span>${esc(ev.title)}`, icon: ev.kind === 'expedition' ? 'map' : 'scroll', cls: 'event ' + ev.kind, locked: true,
+ html: `<div class="ev-stage ${ev.kind}">${cast || DE.Icons.img(ev.kind === 'expedition' ? 'map' : 'warning', 'ev-emblem')}</div><p class="story">${esc(ev.text)}</p><div class="choices">${buttons}</div>`, buttons: [] });
  }
+
  function closeModal() { const root = $('#modal-root'); root.classList.add('hidden'); root.innerHTML = ''; }
  function confirmModal(title, html, onYes, yesLabel) {
  DE.UI._confirmCb = onYes;
