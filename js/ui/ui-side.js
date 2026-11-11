@@ -42,7 +42,10 @@ DE.UI.Side = (function () {
  if (power.total < hp) tips.push(' Defense is weaker than the next wave. Add guards, upgrade the wall.');
  if (s.defense.wall.hp < DE.Defense.wallMaxHp(s) * 0.5) tips.push(' The wall is damaged — repair it in Defense.');
  if (!tips.length) tips.push(' Things are stable. Upgrade production or dig deeper.');
- return `<div class="panel-head"><h3> Bunker Overview</h3><p class="muted">Select a room or an empty slot to manage it.</p></div>
+ const goals = DE.Events.activeGoals(s); const nEv = (s.events || []).length; const noise = DE.Events.noise(s);
+ return `<div class="panel-head"><h3>${DE.Icons.img('home', 'ico-title')} Bunker Overview</h3><p class="muted">Click a room to manage it, an empty cell to build, or drag rooms from the build list.</p></div>
+ ${nEv ? `<button class="btn primary decide-btn" data-action="nextEvent">${DE.Icons.img('scroll', 'ico-inline')} ${nEv} decision${nEv > 1 ? 's' : ''} waiting</button>` : ''}
+ <div class="card goals"><h4>${DE.Icons.img('medal', 'ico-inline')} Objectives</h4>${goals.map(g => `<div class="goal"><span class="tag tier-${g.tier}">T${g.tier}</span><div><b>${esc(g.name)}</b><small class="muted">${esc(g.desc)}</small></div><small class="reward">${Object.keys(g.reward).map(k => DE.Data.RESOURCES[k] ? DE.Icons.res(k, 'ico-inline') + g.reward[k] : '+' + g.reward[k] + ' ' + k).join(' ')}</small></div>`).join('') || '<small class="muted">Every objective done. The bunker is yours.</small>'}</div>
  <div class="card stats-grid">
  <div><small>Floors</small><b>${s.floors.length}</b></div>
  <div><small>Rooms</small><b>${DE.Bunker.roomCount(s)}</b></div>
@@ -50,11 +53,14 @@ DE.UI.Side = (function () {
  <div><small>Morale</small><b>${Math.round(s.morale)}</b></div>
  <div><small>Power</small><b class="${rates.powerFactor < 1 ? 'neg' : ''}">${U().fmt(rates.powerGen, 1)}/${U().fmt(rates.powerUse, 1)}</b></div>
  <div><small>Wave ${s.defense.wave}</small><b class="${power.total < hp ? 'neg' : 'pos'}">${U().fmt(power.total)} vs ${U().fmt(hp)}</b></div>
+ <div><small>Noise</small><b class="noise ${DE.Events.noiseLevel(noise)}">${DE.Events.noiseLevel(noise)}</b></div>
+ <div><small>Vehicle</small><b>${esc(DE.Events.bus(s).name)}</b></div>
+ <div><small>Artifacts</small><b>${Object.keys(s.artifacts || {}).length}</b></div>
  </div>
  <div class="card"><h4>Status</h4><ul class="tips">${tips.map(t => `<li>${t}</li>`).join('')}</ul><button class="btn small" data-action="openDrawer" data-drawer="economy"> Production dashboard</button></div>
- ${cur ? `<div class="card"><h4> Researching ${esc(DE.Data.RESEARCH[cur.id].name)}</h4>${bar(100 * (1 - (cur.endsAt - now) / (cur.duration * 1000)), 'purple')}<small class="muted">${U().fmtTime((cur.endsAt - now) / 1000)} left</small></div>` : ''}
- ${s.excavation ? `<div class="card"><h4> Excavating B${s.excavation.depth}</h4>${bar(100 * (1 - (s.excavation.endsAt - now) / (s.excavation.duration * 1000)), 'brown')}<small class="muted">${U().fmtTime((s.excavation.endsAt - now) / 1000)} left</small></div>` : ''}
- ${s.expeditions.active.length ? `<div class="card"><h4> Expeditions out: ${s.expeditions.active.length}</h4>${s.expeditions.active.map(e => `<small>${DE.Icons.img('location','ico-inline')} ${esc(DE.Expeditions.location(e.location).name)} · ${U().fmtTime((e.endsAt - now) / 1000)}</small>`).join('<br>')}</div>` : ''}
+ ${cur ? `<div class="card"><h4>Researching ${esc(DE.Data.RESEARCH[cur.id].name)}</h4>${bar(100 * (1 - (cur.endsAt - now) / (cur.duration * 1000)), 'purple')}<small class="muted">${U().fmtTime((cur.endsAt - now) / 1000)} left</small></div>` : ''}
+ ${s.excavation ? `<div class="card"><h4>Excavating B${s.excavation.depth}</h4>${bar(100 * (1 - (s.excavation.endsAt - now) / (s.excavation.duration * 1000)), 'brown')}<small class="muted">${U().fmtTime((s.excavation.endsAt - now) / 1000)} left</small></div>` : ''}
+ ${s.expeditions.active.length ? `<div class="card"><h4>Expeditions out: ${s.expeditions.active.length}</h4>${s.expeditions.active.map(e => `<small>${DE.Icons.img('location','ico-inline')} ${esc(DE.Expeditions.location(e.location).name)} · ${U().fmtTime((e.endsAt - now) / 1000)}</small>`).join('<br>')}</div>` : ''}
  <div class="card"><h4>Recent events</h4><ul class="log">${s.log.slice(-6).reverse().map(l => `<li>${esc(l.msg)}</li>`).join('')}</ul></div>`;
  }
 
@@ -149,14 +155,14 @@ DE.UI.Side = (function () {
  ${room.construction ? '<small class="muted">Wait for current construction.</small>' : ''}</div>`;
  } else if (room.level >= def.maxLevel) html += `<div class="card"><b class="gold">★ MAX LEVEL</b></div>`;
 
- if (!def.unique) html += `<div class="card"><button class="btn danger small" data-action="demolish" data-id="${room.id}"> Demolish (50% refund)</button></div>`;
+ if (!def.unique) html += `<div class="card row wrap"><button class="btn small drag-handle" data-move="${room.id}" ${room.construction ? 'disabled' : ''} title="Drag the room to a new place">${DE.Icons.img('home', 'ico-inline')} Relocate <span class="cost">${U().costText(DE.Bunker.moveCost(s, room))}</span></button><button class="btn danger small" data-action="demolish" data-id="${room.id}">Demolish (50% refund)</button></div>`;
  html += `<button class="btn ghost" data-action="selectNone">← Back to overview</button>`;
  return html;
  }
 
  /* ---------- build menu ---------- */
  function renderBuild(s, depth, slot) {
- let html = `<div class="panel-head"><h3> Build on B${depth}, slot ${slot + 1}</h3><p class="muted">Rooms that need 2 slots use this slot and the next one.</p></div>`;
+ let html = `<div class="panel-head"><h3>Build on B${depth}, cell ${slot + 1}</h3><p class="muted">"Build here" places the room from this cell; "Drag" lets you drop it anywhere on the grid.</p></div>`;
  const tiers = {};
  DE.Data.ROOM_BUILD_ORDER.forEach(type => { const def = DE.Data.ROOMS[type]; (tiers[def.tier] = tiers[def.tier] || []).push(def); });
  Object.keys(tiers).sort().forEach(t => {
@@ -173,7 +179,7 @@ DE.UI.Side = (function () {
  html += `<div class="build-card cat-${def.category} ${unlocked ? '' : 'locked'}"><div class="bc-icon">${DE.Icons.room(def.id, 'ico-inline')}</div>
  <div class="bc-body"><b>${esc(def.name)}</b> <small class="muted">${def.size} slot${def.size > 1 ? 's' : ''} · ${def.workers ? def.workers + ' ' + (def.profession ? DE.Data.PROFESSIONS[def.profession].name.toLowerCase() + 's' : 'workers') : 'no staff'}${def.powerUse ? ' · ' + def.powerUse + ' power' : ''}</small>
  <div class="bc-desc">${esc(def.desc)}</div><div class="bc-out">${outputs}</div>${reason ? `<div class="bc-reason">${esc(reason)}</div>` : ''}</div>
- <button class="btn primary small ${ok ? '' : 'cant'}" data-action="build" data-type="${type}" data-depth="${depth}" data-slot="${slot}" ${ok ? '' : 'disabled'}>Build<span class="cost">${U().costText(cost)}</span><small>${U().fmtTime(DE.Bunker.buildTime(s, type))}</small></button></div>`;
+ <div class="bc-actions"><button class="btn primary small ${ok ? '' : 'cant'}" data-action="build" data-type="${type}" data-depth="${depth}" data-slot="${slot}" ${ok ? '' : 'disabled'}>Build here<span class="cost">${U().costText(cost)}</span><small>${U().fmtTime(DE.Bunker.buildTime(s, type))}</small></button>${unlocked ? `<button class="btn small drag-handle" data-place="${type}" title="Drag onto the bunker">${DE.Icons.img('home', 'ico-inline')} Drag</button>` : ''}</div></div>`;
  });
  html += `</details>`;
  });

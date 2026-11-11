@@ -5,7 +5,7 @@ DE.Data = DE.Data || {};
 
 DE.CONFIG = {
   SAVE_KEY: 'deadend_underground_save_v1',
-  SAVE_VERSION: 1,
+  SAVE_VERSION: 2,
   AUTOSAVE_SEC: 15,
   TICK_MS: 250,
   /* Offline progression */
@@ -14,7 +14,9 @@ DE.CONFIG = {
   OFFLINE_MAX_STEPS: 400,        // simulation granularity for long absences
   OFFLINE_MAX_WAVES: 3,          // zombie waves resolved while away (rest are deferred)
   /* Bunker */
-  FLOOR_SLOTS: 6,
+  FLOOR_SLOTS: 12,            // base grid cells per floor (one cell = 100px); rooms are 2 or 4 cells wide
+  MAX_COLS: 24,               // a floor can be dug out sideways up to this many cells
+  WING_CELLS: 4,              // cells added per sideways excavation
   BASE_MAX_FLOOR: 3,
   MAX_FLOORS: 12,
   BASE_STORAGE: 1000,

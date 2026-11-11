@@ -17,7 +17,7 @@ DE.UI.Bunker = (function () {
     s.floors.forEach(f => html += renderFloor(s, f));
     html += renderDigZone(s);
     root.querySelector('#floors').innerHTML = html;
-    DE.UI.Actors.relayout();
+    DE.UI.Actors.relayout(); DE.UI.Elevator.relayout();
     update();
   }
 
@@ -48,25 +48,30 @@ DE.UI.Bunker = (function () {
   function strata(depth) { return depth <= 2 ? 'strata-soil' : depth <= 5 ? 'strata-clay' : depth <= 8 ? 'strata-stone' : 'strata-bedrock'; }
 
   function renderFloor(s, f) {
-    const C = DE.CONFIG; let slots = '';
-    for (let k = 0; k < C.FLOOR_SLOTS; k++) {
+    const cols = f.slots.length; let cells = '';
+    for (let k = 0; k < cols; k++) {
       const rid = f.slots[k];
-      if (!rid) { slots += `<div class="slot empty" data-action="selectSlot" data-depth="${f.depth}" data-slot="${k}" id="slot-${f.depth}-${k}"><span class="plus">+</span><small>Build</small></div>`; continue; }
+      if (!rid) { cells += `<div class="cell" data-action="selectSlot" data-depth="${f.depth}" data-slot="${k}" id="slot-${f.depth}-${k}" style="grid-column:${k + 1}" title="Empty cell — click to build"><span class="plus">+</span></div>`; continue; }
       const room = s.rooms[rid]; if (!room || room.slot !== k) continue;
-      slots += renderRoom(room);
+      cells += renderRoom(room);
     }
     const fac = f.facility ? DE.Data.FACILITIES.find(x => x.id === f.facility) : null;
-    return `<div class="floor ${fac ? 'has-facility' : ''} ${strata(f.depth)}" data-depth="${f.depth}">
-      <div class="shaft"><div class="cable"></div><div class="car"></div><div class="floor-num">B${f.depth}</div></div>
-      <div class="slots">${slots}</div>
+    const wing = cols < DE.CONFIG.MAX_COLS ? `<div class="wing ${f.expansion ? 'digging' : ''}" data-action="${f.expansion ? 'noop' : 'expandFloor'}" data-depth="${f.depth}" style="grid-column:${cols + 1}" id="wing-${f.depth}"><span class="wing-body"></span></div>` : '';
+    return `<div class="floor ${fac ? 'has-facility' : ''} ${strata(f.depth)}" data-depth="${f.depth}" style="--cols:${cols}">
+      <div class="shaft-slot"><div class="floor-num">B${f.depth}</div></div>
+      <div class="cells" style="grid-template-columns: repeat(${cols + 1}, 100px)">
+        <div class="ceiling"></div>${cells}${wing}
+        <div class="corridor"><i class="stripe"></i></div>
+      </div>
       ${fac ? `<div class="facility-tag" title="${esc(fac.lore)}">${Ic().img('facility', 'ico-inline')} ${esc(fac.name)}</div>` : ''}
     </div>`;
   }
 
   function renderRoom(room) {
     const def = DE.Data.ROOMS[room.type];
-    return `<div class="room cat-${def.category} type-${room.type} ${def.unique ? 'unique' : ''}" style="grid-column: span ${def.size}"
+    return `<div class="room cat-${def.category} type-${room.type} ${def.unique ? 'unique' : ''} w-${def.size}" style="grid-column: ${room.slot + 1} / span ${def.size}"
         data-action="selectRoom" data-id="${room.id}" id="room-${room.id}" data-sig="">
+      <div class="door"></div>
       <div class="room-scene"></div>
       <div class="builder">${DE.Chars.crew('engineer', { anim: 'repair', h: 48 })}</div>
       <div class="room-head"><span class="room-name">${esc(def.name)}</span><span class="room-lvl"></span></div>
@@ -77,8 +82,8 @@ DE.UI.Bunker = (function () {
 
   function renderDigZone(s) {
     const d = DE.Excavation.nextDepth(s);
-    if (d > DE.CONFIG.MAX_FLOORS) return `<div class="floor bedrock strata-bedrock"><div class="shaft"></div><div class="bedrock-label">Bedrock. Nothing further down.</div></div>`;
-    return `<div class="floor dig ${strata(d)}" data-action="openDrawer" data-drawer="excavate" id="dig-floor"><div class="shaft"><div class="cable"></div></div><div class="dig-zone" id="dig-zone"></div></div>`;
+    if (d > DE.CONFIG.MAX_FLOORS) return `<div class="floor bedrock strata-bedrock"><div class="shaft-slot"></div><div class="bedrock-label">Bedrock. Nothing further down.</div></div>`;
+    return `<div class="floor dig ${strata(d)}" data-action="openDrawer" data-drawer="excavate" id="dig-floor"><div class="shaft-slot"></div><div class="dig-zone" id="dig-zone"></div></div>`;
   }
 
   /* ---------- per-tick ---------- */
@@ -129,10 +134,20 @@ DE.UI.Bunker = (function () {
       const tier = room.level >= 50 ? 4 : room.level >= 25 ? 3 : room.level >= 10 ? 2 : 1;
       if (!el.classList.contains('tier-' + tier)) { el.classList.remove('tier-1', 'tier-2', 'tier-3', 'tier-4'); el.classList.add('tier-' + tier); }
     }
-    document.querySelectorAll('.slot.empty').forEach(el => el.classList.toggle('selected', !!(sel && sel.type === 'slot' && String(sel.depth) === el.dataset.depth && String(sel.slot) === el.dataset.slot)));
+    document.querySelectorAll('.cell').forEach(el => el.classList.toggle('selected', !!(sel && sel.type === 'slot' && String(sel.depth) === el.dataset.depth && String(sel.slot) === el.dataset.slot)));
     updateSurface(s, now);
     updateDig(s, now);
+    updateWings(s, now);
+    DE.UI.Elevator.update(now);
     DE.UI.Actors.update(now);
+  }
+  function updateWings(s, now) {
+    s.floors.forEach(f => {
+      const el = document.getElementById('wing-' + f.depth); if (!el) return;
+      const body = el.querySelector('.wing-body');
+      if (f.expansion) { const pct = Math.min(100, 100 * (1 - (f.expansion.endsAt - now) / (f.expansion.duration * 1000))); setHtml(body, `<b>Digging…</b><div class="dig-prog"><i style="width:${pct}%"></i></div><small>${U().fmtTime((f.expansion.endsAt - now) / 1000)}</small>`); el.classList.add('digging'); }
+      else { const ok = DE.Bunker.canExpand(s, f.depth).ok; setHtml(body, `${Ic().img('dig', 'ico-inline')}<b>Dig wing</b><small>+${DE.CONFIG.WING_CELLS} cells</small><span class="cost">${U().costText(DE.Bunker.expansionCost(s, f.depth))}</span><small>${U().fmtTime(DE.Bunker.expansionTime(s, f.depth))}</small>`); el.classList.toggle('cant', !ok); el.classList.remove('digging'); }
+    });
   }
 
   /* Rooms that scroll out of view pause their animations. */
@@ -163,6 +178,7 @@ DE.UI.Bunker = (function () {
       info.className = 'wave-info ' + verdict;
     }
     const surface = $('#surface'); if (!surface) return;
+    const wrap = document.getElementById('bunker-wrap'); if (wrap) { const w = wrap.clientWidth + 'px'; if (surface.style.width !== w) surface.style.width = w; }
     const scene = $('#scene'); if (scene && s.overworld) for (const k in s.overworld) { const v = String(s.overworld[k] || 0); if (scene.dataset[k] !== v) scene.dataset[k] = v; }
     const incoming = secs < DE.Defense.warningSec(s); const fighting = now < fightUntil;
     surface.classList.toggle('incoming', incoming && !fighting);

@@ -4,8 +4,8 @@ var DE = globalThis.DE = globalThis.DE || {};
 DE.State = (function () {
   const C = () => DE.CONFIG;
 
-  function emptyFloor(depth) {
-    return { depth, slots: new Array(C().FLOOR_SLOTS).fill(null), facility: null };
+  function emptyFloor(depth, cols) {
+    return { depth, slots: new Array(cols || C().FLOOR_SLOTS).fill(null), facility: null, expansion: null };
   }
 
   function blank(now) {
@@ -27,7 +27,7 @@ DE.State = (function () {
         wall: { level: 1, hp: 0 },      // hp filled in after effects are known
         turrets: 0, traps: 0,
         nextWaveAt: now + C().FIRST_WAVE_SEC * 1000,
-        wave: 1, log: [], shock: 0, lastResult: null,
+        wave: 1, log: [], shock: 0, lastResult: null, nextMut: null,
       },
       expeditions: { active: [], log: [] },
       prestige: { points: 0, lifetime: 0, upgrades: {}, resets: 0 },
@@ -37,6 +37,7 @@ DE.State = (function () {
       settings: { autosave: true, animations: true },
       flags: {},
       overworld: { fence: 0, towers: 0, lights: 0, road: 0 },
+      events: [], artifacts: {}, rep: { traders: 0, militia: 0, growers: 0 }, bus: { level: 1 }, goals: { done: {} }, buffs: [], nextEventAt: 0,
     };
   }
 
@@ -57,7 +58,7 @@ DE.State = (function () {
     s.stats.maxDepth = startFloors;
 
     // starting rooms on floor 1
-    const starters = [['quarters', 0], ['farm', 2], ['water', 3], ['generator', 4]];
+    const starters = [['quarters', 0], ['farm', 4], ['water', 6], ['generator', 8]];
     starters.forEach(([type, slot]) => DE.Bunker.placeRoom(s, type, 1, slot, 1, now));
 
     // starting survivors
@@ -74,6 +75,8 @@ DE.State = (function () {
       const rt = assignments[sv.profession];
       if (rt && byType[rt] && DE.Survivors.assign(s, id, { kind: 'room', id: byType[rt] }).ok) continue;
     }
+    if (lfx.startRep) { s.rep.traders = lfx.startRep; s.bus.level = Math.min(DE.Data.BUS.length, 1 + lfx.startRep); }
+    if (prestige && prestige.relic && DE.Data.ARTIFACTS[prestige.relic]) s.artifacts[prestige.relic] = true;
     // legacy "Inherited Science": research nodes up to a given tree depth start completed
     if (lfx.startResearchTier > 0) {
       for (const id in DE.Data.RESEARCH) if (DE.Research.tier(id) <= lfx.startResearchTier) s.research.done[id] = true;

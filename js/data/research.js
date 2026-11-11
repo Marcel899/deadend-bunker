@@ -43,6 +43,8 @@ DE.Data.RESEARCH = {
     desc: 'Dig to floor 9.', effects: [{ type: 'maxFloor', value: 9 }] },
   fusion: { id: 'fusion', branch: 'engineering', name: 'Fusion Cells', icon: '☢️', cost: 4500, time: 720, requires: ['excavation2'],
     desc: 'Generators x2, fuel use -50%.', effects: [{ type: 'roomMult', room: 'generator', value: 1.0 }, { type: 'fuelUseMult', value: -0.5 }] },
+  dampening: { id: 'dampening', branch: 'survival', name: 'Sound Dampening', icon: '🔇', cost: 350, time: 200, requires: ['defense1'],
+    desc: 'Mufflers and rubber mounts. The bunker makes 40% less noise, so hordes come smaller and less often.', effects: [{ type: 'noiseMult', value: -0.4 }] },
   blueprints2: { id: 'blueprints2', branch: 'engineering', name: 'Tier 2 Blueprints', icon: '📐', cost: 220, time: 120, requires: ['construction'],
     desc: 'Improved infrastructure: Kitchen, Hydroponics, Water Purification, Barracks, Advanced Workshop, Infirmary, Communications Center.', effects: [{ type: 'unlockRoom', room: 'blueprints2' }] },
   blueprints3: { id: 'blueprints3', branch: 'engineering', name: 'Tier 3 Blueprints', icon: '📘', cost: 1200, time: 360, requires: ['blueprints2', 'machinery'],

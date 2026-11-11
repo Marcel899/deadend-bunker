@@ -30,6 +30,7 @@ DE.Effects = (function () {
       capBonus: { food: 0, water: 0 }, guardCap: 4, trapDmgMult: 1, waveWarning: 0, waveLoot: 0,
       expeditionSpeed: 0, expeditionSafety: 0, waterSave: 0, defenseFlat: 0, bossWeaken: 0, cryoSlots: 0,
       allLocations: false, autoAssign: 0, toxicResist: 0, sleepSpeed: 0, eatSpeed: 0, hungerSlow: 0,
+      noiseMult: 1,
     };
   }
 
@@ -68,11 +69,14 @@ DE.Effects = (function () {
       case 'startSurvivors': fx.startSurvivors += v; break;
       case 'startFloors': fx.startFloors += v; break;
       case 'startResearchTier': fx.startResearchTier += v; break;
+      case 'startRep': fx.startRep = (fx.startRep || 0) + v; break;
       case 'trapDmgMult': fx.trapDmgMult += v; break;
       case 'waveWarning': fx.waveWarning += v; break;
       case 'expeditionSpeed': fx.expeditionSpeed += v; break;
       case 'expeditionSafety': fx.expeditionSafety += v; break;
       case 'turretCap': fx.turretCap += v; break;
+      case 'noiseMult': fx.noiseMult += v; break;
+      case 'lootBonusAdd': fx.lootBonus += v; break;
       default: break;
     }
   }
@@ -146,6 +150,10 @@ DE.Effects = (function () {
         }
       }
     }
+    // artifacts, factions and temporary buffs
+    if (state.artifacts && DE.Data.ARTIFACTS) for (const id in state.artifacts) { const a = DE.Data.ARTIFACTS[id]; if (a) a.effects.forEach(e => applyEffect(fx, e, 1)); }
+    if (state.rep && DE.Data.FACTIONS) for (const f in DE.Data.FACTIONS) { const r = state.rep[f] || 0; if (r >= 3) { const b = DE.Data.FACTIONS[f].bonus; for (const t in b) { if (t === 'roomMult') applyEffect(fx, { type: 'roomMult', room: b.roomMult, value: b.value }, 1); else if (t !== 'value') applyEffect(fx, { type: t, value: b[t] }, 1); } } }
+    if (state.buffs) state.buffs.forEach(b => applyEffect(fx, { type: 'roomMult', room: b.room, value: b.mult }, 1));
     // overworld structures
     if (state.overworld && DE.Data.OVERWORLD) for (const k in DE.Data.OVERWORLD) {
       const def = DE.Data.OVERWORLD[k]; const lvl = state.overworld[k] || 0;

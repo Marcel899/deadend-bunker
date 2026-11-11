@@ -8,7 +8,18 @@ DE.Save = (function () {
 
   /* Migrations: key = version being upgraded FROM. Each returns the upgraded raw object. */
   const MIGRATIONS = {
-    // 0: (raw) => { ...; raw.version = 1; return raw; }
+    // 1 → 2: floors became cell grids (12 cells, rooms 2 or 4 cells wide instead of 6 slots of 1-2)
+    1: (raw) => {
+      const st = raw.state || {};
+      if (Array.isArray(st.floors)) st.floors.forEach(f => { if (f && Array.isArray(f.slots) && f.slots.length <= 6) f.slots = new Array(12).fill(null); });
+      if (st.rooms && typeof st.rooms === 'object') for (const id in st.rooms) {
+        const r = st.rooms[id]; if (!r || typeof r !== 'object') continue;
+        r.slot = (r.slot || 0) * 2; const def = DE.Data.ROOMS[r.type]; const size = def ? def.size : 2;
+        const f = Array.isArray(st.floors) ? st.floors.find(x => x && x.depth === r.floor) : null;
+        if (f) for (let k = 0; k < size; k++) if (r.slot + k < f.slots.length) f.slots[r.slot + k] = id;
+      }
+      raw.v = 2; return raw;
+    },
   };
 
   function storage() {
@@ -95,12 +106,13 @@ DE.Save = (function () {
       // resources
       if (U().isObj(src.resources)) for (const r of DE.Data.RESOURCE_ORDER) s.resources[r] = NN(src.resources[r], 0);
       // floors
-      const slots = C().FLOOR_SLOTS;
       if (Array.isArray(src.floors)) {
         src.floors.forEach((f, i) => {
           if (!U().isObj(f)) return;
-          const floor = DE.State.emptyFloor(N(f.depth, i + 1));
-          if (Array.isArray(f.slots)) for (let k = 0; k < slots; k++) floor.slots[k] = typeof f.slots[k] === 'string' ? f.slots[k] : null;
+          const cols = U().clamp(Array.isArray(f.slots) ? f.slots.length : C().FLOOR_SLOTS, C().FLOOR_SLOTS, C().MAX_COLS);
+          const floor = DE.State.emptyFloor(N(f.depth, i + 1), cols);
+          if (Array.isArray(f.slots)) for (let k = 0; k < cols; k++) floor.slots[k] = typeof f.slots[k] === 'string' ? f.slots[k] : null;
+          if (U().isObj(f.expansion)) floor.expansion = { endsAt: N(f.expansion.endsAt, now), duration: NN(f.expansion.duration, 1), cells: C().WING_CELLS };
           floor.facility = typeof f.facility === 'string' && DE.Data.FACILITIES.some(x => x.id === f.facility) ? f.facility : null;
           s.floors.push(floor);
         });
@@ -130,7 +142,8 @@ DE.Save = (function () {
           level: U().clamp(N(v.level, 1), 1, C().SURVIVOR_MAX_LEVEL), xp: NN(v.xp, 0), hp: U().clamp(N(v.hp, 100), 0, 100),
           traits: Array.isArray(v.traits) ? v.traits.filter(t => DE.Data.TRAITS[t]) : [], assignment: null,
           energy: U().clamp(N(v.energy, 100), 0, 100), hunger: U().clamp(N(v.hunger, 0), 0, 100),
-          act: U().isObj(v.act) && typeof v.act.kind === 'string' ? { kind: v.act.kind.slice(0, 12), until: NN(v.act.until, 0), room: typeof v.act.room === 'string' ? v.act.room : null } : { kind: 'idle', until: 0, room: null } };
+          act: U().isObj(v.act) && typeof v.act.kind === 'string' ? { kind: v.act.kind.slice(0, 12), until: NN(v.act.until, 0), room: typeof v.act.room === 'string' ? v.act.room : null } : { kind: 'idle', until: 0, room: null }, bonds: {} };
+        if (U().isObj(v.bonds)) for (const o in v.bonds) if (typeof o === 'string') sv.bonds[o] = U().clamp(N(v.bonds[o], 0), 0, 100);
         if (U().isObj(v.assignment)) {
           const a = v.assignment;
           if (a.kind === 'room' && s.rooms[a.id]) sv.assignment = { kind: 'room', id: a.id };
@@ -184,6 +197,7 @@ DE.Save = (function () {
       // prestige
       if (U().isObj(src.prestige)) {
         s.prestige.points = NN(src.prestige.points, 0); s.prestige.lifetime = NN(src.prestige.lifetime, 0); s.prestige.resets = NN(src.prestige.resets, 0);
+        if (typeof src.prestige.relic === 'string' && DE.Data.ARTIFACTS[src.prestige.relic]) s.prestige.relic = src.prestige.relic;
         if (U().isObj(src.prestige.upgrades)) for (const id in src.prestige.upgrades) if (DE.Data.LEGACY[id]) s.prestige.upgrades[id] = U().clamp(N(src.prestige.upgrades[id], 0), 0, DE.Data.LEGACY[id].max);
       }
       // stats
@@ -193,6 +207,14 @@ DE.Save = (function () {
       }
       if (Array.isArray(src.log)) s.log = src.log.filter(x => U().isObj(x) && typeof x.msg === 'string').slice(-50);
       if (U().isObj(src.settings)) { s.settings.autosave = src.settings.autosave !== false; s.settings.animations = src.settings.animations !== false; }
+      if (Array.isArray(src.events)) s.events = src.events.filter(e => U().isObj(e) && typeof e.title === 'string' && Array.isArray(e.choices)).slice(0, 6).map(e => ({ id: typeof e.id === 'string' ? e.id : 'e' + (s.nextId++), kind: e.kind === 'expedition' ? 'expedition' : 'bunker', def: String(e.def || ''), title: String(e.title).slice(0, 120), text: String(e.text || '').slice(0, 600), ctx: U().isObj(e.ctx) ? e.ctx : {}, choices: e.choices.filter(U().isObj).slice(0, 4).map(c => ({ label: String(c.label || 'OK').slice(0, 60), desc: String(c.desc || '').slice(0, 200), effects: U().isObj(c.effects) ? c.effects : {}, trade: U().isObj(c.trade) ? c.trade : undefined })) }));
+      if (U().isObj(src.artifacts)) for (const id in src.artifacts) if (DE.Data.ARTIFACTS[id]) s.artifacts[id] = true;
+      if (U().isObj(src.rep)) for (const f in DE.Data.FACTIONS) s.rep[f] = U().clamp(N(src.rep[f], 0), -5, 5);
+      if (U().isObj(src.bus)) s.bus.level = U().clamp(N(src.bus.level, 1), 1, DE.Data.BUS.length);
+      if (U().isObj(src.goals) && U().isObj(src.goals.done)) for (const id in src.goals.done) if (DE.Data.GOALS.some(g => g.id === id)) s.goals.done[id] = true;
+      if (Array.isArray(src.buffs)) s.buffs = src.buffs.filter(b => U().isObj(b) && DE.Data.ROOMS[b.room]).map(b => ({ room: b.room, mult: U().clamp(N(b.mult, 0), 0, 2), until: NN(b.until, 0) }));
+      s.nextEventAt = NN(src.nextEventAt, 0);
+      if (U().isObj(src.defense) && typeof src.defense.nextMut === 'string' && DE.Data.MUTATIONS.some(m => m.id === src.defense.nextMut)) s.defense.nextMut = src.defense.nextMut;
       if (U().isObj(src.overworld) && DE.Data.OVERWORLD) for (const k in DE.Data.OVERWORLD) s.overworld[k] = U().clamp(N(src.overworld[k], 0), 0, DE.Data.OVERWORLD[k].levels.length - 1);
       if (U().isObj(src.flags)) for (const k in src.flags) if (typeof src.flags[k] === 'boolean' || typeof src.flags[k] === 'number') s.flags[k] = src.flags[k];
       return s;

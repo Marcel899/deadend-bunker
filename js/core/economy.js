@@ -29,7 +29,7 @@ DE.Economy = (function () {
   function workerMult(state, room, def, fx) {
     if (!def.workers) return 1;
     let eff = 0;
-    room.workers.forEach(id => { const s = state.survivors[id]; if (s) eff += DE.Survivors.efficiency(s, def, fx) * DE.Needs.presence(s) * DE.Needs.needsMult(s); });
+    room.workers.forEach(id => { const s = state.survivors[id]; if (s) eff += DE.Survivors.efficiency(s, def, fx) * DE.Needs.presence(s) * DE.Needs.needsMult(s) * (1 + 0.04 * DE.Events.friendsIn(state, s, room.id)); });
     const staffing = Math.min(1.5, eff / def.workers);
     const base = Math.max(fx.unmannedBase, def.unmannedBase || 0);
     return base + (1 - base) * staffing;

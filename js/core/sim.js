@@ -25,6 +25,7 @@ DE.Sim = (function () {
     // people
     DE.Survivors.tick(state, dt, state._fx);
     DE.Needs.tick(state, dt, state._fx);
+    DE.Events.tick(state, dt, now);
 
     // zombies
     DE.Defense.tick(state, now);

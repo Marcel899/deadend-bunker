@@ -67,7 +67,8 @@ DE.Defense = (function () {
   function waveHp(state, n) {
     n = n || state.defense.wave;
     const weaken = isBossWave(n) ? 1 - (DE.Effects.get(state).bossWeaken || 0) : 1;
-    return Math.floor(C().WAVE_BASE_HP * Math.pow(C().WAVE_GROWTH, n - 1) * (1 + 0.08 * (state.floors.length - 1)) * weaken);
+    const mut = n === state.defense.wave ? DE.Events.mutation(state) : null; const noise = 1 + Math.min(0.6, DE.Events.noise(state) * 0.012);
+    return Math.floor(C().WAVE_BASE_HP * Math.pow(C().WAVE_GROWTH, n - 1) * (1 + 0.08 * (state.floors.length - 1)) * weaken * (mut ? mut.hp : 1) * noise);
   }
   function isBossWave(n) { return n % DE.Data.BOSS_EVERY === 0; }
 
@@ -104,7 +105,7 @@ DE.Defense = (function () {
     return { guardDps, turretDps, trapDmg, trapsUsed, flat: fx.defenseFlat, total: (guardDps + turretDps) * C().WAVE_DURATION + trapDmg + fx.defenseFlat, guards: guards.length };
   }
 
-  function waveInterval(state) { return C().WAVE_INTERVAL_SEC * DE.Effects.get(state).waveIntervalMult; }
+  function waveInterval(state) { return C().WAVE_INTERVAL_SEC * DE.Effects.get(state).waveIntervalMult * Math.max(0.55, 1 - DE.Events.noise(state) * 0.008); }
   /** Seconds of warning before a wave in which the horde is visible on the surface. */
   function warningSec(state) { return 45 + (DE.Effects.get(state).waveWarning || 0); }
 
@@ -114,7 +115,7 @@ DE.Defense = (function () {
     const hp = waveHp(state, n);
     const power = defensePower(state);
     const fx = DE.Effects.get(state);
-    const comp = compositionSummary(waveComposition(hp, n));
+    const comp = compositionSummary(waveComposition(hp, n)); const mut = DE.Events.mutation(state); if (mut) { comp.dmgMult *= mut.dmg; comp.toxic += mut.toxic || 0; }
     const result = { wave: n, hp, dealt: Math.floor(power.total), guards: power.guards, turrets: state.defense.turrets, trapsUsed: power.trapsUsed, t: now, breach: false, wallDamage: 0, losses: {}, injured: [], killed: 0, boss: comp.boss, counts: comp.counts, reward: {} };
     state.defense.traps -= power.trapsUsed;
     const killedFraction = Math.min(1, power.total / hp);
@@ -148,7 +149,7 @@ DE.Defense = (function () {
       }
     }
     // rewards: salvage from the corpses
-    result.reward = waveReward(n, result.outcome);
+    result.reward = waveReward(n, result.outcome); if (mut) { for (const r in result.reward) result.reward[r] = Math.floor(result.reward[r] * mut.loot); result.mutation = mut.name; }
     for (const r in result.reward) result.reward[r] = Math.floor(result.reward[r] * (1 + (fx.waveLoot || 0)));
     for (const r in result.reward) { state.resources[r] = Math.min(DE.Economy.storageCap(state, r), state.resources[r] + result.reward[r]); state.stats.produced[r] += result.reward[r]; state.stats.runScore += result.reward[r] * DE.Data.RESOURCES[r].value; }
     // guards gain experience
@@ -158,6 +159,7 @@ DE.Defense = (function () {
     state.defense.log.push(result);
     if (state.defense.log.length > 20) state.defense.log.shift();
     state.defense.nextWaveAt = now + waveInterval(state) * 1000;
+    DE.Events.rollMutation(state);
     state._events = state._events || []; state._events.push({ type: 'wave', result });
     return result;
   }

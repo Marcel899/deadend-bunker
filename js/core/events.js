@@ -1,0 +1,166 @@
+/* Living world: event queue (bunker events, expedition encounters, trader offers), survivor
+ * bonds, factions, artifacts, wave mutations, noise and the objective ladder. Decisions wait in
+ * state.events until the player answers — also after offline time, so idle play never decides
+ * for you; the queue is persisted. */
+var DE = globalThis.DE = globalThis.DE || {};
+
+DE.Events = (function () {
+  const U = () => DE.Util;
+  const EVENT_MIN = 240, EVENT_MAX = 480;   // seconds between bunker events
+
+  function ensure(state) {
+    state.events = state.events || [];
+    state.artifacts = state.artifacts || {};
+    state.rep = state.rep || { traders: 0, militia: 0, growers: 0 };
+    state.bus = state.bus || { level: 1 };
+    state.goals = state.goals || { done: {} };
+    state.buffs = state.buffs || [];
+    if (!state.nextEventAt) state.nextEventAt = state.playtime + EVENT_MIN + Math.random() * (EVENT_MAX - EVENT_MIN);
+  }
+
+  /* ---------- bus ---------- */
+  function bus(state) { return DE.Data.BUS[Math.min(DE.Data.BUS.length, (state.bus && state.bus.level) || 1) - 1]; }
+  function busNext(state) { const l = (state.bus && state.bus.level) || 1; return l < DE.Data.BUS.length ? DE.Data.BUS[l] : null; }
+  function upgradeBus(state) {
+    const next = busNext(state); if (!next) return { ok: false, reason: 'Fully upgraded' };
+    if (!DE.Expeditions.unlocked(state)) return { ok: false, reason: 'Build a Garage first' };
+    if (!U().canAfford(state.resources, next.cost)) return { ok: false, reason: 'Not enough resources' };
+    U().pay(state.resources, next.cost); state.bus.level = next.level; return { ok: true, cost: next.cost };
+  }
+
+  /* ---------- noise: what the horde hears ---------- */
+  const ROOM_NOISE = { generator: 2, reactor: 3, fusion: 1, workshop: 1, advworkshop: 2, recycling: 2, ammofactory: 3, heavyweapons: 3, autoplant: 4, concrete: 1.5, refinery: 1, vehicleshop: 1.5, dronehangar: 1, silo: 2, geothermal: 1, orevein: 1.5 };
+  function noise(state) {
+    let n = 0;
+    for (const id in state.rooms) { const r = state.rooms[id]; if (r.level < 1) continue; const base = ROOM_NOISE[r.type]; if (base) n += base * Math.pow(r.level, 0.35); }
+    n += state.defense.turrets * 0.4 + state.expeditions.active.length * 1.5;
+    const fx = DE.Effects.get(state); n *= fx.noiseMult != null ? fx.noiseMult : 1;
+    return Math.round(n * 10) / 10;
+  }
+  function noiseLevel(n) { return n < 6 ? 'quiet' : n < 14 ? 'noisy' : n < 26 ? 'loud' : 'deafening'; }
+
+  /* ---------- mutations ---------- */
+  function rollMutation(state) {
+    if (state.defense.wave < 8 || DE.Defense.isBossWave(state.defense.wave)) { state.defense.nextMut = null; return; }
+    state.defense.nextMut = U().chance(0.55) ? U().pick(DE.Data.MUTATIONS).id : null;
+  }
+  function mutation(state) { const id = state.defense && state.defense.nextMut; return id ? DE.Data.MUTATIONS.find(m => m.id === id) : null; }
+
+  /* ---------- bonds ---------- */
+  function tickBonds(state, dt) {
+    const byRoom = {};
+    for (const id in state.survivors) { const sv = state.survivors[id]; if (sv.act && sv.act.room && (sv.act.kind === 'work' || sv.act.kind === 'eat' || sv.act.kind === 'rest')) (byRoom[sv.act.room] = byRoom[sv.act.room] || []).push(sv); }
+    const gain = dt / 60 * 1.2; // ~1.2 per minute together
+    for (const rid in byRoom) { const list = byRoom[rid]; for (let i = 0; i < list.length; i++) for (let j = i + 1; j < list.length; j++) bond(state, list[i], list[j], gain); }
+  }
+  function bond(state, a, b, amount) {
+    a.bonds = a.bonds || {}; b.bonds = b.bonds || {};
+    const before = a.bonds[b.id] || 0; const v = U().clamp(before + amount, 0, 100);
+    a.bonds[b.id] = v; b.bonds[a.id] = v;
+    if (before < 60 && v >= 60) { state._events = state._events || []; state._events.push({ type: 'friends', a: a.name, b: b.name }); state.log.push({ t: Date.now(), msg: a.name + ' and ' + b.name + ' have become friends.' }); }
+  }
+  function friendsIn(state, sv, roomId) { if (!sv.bonds) return 0; let n = 0; for (const id in sv.bonds) { const o = state.survivors[id]; if (o && sv.bonds[id] >= 60 && o.act && o.act.room === roomId && o.act.kind === 'work') n++; } return Math.min(2, n); }
+
+  /* ---------- goals ---------- */
+  function activeGoals(state) { return DE.Data.GOALS.filter(g => !state.goals.done[g.id]).slice(0, 3); }
+  function tickGoals(state) {
+    activeGoals(state).forEach(g => {
+      let ok = false; try { ok = g.check(state); } catch (e) { ok = false; }
+      if (!ok) return;
+      state.goals.done[g.id] = true; applyEffects(state, g.reward, null);
+      state._events = state._events || []; state._events.push({ type: 'goal', goal: g });
+      state.log.push({ t: Date.now(), msg: 'Objective complete: ' + g.name + '.' });
+    });
+  }
+
+  /* ---------- event queue ---------- */
+  function push(state, ev) { ensure(state); ev.id = 'e' + (state.nextId++); state.events.push(ev); return ev; }
+  function fill(text, ctx) { return text.replace(/\{A\}/g, ctx.A || 'Someone').replace(/\{B\}/g, ctx.B || 'someone else'); }
+  function tickEvents(state, now) {
+    if (state.playtime < state.nextEventAt || state.events.length >= 3) return;
+    state.nextEventAt = state.playtime + EVENT_MIN + Math.random() * (EVENT_MAX - EVENT_MIN);
+    const pool = DE.Data.BUNKER_EVENTS.filter(e => !e.cond || e.cond(state));
+    if (!pool.length) return;
+    const def = U().weightedPick(pool);
+    const people = Object.values(state.survivors).filter(s => !s.assignment || s.assignment.kind !== 'expedition');
+    const A = people.length ? U().pick(people) : null; let B = people.length > 1 ? U().pick(people.filter(p => p !== A)) : null;
+    const ctx = { A: A && A.name, B: B && B.name, aId: A && A.id, bId: B && B.id };
+    const ev = { kind: 'bunker', def: def.id, title: fill(def.title, ctx), text: fill(def.text, ctx), ctx };
+    if (def.trade) { const t = U().pick(DE.Data.TRADES), t2 = U().pick(DE.Data.TRADES.filter(x => x !== t)); ev.choices = [t, t2].map(tr => ({ label: 'Trade', desc: '', trade: tr })); ev.choices.push({ label: 'No thanks', desc: '', effects: {} }); }
+    else ev.choices = def.choices.filter(c => !c.cond || c.cond(state)).map(c => ({ label: fill(c.label, ctx), desc: fill(c.desc || '', ctx), effects: c.effects }));
+    push(state, ev);
+  }
+  /** Expedition encounter for a resolved trip (called by DE.Expeditions.resolve). */
+  function encounter(state, exp, result) {
+    ensure(state);
+    const pool = DE.Data.ENCOUNTERS.filter(e => e.tags.includes(exp.location));
+    const def = pool.length ? U().pick(pool) : null; if (!def) return;
+    const names = result.members || [];
+    const ev = { kind: 'expedition', def: def.id, title: def.title, text: def.text, ctx: { members: exp.survivors.slice(), location: exp.location }, choices: def.choices.map(c => ({ label: c.label, desc: c.desc || '', effects: c.effects })) };
+    push(state, ev);
+    result.encounter = def.title;
+  }
+
+  /** Resolve a queued event with the chosen option; returns a summary for the UI. */
+  function choose(state, eventId, index) {
+    ensure(state);
+    const i = state.events.findIndex(e => e.id === eventId); if (i < 0) return { ok: false, reason: 'Event is gone' };
+    const ev = state.events[i]; const ch = ev.choices[index]; if (!ch) return { ok: false, reason: 'No such choice' };
+    if (ch.trade) {
+      if (!U().canAfford(state.resources, ch.trade.give)) return { ok: false, reason: 'Not enough to trade' };
+      U().pay(state.resources, ch.trade.give); for (const r in ch.trade.get) gainRes(state, r, ch.trade.get[r]); state.rep.traders = Math.min(5, (state.rep.traders || 0) + 1);
+      state.events.splice(i, 1); return { ok: true, summary: 'Traded. The traders will remember you.' };
+    }
+    const summary = applyEffects(state, ch.effects || {}, ev.ctx);
+    state.events.splice(i, 1);
+    state.log.push({ t: Date.now(), msg: ev.title + ' — ' + ch.label + '.' });
+    return { ok: true, summary };
+  }
+  function gainRes(state, r, n) { if (!DE.Data.RESOURCES[r]) return; state.resources[r] = U().clamp(state.resources[r] + n, 0, DE.Economy.storageCap(state, r)); if (n > 0) { state.stats.produced[r] += n; state.stats.runScore += n * DE.Data.RESOURCES[r].value; } }
+  function applyEffects(state, fx, ctx) {
+    const out = []; ctx = ctx || {};
+    const members = (ctx.members || []).map(id => state.survivors[id]).filter(Boolean);
+    const A = ctx.aId ? state.survivors[ctx.aId] : null, B = ctx.bId ? state.survivors[ctx.bId] : null;
+    for (const k in fx) {
+      const v = fx[k];
+      if (DE.Data.RESOURCES[k]) { gainRes(state, k, v); out.push((v > 0 ? '+' : '') + U().fmt(v) + ' ' + DE.Data.RESOURCES[k].name); continue; }
+      switch (k) {
+        case 'loot': for (const r in v) { const n = Math.round(v[r] * bus(state).cargo); gainRes(state, r, n); out.push('+' + U().fmt(n) + ' ' + DE.Data.RESOURCES[r].name); } break;
+        case 'lootMult': { const last = state.expeditions.log[state.expeditions.log.length - 1]; if (last && last.loot) for (const r in last.loot) { const delta = Math.round(last.loot[r] * (v - 1)); gainRes(state, r, delta); } out.push('haul x' + v); break; }
+        case 'injure': { const pool = members.length ? members : Object.values(state.survivors); pool.forEach(s => { if (U().chance(v[0])) { DE.Survivors.injure(s, v[1]); out.push(s.name + ' injured'); } }); break; }
+        case 'heal': Object.values(state.survivors).forEach(s => { s.hp = Math.min(100, s.hp + v); }); out.push('everyone healed +' + v); break;
+        case 'rescue': case 'recruit': if (v && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state)) { const sv = DE.Survivors.spawn(state); state.stats.recruited++; out.push(sv.name + ' joined'); } else if (v) out.push('no free housing — they moved on'); break;
+        case 'artifact': { const id = v === 'random' ? randomArtifact(state) : v; if (id) { state.artifacts[id] = true; state._fx = null; out.push('Artifact found: ' + DE.Data.ARTIFACTS[id].name); } else out.push('nothing new inside'); break; }
+        case 'artifactOrScrap': { const id = U().chance(0.4) ? randomArtifact(state) : null; if (id) { state.artifacts[id] = true; state._fx = null; out.push('Artifact found: ' + DE.Data.ARTIFACTS[id].name); } else { gainRes(state, 'scrap', v); out.push('+' + v + ' scrap'); } break; }
+        case 'morale': state.morale = U().clamp(state.morale + v, 0, 100); state.defense.shock = Math.max(0, state.defense.shock - Math.max(0, v)); out.push((v > 0 ? '+' : '') + v + ' morale'); break;
+        case 'shock': state.defense.shock = Math.max(state.defense.shock, v); out.push('morale shaken'); break;
+        case 'rep': for (const f in v) { state.rep[f] = U().clamp((state.rep[f] || 0) + v[f], -5, 5); out.push(DE.Data.FACTIONS[f].name + ' ' + (v[f] > 0 ? '+' : '') + v[f]); } state._fx = null; break;
+        case 'xp': members.forEach(s => s.xp += v); break;
+        case 'xpA': if (A) { A.xp += v; out.push(A.name + ' +' + v + ' xp'); } break;
+        case 'energyA': if (A) { A.energy = U().clamp((A.energy || 100) + v, 0, 100); } break;
+        case 'restA': if (A) { A.energy = 100; A.hunger = 0; out.push(A.name + ' rested'); } break;
+        case 'bond': { const all = members.length ? members : Object.values(state.survivors); for (let i = 0; i < all.length; i++) for (let j = i + 1; j < all.length; j++) bond(state, all[i], all[j], v); break; }
+        case 'bondAB': if (A && B) { bond(state, A, B, v); out.push(A.name + ' and ' + B.name + ' made up'); } break;
+        case 'waterPct': gainRes(state, 'water', state.resources.water * v); out.push('lost water'); break;
+        case 'electricityPct': gainRes(state, 'electricity', state.resources.electricity * v); out.push('lost power'); break;
+        case 'traps': state.defense.traps += v; out.push('+' + v + ' traps'); break;
+        case 'risk': if (U().chance(v[0])) { if (v[1] === 'shock') state.defense.shock = Math.max(state.defense.shock, v[2]); out.push('he was infected — morale shaken'); } break;
+        case 'buff': state.buffs.push({ room: v[0], mult: v[1], until: state.playtime + v[2] }); state._fx = null; out.push(DE.Data.ROOMS[v[0]].name + ' +' + Math.round(v[1] * 100) + '% for ' + Math.round(v[2] / 60) + ' min'); break;
+        default: break;
+      }
+    }
+    return out.join(' · ');
+  }
+  function randomArtifact(state) { const pool = Object.keys(DE.Data.ARTIFACTS).filter(id => !state.artifacts[id]); return pool.length ? U().pick(pool) : null; }
+
+  /* ---------- per tick ---------- */
+  function tick(state, dt, now) {
+    ensure(state);
+    tickBonds(state, dt);
+    tickGoals(state);
+    if (!state._offline) tickEvents(state, now);
+    if (state.buffs.length) { const n = state.buffs.length; state.buffs = state.buffs.filter(b => b.until > state.playtime); if (state.buffs.length !== n) state._fx = null; }
+  }
+
+  return { ensure, bus, busNext, upgradeBus, noise, noiseLevel, rollMutation, mutation, tick, choose, applyEffects, activeGoals, friendsIn, encounter, bond, randomArtifact };
+})();

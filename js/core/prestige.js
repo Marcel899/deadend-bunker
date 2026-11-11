@@ -34,6 +34,7 @@ DE.Prestige = (function () {
     const c = canReset(state);
     if (!c.ok) return { ok: false, reason: c.reason };
     const prestige = DE.Util.deepClone(state.prestige);
+    const owned = Object.keys(state.artifacts || {}); prestige.relic = owned.length ? owned[Math.floor(Math.random() * owned.length)] : (prestige.relic || null);
     prestige.points += c.gain; prestige.lifetime += c.gain; prestige.resets++;
     const fresh = DE.State.create(prestige, now || Date.now());
     fresh.settings = DE.Util.deepClone(state.settings);

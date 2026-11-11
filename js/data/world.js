@@ -56,6 +56,8 @@ DE.Data.LOCATIONS = [
 
 /* Legacy upgrades bought with Legacy Points after a Reconstruction. */
 DE.Data.LEGACY = {
+  contacts: { id: 'contacts', name: 'Old Contacts',     icon: '🤝', max: 2, cost: 3, growth: 2,
+    desc: 'Start each run known to the Road Traders (+1 reputation) and with the next expedition vehicle', effects: [{ type: 'startRep', value: 1 }] },
   hands:    { id: 'hands',    name: 'Veteran Hands',   icon: '✋', max: 20, cost: 2, growth: 1.5,
     desc: '+10% all production per level', effects: [{ type: 'globalMult', value: 0.1 }] },
   stock:    { id: 'stock',    name: 'Stockpile',       icon: '🧰', max: 10, cost: 1, growth: 1.4,
@@ -79,4 +81,4 @@ DE.Data.LEGACY = {
   digger:   { id: 'digger',   name: 'Deep Roots',      icon: '🪨', max: 8,  cost: 2, growth: 1.5,
     desc: 'Excavation cost and time -8% per level', effects: [{ type: 'excavationCostMult', value: -0.08 }, { type: 'excavationTimeMult', value: -0.08 }] },
 };
-DE.Data.LEGACY_ORDER = ['hands', 'stock', 'friends', 'tunnels', 'science', 'archive', 'autonomy', 'scars', 'prints', 'digger', 'patience'];
+DE.Data.LEGACY_ORDER = ['contacts', 'hands', 'stock', 'friends', 'tunnels', 'science', 'archive', 'autonomy', 'scars', 'prints', 'digger', 'patience'];

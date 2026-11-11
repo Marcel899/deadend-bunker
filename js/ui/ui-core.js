@@ -22,11 +22,14 @@ DE.UI = (function () {
 
  function init() {
  document.addEventListener('click', onClick);
+ document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-place]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ type: el.dataset.place }, e); });
+ document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-move]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ roomId: el.dataset.move }, e); });
  document.addEventListener('keydown', e => { if (e.key === 'Escape') { if (!$('#modal-root').classList.contains('hidden')) closeModal(); else closeDrawer(); } });
  renderResbar();
  }
 
  function onClick(e) {
+ if (DE.UI.Placement && DE.UI.Placement.active() && DE.UI.Placement.onClickPlace(e)) { e.preventDefault(); return; }
  const el = e.target.closest('[data-action]');
  if (!el || el.disabled) return;
  const action = el.dataset.action;
@@ -68,7 +71,8 @@ DE.UI = (function () {
  $('#chips').innerHTML = `<div class="chip" id="chip-pop" data-action="openDrawer" data-drawer="survivors" title="Population / housing">${DE.Icons.img('pop')}<b>0/0</b></div>
  <div class="chip" id="chip-morale" title="Morale">${DE.Icons.img('morale')}<b>60</b></div>
  <div class="chip" id="chip-wave" data-action="openDrawer" data-drawer="defense" title="Next zombie wave">${DE.Icons.img('wave')}<b>--</b></div>
- <div class="chip" id="chip-lp" data-action="openDrawer" data-drawer="legacy" title="Legacy Points">${DE.Icons.img('res.legacy')}<b>0</b></div>`;
+ <div class="chip" id="chip-lp" data-action="openDrawer" data-drawer="legacy" title="Legacy Points">${DE.Icons.img('res.legacy')}<b>0</b></div>
+ <div class="chip decide" id="chip-events" data-action="nextEvent" title="Decisions waiting for you">${DE.Icons.img('scroll')}<b>0</b></div>`;
  }
 
  function updateResbar() {
@@ -97,6 +101,7 @@ DE.UI = (function () {
  const secs = (s.defense.nextWaveAt - Date.now()) / 1000;
  $('#chip-wave b').textContent = 'W' + s.defense.wave + '' + U().fmtTime(secs);
  $('#chip-wave').classList.toggle('warn', secs < 30);
+ const nEv = (s.events || []).length; const ce = $('#chip-events'); if (ce) { ce.querySelector('b').textContent = nEv; ce.style.display = nEv ? '' : 'none'; }
  $('#chip-lp b').textContent = U().fmt(s.prestige.points);
  $('#chip-lp').style.display = (s.prestige.lifetime > 0 || s.stats.maxDepth >= 3) ? '' : 'none';
  }
@@ -141,12 +146,21 @@ DE.UI = (function () {
  /* ---------- modal ---------- */
  function modal(opts) {
  const root = $('#modal-root');
- const buttons = (opts.buttons || [{ label: 'OK', action: 'closeModal', cls: 'primary' }])
+ const buttons = (opts.buttons && !opts.buttons.length ? [] : (opts.buttons || [{ label: 'OK', action: 'closeModal', cls: 'primary' }]))
  .map(b => `<button class="btn ${b.cls || ''}" data-action="${b.action || 'closeModal'}" ${Object.keys(b.params || {}).map(k => `data-${k}="${esc(b.params[k])}"`).join('')}>${b.label}</button>`).join('');
  root.innerHTML = `<div class="modal-backdrop" data-action="${opts.locked ? 'noop' : 'closeModal'}"></div>
  <div class="modal panel ${opts.cls || ''}"><div class="modal-head"><h3>${opts.icon ? DE.Icons.img(opts.icon, 'ico-title') : ''}${opts.title || ''}</h3>${opts.locked ? '' : '<button class="btn close" data-action="closeModal">✕</button>'}</div>
  <div class="modal-body">${opts.html || ''}</div><div class="modal-foot">${buttons}</div></div>`;
  root.classList.remove('hidden');
+ }
+ /** A decision card: title, story text, one big button per choice. */
+ function eventModal(ev) {
+ const s = state(); const buttons = ev.choices.map((c, i) => {
+ const tr = c.trade; const can = !tr || U().canAfford(s.resources, tr.give);
+ const label = tr ? `Give ${U().costText(tr.give)} for ${U().costText(tr.get)}` : esc(c.label);
+ return `<button class="btn choice ${i === 0 ? 'primary' : ''} ${can ? '' : 'cant'}" data-action="eventChoice" data-id="${ev.id}" data-i="${i}" ${can ? '' : 'disabled'}><b>${label}</b>${c.desc ? `<small>${esc(c.desc)}</small>` : ''}</button>`; }).join('');
+ const who = ev.kind === 'expedition' ? `<div class="ev-team">${(ev.ctx.members || []).map(id => s.survivors[id]).filter(Boolean).map(sv => DE.Chars.crew(sv.profession, { anim: 'idle', h: 54, title: sv.name })).join('')}</div>` : '';
+ modal({ title: ev.title, icon: ev.kind === 'expedition' ? 'map' : 'scroll', cls: 'event ' + ev.kind, locked: true, html: `${who}<p class="story">${esc(ev.text)}</p><div class="choices">${buttons}</div>`, buttons: [] });
  }
  function closeModal() { const root = $('#modal-root'); root.classList.add('hidden'); root.innerHTML = ''; }
  function confirmModal(title, html, onYes, yesLabel) {
@@ -188,6 +202,6 @@ DE.UI = (function () {
  renderDrawer(force);
  }
 
- return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, floatText, floatAt, modal, closeModal, confirmModal,
+ return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, floatText, floatAt, modal, eventModal, closeModal, confirmModal,
  openDrawer, closeDrawer, renderDrawer, refresh, state };
 })();

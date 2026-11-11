@@ -16,7 +16,7 @@ DE.Expeditions = (function () {
     if (state.expeditions.active.length >= slots(state)) return { ok: false, reason: 'All teams are out' };
     if (loc.minDepth > state.floors.length && !DE.Effects.get(state).allLocations) return { ok: false, reason: 'Dig deeper to find this location' };
     if (!survivorIds || !survivorIds.length) return { ok: false, reason: 'Pick at least one survivor' };
-    if (survivorIds.length > 3) return { ok: false, reason: 'Max 3 per team' };
+    if (survivorIds.length > DE.Events.bus(state).capacity) return { ok: false, reason: 'The ' + DE.Events.bus(state).name.toLowerCase() + ' seats ' + DE.Events.bus(state).capacity };
     for (const id of survivorIds) {
       const s = state.survivors[id];
       if (!s) return { ok: false, reason: 'Unknown survivor' };
@@ -34,7 +34,7 @@ DE.Expeditions = (function () {
     const id = 'x' + (state.nextId++);
     survivorIds.forEach(sid => { DE.Survivors.assign(state, sid, null); state.survivors[sid].assignment = { kind: 'expedition', id }; });
     const scouts = survivorIds.filter(id => state.survivors[id] && state.survivors[id].profession === 'scout').length;
-    const dur = Math.max(20, Math.round(loc.duration * Math.pow(0.8, scouts) * (1 - Math.min(0.7, DE.Effects.get(state).expeditionSpeed || 0))));
+    const dur = Math.max(20, Math.round(loc.duration * Math.pow(0.8, scouts) * DE.Events.bus(state).speed * (1 - Math.min(0.7, DE.Effects.get(state).expeditionSpeed || 0))));
     state.expeditions.active.push({ id, location: locId, survivors: survivorIds.slice(), endsAt: now + dur * 1000, duration: dur });
     return { ok: true };
   }
@@ -44,7 +44,7 @@ DE.Expeditions = (function () {
     const fx = DE.Effects.get(state);
     const members = exp.survivors.map(id => state.survivors[id]).filter(Boolean);
     const scav = members.filter(s => s.profession === 'scavenger').length;
-    const lootMult = fx.lootBonus * (1 + 0.15 * (members.length - 1)) * (1 + 0.3 * scav) * (1 + 0.3 * (state.floors.length - 1))
+    const lootMult = fx.lootBonus * DE.Events.bus(state).cargo * (1 + 0.15 * (members.length - 1)) * (1 + 0.3 * scav) * (1 + 0.3 * (state.floors.length - 1))
       * members.reduce((m, s) => m + DE.Survivors.traitSum(s, 'loot'), 1);
     const result = { id: exp.id, location: loc.id, t: now, loot: {}, injured: [], rescued: null, members: members.map(m => m.name) };
     for (const r in loc.loot) {
@@ -55,7 +55,7 @@ DE.Expeditions = (function () {
       state.stats.produced[r] += amt; state.stats.runScore += amt * DE.Data.RESOURCES[r].value;
     }
     const hunters = members.filter(s => s.profession === 'hunter').length;
-    const danger = loc.danger * (1 - 0.15 * scav) * (1 - 0.2 * hunters) * (1 - Math.min(0.8, fx.expeditionSafety || 0));
+    const danger = loc.danger * (1 - 0.15 * scav) * (1 - 0.2 * hunters) * (1 - Math.min(0.8, fx.expeditionSafety || 0)) * (1 - DE.Events.bus(state).safety);
     members.forEach(s => {
       s.assignment = null;
       s.xp += 60 * fx.xpMult;
@@ -65,6 +65,7 @@ DE.Expeditions = (function () {
       const sv = DE.Survivors.spawn(state); state.stats.recruited++; result.rescued = sv.name;
     }
     state.stats.expeditions++;
+    if (U().chance(0.6)) DE.Events.encounter(state, exp, result);
     state.expeditions.log.push(result);
     if (state.expeditions.log.length > 20) state.expeditions.log.shift();
     state._events = state._events || []; state._events.push({ type: 'expedition', result });

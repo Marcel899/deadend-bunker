@@ -57,7 +57,7 @@ DE.Excavation = (function () {
     const fac = rollFacility(state, ex.depth);
     if (fac) {
       floor.facility = fac.id;
-      DE.Bunker.placeRoom(state, fac.room, ex.depth, C().FLOOR_SLOTS - 1, 1, now);
+      DE.Bunker.placeRoom(state, fac.room, ex.depth, C().FLOOR_SLOTS - DE.Data.ROOMS[fac.room].size, 1, now);
       state.flags.floorsSinceFacility = 0;
     } else state.flags.floorsSinceFacility = (state.flags.floorsSinceFacility || 0) + 1;
     state._fx = null;

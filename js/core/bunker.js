@@ -27,13 +27,54 @@ DE.Bunker = (function () {
   }
 
   /** Can `type` fit at floor/slot? Returns {ok, reason}. */
-  function canPlace(state, type, depth, slot) {
+  function canPlace(state, type, depth, slot, ignoreId) {
     const def = DE.Data.ROOMS[type];
     const floor = getFloor(state, depth);
     if (!def || !floor) return { ok: false, reason: 'Invalid location' };
-    if (slot < 0 || slot + def.size > C().FLOOR_SLOTS) return { ok: false, reason: 'Not enough space' };
-    for (let k = 0; k < def.size; k++) if (floor.slots[slot + k]) return { ok: false, reason: 'Slot occupied' };
+    if (slot < 0 || slot + def.size > floor.slots.length) return { ok: false, reason: 'Not enough space' };
+    for (let k = 0; k < def.size; k++) if (floor.slots[slot + k] && floor.slots[slot + k] !== ignoreId) return { ok: false, reason: 'Space occupied' };
     return { ok: true };
+  }
+
+  /* ---- sideways expansion: dig a wing of extra cells onto a floor ---- */
+  function expansionCost(state, depth) {
+    const floor = getFloor(state, depth); const wings = Math.round((floor.slots.length - C().FLOOR_SLOTS) / C().WING_CELLS);
+    const fx = DE.Effects.get(state);
+    return { scrap: Math.ceil(160 * Math.pow(1.6, wings) * Math.pow(1.25, depth - 1) * fx.excavationCostMult), concrete: Math.ceil(30 * Math.pow(1.6, wings) * Math.pow(1.25, depth - 1) * fx.excavationCostMult) };
+  }
+  function expansionTime(state, depth) { const floor = getFloor(state, depth); const wings = Math.round((floor.slots.length - C().FLOOR_SLOTS) / C().WING_CELLS); return Math.max(8, 45 * Math.pow(1.3, wings) * DE.Effects.get(state).excavationTimeMult); }
+  function canExpand(state, depth) {
+    const floor = getFloor(state, depth); if (!floor) return { ok: false, reason: 'No such floor' };
+    if (floor.expansion) return { ok: false, reason: 'Already digging' };
+    if (floor.slots.length >= C().MAX_COLS) return { ok: false, reason: 'This floor is as wide as the rock allows' };
+    if (!U().canAfford(state.resources, expansionCost(state, depth))) return { ok: false, reason: 'Not enough resources' };
+    return { ok: true };
+  }
+  function expand(state, depth, now) {
+    now = now || Date.now(); const c = canExpand(state, depth); if (!c.ok) return c;
+    U().pay(state.resources, expansionCost(state, depth));
+    const dur = expansionTime(state, depth); const floor = getFloor(state, depth);
+    floor.expansion = { endsAt: now + dur * 1000, duration: dur, cells: C().WING_CELLS };
+    state._dirtyBunker = true;
+    return { ok: true };
+  }
+
+  /* ---- relocation: move a finished room to another free place (10% of its build cost) ---- */
+  function moveCost(state, room) { return U().scaleCost(DE.Data.ROOMS[room.type].cost, 0.1); }
+  function move(state, roomId, depth, slot) {
+    const room = state.rooms[roomId]; if (!room) return { ok: false, reason: 'No such room' };
+    if (room.construction) return { ok: false, reason: 'Under construction' };
+    if (DE.Data.ROOMS[room.type].unique) return { ok: false, reason: 'Unique rooms are part of the rock' };
+    const place = canPlace(state, room.type, depth, slot, roomId); if (!place.ok) return place;
+    if (room.floor === depth && room.slot === slot) return { ok: true };
+    const cost = moveCost(state, room); if (!U().canAfford(state.resources, cost)) return { ok: false, reason: 'Not enough resources to relocate' };
+    U().pay(state.resources, cost);
+    const def = DE.Data.ROOMS[room.type];
+    const from = getFloor(state, room.floor); from.slots.forEach((rid, k) => { if (rid === roomId) from.slots[k] = null; });
+    const to = getFloor(state, depth); for (let k = 0; k < def.size; k++) to.slots[slot + k] = roomId;
+    room.floor = depth; room.slot = slot;
+    state._dirtyBunker = true;
+    return { ok: true, cost };
   }
 
   /** Cost to construct a new room of `type`. */
@@ -145,6 +186,7 @@ DE.Bunker = (function () {
   /** Finish construction timers that have elapsed. Returns list of completed events. */
   function tickConstruction(state, now) {
     const events = [];
+    state.floors.forEach(f => { const e = f.expansion; if (e && now >= e.endsAt) { for (let k = 0; k < e.cells; k++) f.slots.push(null); f.expansion = null; events.push({ type: 'expanded', depth: f.depth }); state._dirtyBunker = true; } });
     for (const id in state.rooms) {
       const room = state.rooms[id];
       const c = room.construction;
@@ -164,7 +206,7 @@ DE.Bunker = (function () {
     const floor = getFloor(state, room.floor);
     if (!floor) return 0;
     const left = room.slot - 1 >= 0 ? floor.slots[room.slot - 1] : null;
-    const right = room.slot + def.size < C().FLOOR_SLOTS ? floor.slots[room.slot + def.size] : null;
+    const right = room.slot + def.size < floor.slots.length ? floor.slots[room.slot + def.size] : null;
     let bonus = 0;
     [left, right].forEach(nid => {
       const n = nid ? state.rooms[nid] : null;
@@ -181,6 +223,6 @@ DE.Bunker = (function () {
   function roomCount(state) { return Object.values(state.rooms).filter(r => r.level >= 1).length; }
   function totalLevels(state) { return Object.values(state.rooms).reduce((s, r) => s + r.level, 0); }
 
-  return { getFloor, roomsOnFloor, isUnlocked, lockReason, canPlace, buildCost, buildTime, upgradeCost, upgradeTime, affordableLevels,
+  return { getFloor, roomsOnFloor, isUnlocked, lockReason, expansionCost, expansionTime, canExpand, expand, moveCost, move, canPlace, buildCost, buildTime, upgradeCost, upgradeTime, affordableLevels,
     placeRoom, build, upgrade, demolish, tickConstruction, adjacencyBonus, housingCapacity, population, roomCount, totalLevels };
 })();

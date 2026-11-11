@@ -3,9 +3,9 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 const FILES = [
-  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/icons.js',
+  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/events.js', 'js/data/icons.js',
   'js/core/util.js', 'js/core/effects.js', 'js/core/state.js', 'js/core/save.js', 'js/core/economy.js', 'js/core/bunker.js',
-  'js/core/survivors.js', 'js/core/needs.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
+  'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
   'js/core/prestige.js', 'js/core/sim.js', 'js/core/offline.js',
 ];
 // minimal localStorage shim
@@ -72,13 +72,13 @@ t('unmanned room runs at base 25%', () => {
 console.log('Bunker');
 t('build deducts cost and starts a timer', () => {
   S.resources.scrap = 1000; const scrapBefore = S.resources.scrap;
-  const res = DE.Bunker.build(S, 'workshop', 1, 5, now);
+  const res = DE.Bunker.build(S, 'workshop', 1, 10, now);
   assert(res.ok, res.reason); assert(S.resources.scrap === scrapBefore - 70);
   assert(res.room.level === 0 && res.room.construction && res.room.construction.kind === 'build');
 });
-t('cannot build on occupied slot', () => { const r = DE.Bunker.build(S, 'farm', 1, 5, now); assert(!r.ok); });
-t('cannot build 2-wide room where only 1 slot free', () => {
-  const r = DE.Bunker.canPlace(S, 'quarters', 1, 5); assert(!r.ok);
+t('cannot build on occupied cells', () => { const r = DE.Bunker.build(S, 'farm', 1, 10, now); assert(!r.ok); });
+t('cannot build a 4-cell room where only 2 cells are free', () => {
+  const r = DE.Bunker.canPlace(S, 'quarters', 1, 10); assert(!r.ok);
 });
 t('construction completes after its timer', () => {
   const ws = Object.values(S.rooms).find(r => r.type === 'workshop');
@@ -104,12 +104,51 @@ t('bulk upgrade x10 / max', () => {
   if (nmax < 500) assert(!DE.Util.canAfford(S.resources, DE.Bunker.upgradeCost(S, farm, nmax + 1)));
 });
 t('adjacency bonus: farm next to generator', () => {
-  const water = Object.values(S.rooms).find(r => r.type === 'water'); // slot 3, generator at 4
+  const water = Object.values(S.rooms).find(r => r.type === 'water'); // cells 6-7, generator at 8
   assert(DE.Bunker.adjacencyBonus(S, water) >= 0.05);
 });
 t('demolish refunds and frees slot', () => {
   const ws = Object.values(S.rooms).find(r => r.type === 'workshop'); const before = S.resources.scrap;
-  const r = DE.Bunker.demolish(S, ws.id); assert(r.ok); assert(S.floors[0].slots[5] === null); assert(S.resources.scrap > before);
+  const r = DE.Bunker.demolish(S, ws.id); assert(r.ok); assert(S.floors[0].slots[10] === null); assert(S.resources.scrap > before);
+});
+
+t('floors expand sideways and rooms relocate', () => {
+  S.resources.scrap = 1e5; S.resources.concrete = 1e5;
+  const r = DE.Bunker.expand(S, 1, now); assert(r.ok, r.reason);
+  now = run(S, DE.Bunker.getFloor(S, 1).expansion.duration + 1, now, 1);
+  assert(DE.Bunker.getFloor(S, 1).slots.length === 16, 'cols ' + DE.Bunker.getFloor(S, 1).slots.length);
+  const b2 = DE.Bunker.build(S, 'workshop', 1, 10, now); assert(b2.ok, b2.reason); const ws = b2.room; ws.level = 1; ws.construction = null; const m = DE.Bunker.move(S, ws.id, 1, 12); assert(m.ok, m.reason); assert(ws.slot === 12);
+  assert(DE.Bunker.getFloor(S, 1).slots[12] === ws.id && DE.Bunker.getFloor(S, 1).slots[10] === null);
+  assert(!DE.Bunker.move(S, ws.id, 1, 0).ok, 'cannot move onto quarters');
+  DE.Bunker.demolish(S, ws.id);
+});
+
+console.log('Living world');
+t('events: choose applies effects and clears the queue', () => {
+  const E = DE.State.create(null, now); DE.Events.ensure(E);
+  E.events.push({ id: 'ex1', kind: 'bunker', def: 'pipe', title: 'Burst pipe', text: '', ctx: {}, choices: [{ label: 'Patch', effects: { scrap: -80 } }, { label: 'Drain', effects: { waterPct: -0.25 } }] });
+  const sc = E.resources.scrap; const r = DE.Events.choose(E, 'ex1', 0); assert(r.ok); assert(E.resources.scrap === sc - 80); assert(E.events.length === 0);
+  assert(!DE.Events.choose(E, 'ex1', 0).ok, 'gone');
+});
+t('bus upgrade raises team capacity and expedition speed', () => {
+  const E = DE.State.create(null, now); E.research.done.construction = true; E._fx = null; E.resources.scrap = 1e5; E.resources.concrete = 1e5; E.resources.fuel = 1e5; E.resources.research = 1e5;
+  assert(DE.Events.bus(E).capacity === 3);
+  E.floors[0].slots.push(null, null, null, null); const gb = DE.Bunker.build(E, 'garage', 1, 12, now); assert(gb.ok, gb.reason); Object.values(E.rooms).find(r => r.type === 'garage').level = 1; Object.values(E.rooms).find(r => r.type === 'garage').construction = null; E._fx = null;
+  const r = DE.Events.upgradeBus(E); assert(r.ok, r.reason); assert(DE.Events.bus(E).capacity === 4);
+});
+t('goals complete and pay out', () => {
+  const E = DE.State.create(null, now); DE.Events.ensure(E); E.resources.research = 0; ['g_canteen', 'g_staff', 'g_wave3'].forEach(id => E.goals.done[id] = true);
+  const sc = E.resources.research; E.floors.push(DE.State.emptyFloor(2)); DE.Events.tick(E, 0.25, now);
+  assert(E.goals.done.g_b2, 'B2 goal'); assert(E.resources.research === sc + 40, 'reward');
+});
+t('noise raises wave strength; dampening lowers it', () => {
+  const E = DE.State.create(null, now); const n1 = DE.Events.noise(E); assert(n1 > 0);
+  const hp1 = DE.Defense.waveHp(E); E.research.done.dampening = true; E._fx = null; const n2 = DE.Events.noise(E); assert(n2 < n1); assert(DE.Defense.waveHp(E) <= hp1);
+});
+t('artifact effects reach the economy', () => {
+  const E = DE.State.create(null, now); const farm = Object.values(E.rooms).find(r => r.type === 'farm');
+  const before = DE.Economy.computeRates(E).perRoom[farm.id].produces.food; E.artifacts = { seedvault: true }; E._fx = null;
+  approx(DE.Economy.computeRates(E).perRoom[farm.id].produces.food, before * 1.2, 1e-6, 'seed vault');
 });
 
 console.log('Survivors');
@@ -233,7 +272,7 @@ t('offline progression credits production and caps', () => {
 });
 t('offline completes construction timers and limits waves', () => {
   const O = DE.State.create(null, now); O.resources.scrap = 1000; O.resources.fuel = 1e5;
-  const r = DE.Bunker.build(O, 'workshop', 1, 5, now);
+  const r = DE.Bunker.build(O, 'workshop', 1, 10, now);
   DE.Offline.process(O, now + 10 * 3600 * 1000);
   assert(r.room.level === 1, 'built'); assert(O.defense.wave <= 1 + DE.CONFIG.OFFLINE_MAX_WAVES + 1, 'waves ' + O.defense.wave);
   assert(O.defense.nextWaveAt > now + 10 * 3600 * 1000 - 1000, 'next wave in the future');

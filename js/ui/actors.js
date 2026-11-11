@@ -10,7 +10,7 @@ DE.UI.Actors = (function () {
   const esc = (s) => DE.Util.escapeHtml(s);
   const actors = {};                 // survivorId → actor
   const WALK = 60, RIDE = 110;       // px per second
-  const SHAFT_X = 32;                // elevator column centre within a floor
+  const SHAFT_X = 40;                // elevator column centre within a floor
   let last = 0, layer = null;
 
   function ensureLayer() {
@@ -58,12 +58,13 @@ DE.UI.Actors = (function () {
     const el = document.getElementById('room-' + roomId); if (!el) return null;
     const base = layer.getBoundingClientRect(); const r = el.getBoundingClientRect();
     const size = (DE.Data.ROOMS[(DE.UI.state().rooms[roomId] || {}).type] || { size: 1 }).size;
-    return { x: r.left - base.left + r.width * (sx / (200 * size)), y: r.bottom - base.top - 6, floor: +el.closest('.floor').dataset.depth };
+    return { x: r.left - base.left + r.width * (sx / (100 * size)), y: r.bottom - base.top - 4, floor: +el.closest('.floor').dataset.depth };
   }
   function shaftPoint(depth) {
     const fl = document.querySelector(`.floor[data-depth="${depth}"]`); if (!fl || !layer) return null;
     const base = layer.getBoundingClientRect(); const r = fl.getBoundingClientRect();
-    return { x: r.left - base.left + SHAFT_X, y: r.bottom - base.top - 20, floor: depth };
+    const cor = fl.querySelector('.corridor'); const cy = cor ? cor.getBoundingClientRect().bottom - base.top - 6 : r.bottom - base.top - 20;
+    return { x: r.left - base.left + SHAFT_X, y: cy, floor: depth };
   }
 
   function make(sv) {
@@ -92,9 +93,9 @@ DE.UI.Actors = (function () {
     if (!a.placed) { a.queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: 0 }); return; }
     if (a.floor !== dest.floor) {
       const s1 = shaftPoint(a.floor), s2 = shaftPoint(dest.floor); if (!s1 || !s2) { a.queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: 0 }); return; }
-      a.queue.push({ x: s1.x, y: a.y, floor: a.floor, dur: Math.abs(s1.x - a.x) / WALK });
-      a.queue.push({ x: s2.x, y: s2.y, floor: dest.floor, dur: Math.abs(s2.y - s1.y) / RIDE, ride: true });
-      a.queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: Math.abs(dest.x - s2.x) / WALK });
+      a.queue.push({ x: s1.x, y: s1.y, floor: a.floor, dur: Math.hypot(s1.x - a.x, s1.y - a.y) / WALK });
+      a.queue.push({ x: s2.x, y: s2.y, floor: dest.floor, dur: Math.abs(s2.y - s1.y) / RIDE, ride: true, from: a.floor, to: dest.floor });
+      a.queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: Math.hypot(dest.x - s2.x, dest.y - s2.y) / WALK });
     } else a.queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: Math.abs(dest.x - a.x) / WALK });
   }
 
@@ -125,7 +126,7 @@ DE.UI.Actors = (function () {
       if (a.queue.length && now >= a.segEnd) {
         const seg = a.queue.shift();
         const flip = seg.x < a.x - 1 ? true : seg.x > a.x + 1 ? false : null;
-        a.el.classList.toggle('riding', !!seg.ride);
+        a.el.classList.toggle('riding', !!seg.ride); if (seg.ride) DE.UI.Elevator.request(seg.from, seg.to);
         setAnim(a, seg.ride ? 'idle' : seg.dur > 0.05 ? 'walk' : (a.pendingAnim || 'idle'));
         moveTo(a, seg.x, seg.y, seg.dur, flip); a.floor = seg.floor; a.placed = true;
         a.segEnd = now + seg.dur * 1000;
