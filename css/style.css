@@ -725,3 +725,17 @@ body.placing, body.placing * { touch-action: none; }
   border-image: url(../assets/ui/slot.png) 30 30 fill / 7px 9px stretch; font-family: var(--display); font-size: 13px; color: #fff; text-shadow: 0 1px 0 #000; white-space: nowrap; }
 .rc-box img.ico-inline { width: 17px !important; height: 17px !important; }
 .room-flag { align-self: flex-end; margin-bottom: 4px; }
+
+/* nav attention badges (rebuilt) — sit on the tile's top-right corner, outside the skinned border */
+.nav-btn .nav-badge { display: none !important; }
+.nav-btn { overflow: visible !important; }
+.nb { font-style: normal; position: absolute; top: -18px; right: -18px; z-index: 3; pointer-events: auto; animation: nb-pop .35s cubic-bezier(.3, 1.6, .5, 1); }
+.nb-count { min-width: 26px; height: 26px; padding: 0 6px; display: grid; place-items: center; border-radius: 13px; border: 3px solid #14121b;
+  background: radial-gradient(circle at 35% 30%, #ff8a7a, #e8392f 55%, #b32218); box-shadow: inset 0 -2px 0 rgba(0, 0, 0, .25), 0 2px 0 rgba(0, 0, 0, .45); }
+.nb-count b { font-family: var(--display); font-weight: 400; font-size: 14px; line-height: 1; color: #fff; text-shadow: 0 1px 0 #6a1008; }
+.nb-alert img { display: block; width: 30px; height: 30px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .55)); }
+.nb-alert { animation: nb-pop .35s cubic-bezier(.3, 1.6, .5, 1), nb-bob 1.6s ease-in-out .4s infinite; }
+.nb-danger img { filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .55)) drop-shadow(0 0 6px rgba(255, 80, 60, .9)); }
+@keyframes nb-pop { 0% { transform: scale(0); } 100% { transform: scale(1); } }
+@keyframes nb-bob { 50% { transform: translateY(-3px); } }
+@media (max-width: 980px) { .nb { top: -14px; right: -12px; } .nb-alert img { width: 24px; height: 24px; } .nb-count { min-width: 22px; height: 22px; } }

@@ -64,13 +64,25 @@ DE.UI = (function () {
  }
 
  /** Little red counters on the nav dock: what needs attention where. */
+ /** Attention badges on the nav dock: a red counter (idle survivors) or the yellow "!" icon. */
  function updateNavBadges(s) {
  const idle = DE.Survivors.idle(s).length;
- const research = !s.research.current && s.resources.research >= 40 ? '!' : '';
- const wave = (s.defense.nextWaveAt - Date.now()) / 1000 < DE.Defense.warningSec(s) ? '!' : '';
- const set = (nav, v) => { const b = document.querySelector(`#bottombar .nav-btn[data-nav="${nav}"]`); if (!b) return; let el = b.querySelector('.nav-badge');
-   if (!v) { if (el) el.remove(); return; } if (!el) { el = document.createElement('i'); el.className = 'nav-badge'; b.appendChild(el); } if (el.textContent !== String(v)) el.textContent = v; };
- set('survivors', idle || ''); set('research', research); set('defense', wave);
+ const want = {
+   survivors: idle ? { n: idle, tip: idle + ' idle survivor' + (idle > 1 ? 's' : '') } : null,
+   research: !s.research.current && s.resources.research >= 40 ? { alert: true, tip: 'Research points ready — start a project' } : null,
+   defense: (s.defense.nextWaveAt - Date.now()) / 1000 < DE.Defense.warningSec(s) ? { alert: true, danger: true, tip: 'A wave is incoming' } : null,
+ };
+ for (const nav in want) {
+   const btn = document.querySelector(`#bottombar .nav-btn[data-nav="${nav}"]`); if (!btn) continue;
+   const w = want[nav]; let el = btn.querySelector('.nb');
+   const sig = w ? (w.alert ? 'a' + (w.danger ? 'd' : '') : 'n' + w.n) : '';
+   if (!w) { if (el) el.remove(); continue; }
+   if (el && el.dataset.sig === sig) continue;
+   if (!el) { el = document.createElement('i'); btn.appendChild(el); }
+   el.dataset.sig = sig; el.title = w.tip;
+   el.className = 'nb ' + (w.alert ? 'nb-alert' + (w.danger ? ' nb-danger' : '') : 'nb-count');
+   el.innerHTML = w.alert ? `<img src="assets/icons/alert.png" alt="!">` : `<b>${w.n > 9 ? '9+' : w.n}</b>`;
+ }
  }
  function updateResbar() {
  const s = state(); const rates = s._rates; if (!rates) return;
