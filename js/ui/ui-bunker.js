@@ -112,7 +112,9 @@ DE.UI.Bunker = (function () {
         else if (info.starve < 1) flag = 'NO INPUT';
         else if (def.workers > 0 && room.workers.length === 0) flag = 'UNSTAFFED';
       }
-      setHtml(el.querySelector('.room-rate'), rate);
+      // counter box: a label tab above a UI-sheet slot holding the value
+      const label = room.level > 0 && info && Object.keys(info.produces || {}).length ? 'Makes /s' : def.effects && def.effects.housing ? 'Housing' : def.effects && def.effects.storage ? 'Storage' : 'Bonus';
+      setHtml(el.querySelector('.room-rate'), rate ? `<span class="rc-label">${label}</span><span class="rc-box">${rate}</span>` : '');
       setText(el.querySelector('.room-flag'), flag);
       const prog = el.querySelector('.room-progress');
       if (c) {
