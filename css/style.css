@@ -753,3 +753,19 @@ body.placing, body.placing * { touch-action: none; }
 .dk-horde .rig { height: 64px !important; }
 .dk-horde em { background: rgba(0, 0, 0, .55); padding: 0 5px; border-radius: 6px; bottom: -18px !important; }
 @keyframes dk-shamble { 50% { transform: translateX(-6px); } }
+
+/* ============ TOUCH / iPad: no page rubber-banding or zoom, contained momentum scrolling ============ */
+html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text-size-adjust: 100%; -webkit-tap-highlight-color: transparent; }
+.screen { height: 100vh; height: 100dvh; }
+/* every scroll area keeps its own scroll: reaching the end never drags the page or the panel behind it */
+#bunker-wrap, #sidepanel, #drawer-body, .rs-tree-wrap, #resbar, #chips, .modal-body, .sv-list, .dk-sec-body { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+#bunker-wrap { touch-action: pan-x pan-y; }
+#resbar, #chips { touch-action: pan-x; }
+#sidepanel, #drawer-body, .modal-body { touch-action: pan-y; }
+/* non-scrolling chrome must not start a page drag */
+#bottombar, .drawer-head { touch-action: none; }
+#topbar { touch-action: pan-x; }
+.btn, .nav-btn, .menu-btn, .res, .chip, .room, .cell { touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+/* notch / home-indicator safe areas */
+#topbar { padding-top: max(8px, env(safe-area-inset-top)); padding-left: max(10px, env(safe-area-inset-left)); padding-right: max(14px, env(safe-area-inset-right)); }
+#bottombar { padding-bottom: max(10px, env(safe-area-inset-bottom)) !important; }
