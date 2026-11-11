@@ -222,27 +222,23 @@ DE.Scenes = (function () {
     const layout = DE.Data.SCENES[def.id] || DE.Data.SCENES._default;
     const size = def.size, W = CELL * size, level = room.level, tier = tierOf(level);
     let s = `<svg class="scene" viewBox="0 ${-TOP} ${W} ${180 + TOP}" preserveAspectRatio="none" aria-hidden="true">${defs()}${base(def, layout.theme, size, level, room.construction)}`;
-    // floor footprint already taken by sprite furniture: new floor sprites that would mostly overlap
-    // an existing one are skipped, so higher room levels never pile furniture on top of furniture
-    const taken = [];
-    const fits = (a, b) => { for (const [l, r] of taken) { const ov = Math.min(b, r) - Math.max(a, l); if (ov > .35 * Math.min(b - a, r - l)) return false; } return true; };
-    const place = (list) => (list || []).forEach(p => { const [name, x, y, o] = p;
-      const spr = sprite(name, o); if (spr) {
-        const sp = DE.Data.SPRITE_PROPS[name], px = DE.Data.SPRITES[sp.s];
-        // keep the whole sprite inside the room; wall items without a height hang at eye level
-        const hw = sp.h * ((o && o.scale) || 1) * px[0] / px[1] / 2 + (sp.pair || 0), cx = Math.max(hw + 6, Math.min(W - hw - 6, x));
-        let py = FLOOR;
-        if (sp.wall) py = y != null ? y : FLOOR - 62;
-        else if (sp.surface && y != null && y < FLOOR) py = y;                    // sits on a bench / desk top
-        else if (sp.pair) { /* chairs flank a table: allowed to overlap it */ }
-        else if (!sp.berths) { if (!fits(cx - hw, cx + hw)) return; taken.push([cx - hw, cx + hw]); }
-        else taken.push([cx - hw, cx + hw]);
-        s += g('prop sprite sp-' + name, spr, cx, py); return; }
-      const fn = P[name]; if (!fn) return; const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier; s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : ''); });
-    // beds first so they always get their space
-    const all = [layout.props, tier >= 2 && layout.lv10, tier >= 3 && layout.lv25, tier >= 4 && layout.lv50].filter(Boolean).flat();
-    place(all.filter(p => (DE.Data.SPRITE_PROPS[p[0]] || {}).berths));
-    place(all.filter(p => !(DE.Data.SPRITE_PROPS[p[0]] || {}).berths));
+    // sprite furniture: laid out by DE.Data.layoutRoom (packed floor, bench tops, eye-level wall items)
+    const lay = DE.Data.layoutRoom(def.id, level);
+    const img = (it, y, flip) => `<g transform="translate(${it.x.toFixed(1)} ${y.toFixed(1)})"><image href="assets/sprites/${it.s}.png" x="${(-it.w / 2).toFixed(1)}" y="${(-it.h).toFixed(1)}" width="${it.w.toFixed(1)}" height="${it.h.toFixed(1)}" preserveAspectRatio="xMidYMax meet"${flip ? ' transform="scale(-1 1)"' : ''}/></g>`;
+    lay.wall.forEach(it => { s += `<g class="prop sprite sp-${it.name}">${img(it, it.y)}</g>`; });
+    lay.floor.forEach(it => {
+      let out = `<ellipse cx="${it.x.toFixed(1)}" cy="${FLOOR}" rx="${(it.wfull * .48).toFixed(1)}" ry="3.5" fill="#000" opacity=".35"/>`;
+      if (it.sp.pair) out += img(Object.assign({}, it, { x: it.x - it.sp.pair }), FLOOR) + img(Object.assign({}, it, { x: it.x + it.sp.pair }), FLOOR, true);
+      else out += img(it, FLOOR);
+      s += `<g class="prop sprite sp-${it.name}">${out}</g>`;
+    });
+    lay.top.forEach(it => { s += `<g class="prop sprite sp-${it.name}">${img(it, it.y)}</g>`; });
+    // remaining vector-drawn props (pipes, wires, lamps...) keep their authored spots
+    [layout.props, tier >= 2 && layout.lv10, tier >= 3 && layout.lv25, tier >= 4 && layout.lv50].filter(Boolean).flat().forEach(p => {
+      const [name, x, y, o] = p; if (DE.Data.SPRITE_PROPS[name]) return; const fn = P[name]; if (!fn) return;
+      const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier;
+      s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : '');
+    });
     if (room.construction) s += g('construction', P.scaffold({ w: W - 30, h: 110 }), W / 2, FLOOR);
     s += `<rect x="0" y="${-TOP}" width="${W}" height="${180 + TOP}" fill="url(#sc-vig)" class="vig"/></svg>`;
     return s;

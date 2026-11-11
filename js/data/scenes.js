@@ -360,28 +360,78 @@ DE.Data.SPRITE_PROPS = {
   forge: { s: 'furnace', h: 52 }, sack: { s: 'boxes', h: 30 }, ammobox: { s: 'satchel', h: 22 }, monitor: { s: 'computer', h: 40, surface: true }, freezer: { s: 'vending', h: 66 },
   tank: { s: 'growtank', h: 64 }, reactor: { s: 'reactor', h: 86 }, centrifuge: { s: 'centrifuge', h: 30, surface: true },
   // third sheet: industrial, science, nature and wall props
-  sign: { s: 'f3_sign', h: 24, wall: true }, monitorwall: { s: 'f3_monitorwall', h: 40, wall: true }, neon: { s: 'f3_neon', h: 10, wall: true },
-  warningstripe: { s: 'f3_stripe', h: 8, wall: true }, mapscreen: { s: 'f3_mapscreen', h: 34, wall: true }, bigmap: { s: 'f3_mapscreen', h: 48, wall: true }, 
+  sign: { s: 'f3_sign', h: 24, wall: true }, monitorwall: { s: 'f3_monitorwall', h: 40, wall: true },
+  mapscreen: { s: 'f3_mapscreen', h: 34, wall: true }, bigmap: { s: 'f3_mapscreen', h: 48, wall: true }, 
   cablebox: { s: 'f3_cablebox', h: 30, wall: true }, flag: { s: 'f3_flag', h: 50 }, dartboard: { s: 'f3_dartboard', h: 22, wall: true }, lamp: { s: 'f3_lamp', h: 22, wall: true },
   robotarm: { s: 'f3_robotarm', h: 56 }, conveyor: { s: 'f3_conveyor', h: 22 }, turretmodel: { s: 'f3_turret', h: 40 }, press: { s: 'f3_press', h: 66 }, filtercol: { s: 'f3_filter', h: 58 },
   toolboard: { s: 'f3_toolboard', h: 44, wall: true }, missile: { s: 'f3_missile', h: 96 }, anvil: { s: 'f3_anvil', h: 28 }, carlift: { s: 'f3_carlift', h: 60 }, lathe: { s: 'f3_lathe', h: 38 },
   truck: { s: 'f3_truck', h: 56 }, fusioncore: { s: 'f3_fusion', h: 80 }, minecart: { s: 'f3_minecart', h: 34 }, seismo: { s: 'f3_seismo', h: 40 }, hologram: { s: 'f3_hologram', h: 46 },
   dnascreen: { s: 'f3_dna', h: 40, wall: true }, testtubes: { s: 'f3_testtubes', h: 22, surface: true }, glasswall: { s: 'f3_glass', h: 70 }, pod: { s: 'f3_pod', h: 76 }, cryopod: { s: 'f3_cryopod', h: 78 },
   plant: { s: 'f3_plant', h: 30 }, rock: { s: 'f3_rock', h: 30 }, traytower: { s: 'f3_traytower', h: 76 }, water: { s: 'f3_water', h: 56 }, crystal: { s: 'f3_crystal', h: 34 },
-  planter: { s: 'f3_planter', h: 34 }, sprinkler: { s: 'f3_sprinkler', h: 40 }, tree: { s: 'f3_tree', h: 90 }, lava: { s: 'f3_lava', h: 34 }, ore: { s: 'f3_ore', h: 34 },
+  planter: { s: 'f3_planter', h: 34 }, sprinkler: { s: 'f3_sprinkler', h: 40 }, tree: { s: 'f3_plant', h: 46 }, lava: { s: 'f3_lava', h: 34 }, ore: { s: 'f3_ore', h: 34 },
   railing: { s: 'f3_railing', h: 30 }, benchseat: { s: 'chair', h: 32, pair: 42 }, cage: { s: 'f3_cage', h: 48 }, dish: { s: 'f3_dish', h: 44 }, drone: { s: 'f3_drone', h: 18, wall: true },
   punchbag: { s: 'f3_punchbag', h: 64 }, arcade: { s: 'f3_arcade', h: 62 }, dronepad: { s: 'f3_dronepad', h: 20 },
 };
 
-DE.Data.bedsFor = function (type, level) {
-  const L = DE.Data.SCENES[type]; if (!L) return [];
+/* Room layout for sprite furniture: a pure function (no DOM) shared by the renderer and the bed
+ * allocator, so sleepers always lie on the beds that are drawn.
+ *   floor items  packed left→right without overlapping, as close as possible to their authored x;
+ *                if the room is too full the latest-tier extras are dropped (beds never are)
+ *   bench items  (surface: true) sit on top of the floor item they were authored next to
+ *   wall items   hang at eye level, just above whatever stands beneath them, packed too
+ * Returns { floor:[{name,s,x,w,h,flip?}], top:[...], wall:[{...,y}], W }  (y = bottom edge). */
+DE.Data.layoutRoom = function (type, level) {
+  const L = DE.Data.SCENES[type] || DE.Data.SCENES._default, def = (DE.Data.ROOMS || {})[type] || { size: 2 };
+  const W = 100 * def.size, FLOOR = 150, GAP = 5, SP = DE.Data.SPRITE_PROPS, PX = DE.Data.SPRITES || {};
   const tier = level >= 50 ? 4 : level >= 25 ? 3 : level >= 10 ? 2 : 1;
-  const list = (L.props || []).concat(tier >= 2 ? L.lv10 || [] : [], tier >= 3 ? L.lv25 || [] : [], tier >= 4 ? L.lv50 || [] : []);
-  const beds = [];
-  list.forEach(([name, x]) => {
-    const sp = DE.Data.SPRITE_PROPS[name];
-    if (sp && sp.berths) sp.berths.forEach(y => beds.push({ x, y, kind: name }));
-    else if (name === 'cryopod') beds.push({ x, y: -14, kind: 'pod', upright: true });
+  const all = [];
+  [[L.props, 1], [L.lv10, 2], [L.lv25, 3], [L.lv50, 4]].forEach(([list, t]) => { if (t <= tier) (list || []).forEach((p, i) => all.push({ p, t, i })); });
+  const floor = [], tops = [], walls = [];
+  all.forEach(({ p, t, i }) => {
+    const [name, x, , o] = p; const sp = SP[name]; const px = sp && PX[sp.s]; if (!px) return;
+    const h = sp.h * ((o && o.scale) || 1), w = h * px[0] / px[1];
+    const it = { name, s: sp.s, x: Math.max(0, Math.min(W, x)), w, h, t, i, sp, wfull: w + (sp.pair ? sp.pair * 2 : 0) };
+    if (sp.wall) walls.push(it); else if (sp.surface) tops.push(it); else floor.push(it);
+  });
+  // drop extras until the floor fits (highest tier first, never beds)
+  const width = () => floor.reduce((a, f) => a + f.wfull + GAP, GAP);
+  while (width() > W - 4) {
+    const cands = floor.filter(f => !f.sp.berths); if (!cands.length) break;
+    const drop = cands.sort((a, b) => b.t - a.t || b.i - a.i)[0]; floor.splice(floor.indexOf(drop), 1);
+  }
+  // 1-D packing around the authored positions
+  floor.sort((a, b) => a.x - b.x);
+  const pack = (items, lo, hi) => {
+    let prev = lo; items.forEach(f => { f.x = Math.max(f.x, prev + GAP + f.wfull / 2); prev = f.x + f.wfull / 2; });
+    let next = hi; for (let k = items.length - 1; k >= 0; k--) { const f = items[k]; f.x = Math.min(f.x, next - GAP - f.wfull / 2); next = f.x - f.wfull / 2; }
+    prev = lo; items.forEach(f => { f.x = Math.max(f.x, prev + GAP + f.wfull / 2); prev = f.x + f.wfull / 2; });
+  };
+  pack(floor, 0, W);
+  // bench-top items ride on the nearest floor item that is low enough to put things on
+  const top = [];
+  tops.forEach(it => {
+    const host = floor.filter(f => f.h <= 60 && !f.sp.berths && Math.abs(f.x - it.x) < 70).sort((a, b) => Math.abs(a.x - it.x) - Math.abs(b.x - it.x))[0];
+    if (!host || host.used + it.w > host.w) return;
+    host.used = (host.used || 0) + it.w + 2;
+    top.push(Object.assign(it, { x: host.x - host.w / 2 + host.used - it.w / 2, y: FLOOR - host.h + 4 }));
+  });
+  // wall items: eye level, above the tallest thing standing under them
+  walls.sort((a, b) => a.x - b.x); pack(walls, 0, W);
+  const wall = [];
+  walls.forEach(it => {
+    const under = floor.filter(f => Math.abs(f.x - it.x) < (f.w + it.w) / 2).reduce((m, f) => Math.max(m, f.h), 0);
+    const y = Math.min(FLOOR - 52, FLOOR - under - 8);                               // bottom edge
+    if (y - it.h < 22) return;                                                        // no room under the ceiling
+    wall.push(Object.assign(it, { y }));
+  });
+  return { floor, top, wall, W };
+};
+
+DE.Data.bedsFor = function (type, level) {
+  const lay = DE.Data.layoutRoom(type, level), beds = [];
+  lay.floor.forEach(f => {
+    if (f.sp.berths) f.sp.berths.forEach(y => beds.push({ x: f.x, y, kind: f.name }));
+    else if (f.name === 'cryopod') beds.push({ x: f.x, y: -14, kind: 'pod', upright: true });
   });
   return beds.sort((a, b) => a.x - b.x || b.y - a.y);
 };

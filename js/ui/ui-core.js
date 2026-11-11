@@ -49,9 +49,10 @@ DE.UI = (function () {
  /* ---------- top bar ---------- */
  function renderResbar() {
  const R = DE.Data.RESOURCES;
- $('#resbar').innerHTML = DE.Data.RESOURCE_ORDER.map(r => `<div class="res" data-res="${r}" title="${R[r].name}" style="--rc:${R[r].color}" data-action="openDrawer" data-drawer="economy">
+  $('#resbar').innerHTML = DE.Data.RESOURCE_ORDER.map(r => `<div class="res ${R[r].capped ? 'capped' : 'open'}" data-res="${r}" title="${R[r].name}" style="--rc:${R[r].color}" data-action="openDrawer" data-drawer="economy">
  <span class="res-icon">${DE.Icons.res(r)}</span>
- <span class="res-body"><span class="res-line"><b class="res-amt">0</b><small class="res-max"></small></span><span class="res-cap"><i></i></span></span>
+ <span class="res-body"><span class="res-line"><b class="res-amt">0</b><b class="res-max"></b></span><span class="res-cap"><i></i></span></span>
+ ${R[r].capped ? '' : `<span class="res-plus" data-action="openDrawer" data-drawer="research" title="Research">+</span>`}
  <i class="res-rate">+0/s</i>
  </div>`).join('');
  $('#chips').innerHTML = `<div class="chip" id="chip-pop" data-action="openDrawer" data-drawer="survivors" title="Population / housing">${DE.Icons.img('pop')}<b>0/0</b></div>
@@ -72,7 +73,7 @@ DE.UI = (function () {
  rateEl.className = 'res-rate ' + (net < -1e-6 ? 'neg' : net > 1e-6 ? 'pos' : '');
  const capEl = el.querySelector('.res-cap i');
  const maxEl = el.querySelector('.res-max');
- if (isFinite(cap)) { capEl.style.width = Math.min(100, amt / cap * 100) + '%'; capEl.parentElement.style.display = ''; capEl.parentElement.className = 'res-cap' + (amt >= cap * 0.98 ? ' full' : ''); maxEl.textContent = '/ ' + U().fmt(cap); }
+ if (isFinite(cap)) { capEl.style.width = Math.min(100, amt / cap * 100) + '%'; capEl.parentElement.style.display = ''; capEl.parentElement.className = 'res-cap' + (amt >= cap * 0.98 ? ' full' : ''); maxEl.textContent = '\u00a0/\u00a0' + U().fmt(cap); }
  else { capEl.parentElement.style.display = 'none'; maxEl.textContent = ''; }
  el.classList.toggle('empty', amt <= 0.01 && net < 0);
  const eta = net < -1e-6 ? '\nEmpty in ' + U().fmtTime(amt / -net) : (net > 1e-6 && isFinite(cap) && amt < cap) ? '\nFull in ' + U().fmtTime((cap - amt) / net) : '';

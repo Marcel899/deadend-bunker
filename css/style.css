@@ -483,3 +483,23 @@ img.ico-room, img.ico-struct { image-rendering: auto; border-radius: 22%; }
 .res-rate { display: none; } .res:hover .res-rate { display: block; position: absolute; right: 6px; top: -10px; }
 .res-amt { font-size: 18px; } .res-max { font-size: 10px; }
 @media (max-width: 1400px) { .res-max { display: none; } #chips .chip b { font-size: 14px; } .brand span { display: none; } }
+
+/* resource counter v3 (reference style): dark slot, big icon over the left edge,
+   "amount / cap" in bold white above a thick coloured bar; uncapped ones get an orange + */
+.res { flex: 1 1 0; max-width: 190px; min-width: 0; padding: 4px 8px 5px 30px; margin-left: 12px; border: 3px solid #0d0b12; border-radius: 12px;
+  background: linear-gradient(180deg, #34303f, #25222e); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .07), 0 3px 0 rgba(0, 0, 0, .4); }
+.res-icon { left: -20px; width: 44px; height: 44px; }
+.res-icon img.ico { width: 44px; height: 44px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .6)) drop-shadow(0 0 1px #000); }
+.res-body { gap: 3px; align-items: stretch; }
+.res-line { justify-content: center; gap: 0; }
+.res-amt, .res-max { font-family: var(--display); font-weight: 400; font-size: 17px; color: #fff; letter-spacing: .3px; text-shadow: 0 2px 0 rgba(0, 0, 0, .6), 0 0 2px #000; }
+.res-max { color: #fff; display: inline !important; }
+.res-cap { height: 11px; border-radius: 6px; background: #0f0d14; border: 2px solid #0d0b12; box-shadow: inset 0 2px 2px rgba(0, 0, 0, .6); }
+.res-cap i { border-radius: 4px; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .35), inset 0 -2px 0 rgba(0, 0, 0, .2); }
+.res.open .res-body { flex-direction: row; align-items: center; justify-content: space-between; }
+.res.open .res-line { justify-content: flex-start; } .res.open .res-amt { font-size: 19px; }
+.res-plus { flex: 0 0 auto; width: 28px; height: 28px; margin-left: 6px; display: grid; place-items: center; border-radius: 8px; border: 2px solid #0d0b12; cursor: pointer;
+  font-family: var(--display); font-size: 22px; line-height: 1; color: #fff; text-shadow: 0 2px 0 rgba(120, 50, 0, .6);
+  background: linear-gradient(180deg, #ffc35a 0%, #f5a02a 48%, #e07a12 52%, #e07a12 100%); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .45), 0 2px 0 #a34f05; }
+.res-plus:hover { filter: brightness(1.1); } .res-plus:active { transform: translateY(2px); box-shadow: none; }
+@media (max-width: 1400px) { .res-max { display: none !important; } .res { padding-left: 26px; } }
