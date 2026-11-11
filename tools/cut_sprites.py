@@ -79,7 +79,7 @@ ICONS = {'icons1': {1: 'water', 2: 'truck'}, 'power': {0: 'power'},
              15: 'up', 16: 'alert', 17: 'gear', 18: 'star', 19: 'trophy', 20: 'medal', 21: 'scroll', 25: 'bunker', 26: 'factory', 27: 'hospital', 28: 'labbuilding', 29: 'construction',
              30: 'garage', 31: 'watchtower', 32: 'dish', 35: 'van', 37: 'wrench', 38: 'hammer', 42: 'pickaxe', 43: 'shovel', 47: 'medkit', 49: 'helmet', 51: 'check', 53: 'coins',
              54: 'home', 57: 'cross', 63: 'group', 66: 'info', 70: 'chest', 73: 'search', 75: 'warning', 82: 'chart', 88: 'move', 91: 'mappin', 93: 'lock', 99: 'mail', 104: 'turret',
-             107: 'trash', 109: 'calendar', 114: 'plus', 122: 'crown', 127: 'refresh', 129: 'diamond', 133: 'barrier', 137: 'gift', 143: 'spikes', 146: 'signal', 147: 'fire',
+             107: 'trash', 109: 'calendar', 114: 'plus', 122: 'crown', 127: 'refresh', 129: 'diamond', 133: 'barrier', 137: 'gift', 143: 'spikes', 146: 'signal', 147: 'fire', 139: 'eye', 153: 'eyeoff',
              150: 'play', 152: 'snow', 159: 'bolt', 171: 'skull'}}
 
 PREVIEW = '--preview' in sys.argv
@@ -101,6 +101,12 @@ if __name__ == '__main__':
         ordered = cut(sheet); print(sheet, len(ordered))
         for k, name in names.items():
             im = Image.fromarray(ordered[k][2].astype('uint8')); im = im.crop(im.getbbox())
+            if name == 'turret':   # drop the second turret peeking out behind the front one (left edge)
+                px = im.load()
+                for y in range(im.height):
+                    for x in range(min(14, im.width)):
+                        if y < im.height * .72: px[x, y] = (0, 0, 0, 0)
+                im = im.crop(im.getbbox())
             im.thumbnail((128, 128), Image.LANCZOS)
             im.save(os.path.join(ROOT, 'assets', 'icons', name + '.png'), optimize=True)
     for sheet, names in UIKIT.items():

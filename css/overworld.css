@@ -14,8 +14,9 @@
 @keyframes ow-haze { to { opacity: .55; transform: translateX(30px); } }
 .ow-bird { animation: ow-fly 26s linear infinite; animation-delay: var(--d, 0s); }
 @keyframes ow-fly { from { transform: translate(-500px, 40px); } 50% { transform: translate(300px, -20px); } to { transform: translate(1300px, 30px); } }
-.ow-tree { animation: ow-sway 5s ease-in-out infinite alternate; animation-delay: var(--d, 0s); transform-box: fill-box; transform-origin: 50% 100%; }
-@keyframes ow-sway { from { transform: rotate(-1.4deg); } to { transform: rotate(1.6deg); } }
+/* trees pivot on their own trunk base (transform-origin set per tree in px, in SVG user space) */
+.ow-tree { animation: ow-sway 6s ease-in-out infinite alternate; animation-delay: var(--d, 0s); transform-box: view-box; }
+@keyframes ow-sway { from { transform: rotate(-.7deg); } to { transform: rotate(.7deg); } }
 .ow-flag { transform-box: fill-box; transform-origin: 0% 50%; animation: ow-wave 2.2s ease-in-out infinite; }
 @keyframes ow-wave { 0%, 100% { transform: skewY(-3deg) scaleX(1); } 50% { transform: skewY(3deg) scaleX(.96); } }
 .ow-ferris-wheel { transform-box: fill-box; transform-origin: 50% 50%; animation: ow-spin 90s linear infinite; }
@@ -104,7 +105,7 @@ body.no-anim .ow-svg * { animation: none !important; }
 .ow-sunrays { transform-origin: 1120px 265px; animation: ow-spin 240s linear infinite; }
 .ow-mote { animation: ow-mote 9s linear infinite; animation-delay: var(--d, 0s); }
 @keyframes ow-mote { 0% { transform: translate(0, 0); opacity: 0; } 20% { opacity: .5; } 100% { transform: translate(140px, -60px); opacity: 0; } }
-.ow-deadtree { transform-box: fill-box; transform-origin: 50% 100%; animation: ow-sway 7s ease-in-out infinite alternate; }
+.ow-deadtree { transform-box: view-box; animation: ow-sway 8s ease-in-out infinite alternate; }
 .ow-gasstation text { font-family: 'Lilita One', Impact, sans-serif; }
 #scene.just-upgraded .ow-svg { animation: upglow-ow 1s ease-out; }
 @keyframes upglow-ow { 30% { filter: brightness(1.5); } }

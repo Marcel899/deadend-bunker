@@ -633,3 +633,12 @@ img.dk-big { width: 52px !important; height: 52px !important; } img.dk-mid { wid
   border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #ffd53a; transform: translateX(-50%); }
 .nav-btn .nav-badge { position: absolute; top: -8px; right: -6px; min-width: 22px; height: 22px; padding: 0 5px; border-radius: 11px; border: 2px solid #14121b; background: linear-gradient(180deg, #ff5a50 0 52%, #e8392f 52%); color: #fff; font-family: var(--display); font-size: 12px; line-height: 18px; text-align: center; box-shadow: inset 0 -2px 0 #a8201a; }
 @media (max-width: 980px) { .nav-btn { flex: 1 1 0 !important; padding: 4px 2px 8px !important; } .nav-btn img.ico { width: 30px !important; height: 30px !important; } .nav-btn span { font-size: 11px !important; } #bottombar { gap: 4px; padding: 6px 6px 8px !important; } }
+
+/* event choices use the UI-sheet skins too: first choice yellow, the rest dark */
+.modal.event .btn.choice { background: none !important; box-shadow: none !important; border: solid transparent !important; border-width: 12px 14px !important; border-radius: 0 !important; padding: 0 4px 2px !important;
+  border-image: url(../assets/ui/btn-dark.png) 24 26 fill / 12px 14px stretch !important; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .4)); color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, .55); }
+.modal.event .btn.choice.primary { border-image-source: url(../assets/ui/btn-yellow.png) !important; border-image-slice: 26 30 fill !important; text-shadow: 0 2px 0 rgba(130, 60, 0, .65); }
+.modal.event .btn.choice:hover:not(:disabled) { filter: brightness(1.08) drop-shadow(0 4px 0 rgba(0, 0, 0, .4)); transform: translateY(-1px); }
+.modal.event .btn.choice:active:not(:disabled) { transform: translateY(3px); }
+.modal.event .btn.choice small { opacity: .95; }
+.modal.event .btn.choice kbd { background: rgba(0, 0, 0, .35); }

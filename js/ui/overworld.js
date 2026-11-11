@@ -330,8 +330,8 @@ DE.UI.Overworld = (function () {
   function wasteland() {
     const rocks = [[1100, 436, 90], [1180, 458, 50], [1560, 418, 120], [1628, 456, 60], [960, 456, 46]];
     return `<g class="ow-wasteland">
-      <use class="ow-deadtree" href="#ow-deadtree" x="1240" y="${GROUND - 150}" width="100" height="160"/>
-      <use class="ow-deadtree" href="#ow-deadtree" x="1470" y="${GROUND - 120}" width="80" height="128"/>
+      <use class="ow-deadtree" href="#ow-deadtree" x="1240" y="${GROUND - 150}" width="100" height="160" style="transform-origin:1290px ${GROUND + 10}px"/>
+      <use class="ow-deadtree" href="#ow-deadtree" x="1470" y="${GROUND - 120}" width="80" height="128" style="transform-origin:1510px ${GROUND + 8}px"/>
       <use href="#ow-bus" x="1300" y="${GROUND - 78}" width="220" height="80" transform="rotate(-3 1410 ${GROUND})"/>
       <use href="#ow-car" x="1030" y="${GROUND - 56}" width="130" height="56" style="color:#4b2d46"/>
       <use href="#ow-car" x="1570" y="${GROUND - 50}" width="110" height="48" style="color:#6a5a2a" transform="rotate(6 1620 ${GROUND})"/>
@@ -347,7 +347,7 @@ DE.UI.Overworld = (function () {
   }
   function trees() {
     const T = [[1000, 318, 100, 0], [1056, 340, 76, 1], [1584, 296, 112, 2], [1636, 334, 76, 3], [1520, 352, 56, 4]];
-    return `<g class="ow-trees">${T.map(([x, y, w, i]) => `<g class="ow-tree" style="--d:${(i * .7).toFixed(1)}s"><use href="#ow-pine" x="${x}" y="${y}" width="${w}" height="${w * 220 / 120}"/></g>`).join('')}</g>`;
+    return `<g class="ow-trees">${T.map(([x, y, w, i]) => `<g class="ow-tree" style="--d:${(i * .7).toFixed(1)}s;transform-origin:${(x + w / 2).toFixed(0)}px ${(y + w * 220 / 120).toFixed(0)}px"><use href="#ow-pine" x="${x}" y="${y}" width="${w}" height="${w * 220 / 120}"/></g>`).join('')}</g>`;
   }
   /* Ground: a slightly undulating turf band with a dense, static hand-drawn grass fringe (no
    * whole-strip skewing), a worn dirt path from the bunker door to the road, pebbles, a cut
