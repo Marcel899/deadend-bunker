@@ -158,20 +158,56 @@ DE.UI = (function () {
    + '\nClick to open Defense';
  }
 
- /* ---------- toasts & floaters ---------- */
- function toast(msg, kind, ms, iconKey) {
- const root = $('#toasts'); if (!root) return;
- const dup = Array.from(root.children).find(t => t.dataset.msg === msg);
- if (dup) { dup.classList.add('show'); clearTimeout(dup._t); dup._t = setTimeout(() => { dup.classList.remove('show'); setTimeout(() => dup.remove(), 400); }, ms || 3200); return; }
- const el = document.createElement('div'); el.dataset.msg = msg;
- el.className = 'toast ' + (kind || '');
- const ic = iconKey || (kind === 'err' ? 'warning' : kind === 'warn' ? 'wave' : 'morale');
- el.innerHTML = `<span class="toast-ico ${kind || ''}">${DE.Icons.img(ic)}</span><span>${msg}</span>`;
- root.appendChild(el);
- requestAnimationFrame(() => el.classList.add('show'));
- el._t = setTimeout(() => { el.classList.remove('show'); setTimeout(() => el.remove(), 400); }, ms || 3200);
- while (root.children.length > 3) root.firstChild.remove();
+ /* ---------- notifications ---------- */
+ // Compact pills stacked at the top of the bunker view, newest on top. A repeat of the same text
+ // merges into one pill with a ×N counter; the same `key` (e.g. one room being upgraded again)
+ // replaces the text instead of stacking. At most three are visible, hovering pauses the timer
+ // and a tap dismisses.
+ const TOAST_MAX = 3;
+ function toast(msg, kind, ms, iconKey, opts) {
+ const root = $('#toasts'); if (!root) return null;
+ opts = opts || {}; kind = kind || 'info';
+ const key = opts.key || kind + '|' + msg, dur = ms || (kind === 'err' ? 2400 : 3400);
+ placeToasts();
+ let el = Array.from(root.children).find(t => t.dataset.key === key && !t.classList.contains('out'));
+ if (el) {
+   if (el.dataset.msg === msg) { const n = (+el.dataset.n || 1) + 1; el.dataset.n = n; el.querySelector('.toast-n').textContent = '×' + n; el.classList.add('has-n'); }
+   else { el.dataset.msg = msg; el.querySelector('.toast-msg').innerHTML = msg; }
+   el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump');
+   if (root.firstChild !== el) root.prepend(el);
+   arm(el, dur); return el;
  }
+ el = document.createElement('div');
+ el.className = 'toast ' + kind; el.dataset.key = key; el.dataset.msg = msg; el.dataset.n = 1;
+ const ic = iconKey || (kind === 'err' ? 'warning' : kind === 'warn' ? 'alert' : kind === 'ok' ? 'check' : 'info');
+ el.innerHTML = `<span class="toast-ico">${ic.charAt(0) === '<' ? ic : DE.Icons.img(ic)}</span><span class="toast-msg">${msg}</span><b class="toast-n"></b><i class="toast-t"></i>`;
+ el.addEventListener('click', () => dismissToast(el));
+ el.addEventListener('pointerenter', (e) => { if (e.pointerType === 'mouse') { clearTimeout(el._t); el.classList.add('hold'); } });
+ el.addEventListener('pointerleave', (e) => { if (e.pointerType === 'mouse' && el.classList.contains('hold')) { el.classList.remove('hold'); arm(el, 1500); } });
+ root.prepend(el);
+ requestAnimationFrame(() => el.classList.add('show'));
+ arm(el, dur);
+ Array.from(root.children).filter(t => !t.classList.contains('out')).slice(TOAST_MAX).forEach(dismissToast);
+ return el;
+ }
+ function arm(el, ms) {
+ clearTimeout(el._t);
+ const bar = el.querySelector('.toast-t'); if (bar) { bar.style.animation = 'none'; void bar.offsetWidth; bar.style.animation = `toastT ${ms}ms linear forwards`; }
+ el._t = setTimeout(() => dismissToast(el), ms);
+ }
+ function dismissToast(el) { if (!el || el.classList.contains('out')) return; clearTimeout(el._t); el.classList.add('out'); el.classList.remove('show'); setTimeout(() => el.remove(), 300); }
+ /** Centre the stack over the bunker view, under the top bar (and under an open drawer's header). */
+ function placeToasts() {
+ const root = $('#toasts'), top = $('#topbar'), wrap = $('#bunker-wrap'), game = $('#game-screen'); if (!root || !top || !wrap || !game) return;
+ const g = game.getBoundingClientRect(), r = wrap.getBoundingClientRect(), dr = $('#drawer');
+ const head = dr && !dr.classList.contains('hidden') ? (dr.querySelector('.drawer-head') || {}).offsetHeight || 0 : 0;
+ root.style.top = Math.round(r.top - g.top + head + 10) + 'px';
+ root.style.left = Math.round(r.left - g.left + r.width / 2) + 'px';
+ root.style.maxWidth = Math.max(260, Math.min(520, r.width - 24)) + 'px';
+ }
+ window.addEventListener('resize', () => placeToasts());
+
+ /* ---------- floaters ---------- */
  /** Feedback for a successful purchase: button pulse, floating cost, short toast. */
  function purchased(el, cost, msg) {
  DE.Audio.sfx(/upgrad/i.test(msg || '') ? 'upgrade' : 'buy');
@@ -210,9 +246,10 @@ DE.UI = (function () {
  function eventModal(ev) {
  DE.Audio.sfx('event');
  const s = state(); const buttons = ev.choices.map((c, i) => {
- const tr = c.trade; const can = !tr || U().canAfford(s.resources, tr.give);
+ const tr = c.trade; const can = DE.Events.canChoose(s, ev, i).ok;
  const label = tr ? `Give ${U().costText(tr.give)} for ${U().costText(tr.get)}` : esc(c.label);
- return `<button class="btn choice ${i === 0 ? 'primary' : ''} ${can ? '' : 'cant'}" data-action="eventChoice" data-id="${ev.id}" data-i="${i}" ${can ? '' : 'disabled'}><kbd>${i + 1}</kbd><span><b>${label}</b>${c.desc ? `<small>${esc(c.desc)}</small>` : ''}</span></button>`; }).join('');
+ const chips = consequences(s, c).map(x => `<i class="cq ${x.cls}">${x.ic || ''}${x.t}</i>`).join('');
+ return `<button class="btn choice ${i === 0 ? 'primary' : ''} ${can ? '' : 'cant'}" data-action="eventChoice" data-id="${ev.id}" data-i="${i}" ${can ? '' : 'disabled'}><kbd>${i + 1}</kbd><span><b>${label}</b>${c.desc ? `<small>${esc(c.desc)}</small>` : ''}<span class="cqs">${chips}</span></span></button>`; }).join('');
  // the people involved stand in the header scene
  const ids = ev.kind === 'expedition' ? (ev.ctx.members || []) : [ev.ctx.aId, ev.ctx.bId];
  const people = ids.map(id => s.survivors[id]).filter(Boolean).slice(0, 4);
@@ -220,6 +257,41 @@ DE.UI = (function () {
  const kind = ev.kind === 'expedition' ? 'Expedition report' : 'Bunker event';
  modal({ title: `<span class="ev-kind">${kind}</span>${esc(ev.title)}`, icon: ev.kind === 'expedition' ? 'map' : 'scroll', cls: 'event ' + ev.kind, locked: true,
  html: `<div class="ev-stage ${ev.kind}">${cast || DE.Icons.img(ev.kind === 'expedition' ? 'map' : 'warning', 'ev-emblem')}</div><p class="story">${esc(ev.text)}</p><div class="choices">${buttons}</div>`, buttons: [] });
+ }
+
+ /** What a choice will do, as small coloured chips: gains green, costs red (dim when you cannot
+  *  pay), gambles orange, rare finds gold. Built from the same effect keys DE.Events applies. */
+ function consequences(s, c) {
+ const out = [], fx = c.effects || {}, R = DE.Data.RESOURCES, im = (k) => DE.Icons.img(k, 'ico-inline');
+ const res = (k, n) => { if (!n) return; const short = n < 0 && s.resources[k] + 1e-6 < -n; out.push({ cls: n > 0 ? 'good' : short ? 'bad short' : 'bad', ic: DE.Icons.res(k, 'ico-inline'), t: (n > 0 ? '+' : '−') + U().fmt(Math.abs(n)) + (short ? ' · have ' + U().fmt(s.resources[k]) : '') }); };
+ if (c.trade) { for (const k in c.trade.give) res(k, -c.trade.give[k]); for (const k in c.trade.get) res(k, c.trade.get[k]); out.push({ cls: 'good', ic: im('people'), t: 'Traders +1' }); }
+ for (const k in fx) {
+   const v = fx[k];
+   if (R[k]) { res(k, v); continue; }
+   switch (k) {
+     case 'loot': for (const r in v) res(r, Math.round(v[r] * DE.Events.bus(s).cargo)); break;
+     case 'lootMult': out.push({ cls: v >= 1 ? 'good' : 'bad', ic: im('chest'), t: 'Haul ' + (v >= 1 ? '+' : '−') + Math.round(Math.abs(1 - v) * 100) + '%' }); break;
+     case 'injure': out.push({ cls: 'risk', ic: im('medkit'), t: Math.round(v[0] * 100) + '% injury risk' }); break;
+     case 'heal': out.push({ cls: 'good', ic: im('medkit'), t: 'Heal all +' + v }); break;
+     case 'rescue': case 'recruit': if (v) { const bed = DE.Bunker.population(s) < DE.Bunker.housingCapacity(s); out.push({ cls: bed ? 'good' : 'warn', ic: im('pop'), t: bed ? '+1 survivor' : 'No free bed!' }); } break;
+     case 'artifact': out.push({ cls: 'gold', ic: im('artifacts'), t: 'Artifact' }); break;
+     case 'artifactOrScrap': out.push({ cls: 'gold', ic: im('artifacts'), t: '40% artifact, else +' + v + ' scrap' }); break;
+     case 'morale': out.push({ cls: v >= 0 ? 'good' : 'bad', ic: im('morale'), t: (v > 0 ? '+' : '−') + Math.abs(v) + ' morale' }); break;
+     case 'shock': out.push({ cls: 'bad', ic: im('morale'), t: 'Morale shaken' }); break;
+     case 'rep': for (const f in v) out.push({ cls: v[f] >= 0 ? 'good' : 'bad', ic: im('people'), t: DE.Data.FACTIONS[f].name.split(' ').pop() + ' ' + (v[f] > 0 ? '+' : '') + v[f] }); break;
+     case 'xp': case 'xpA': out.push({ cls: 'good', ic: im('star'), t: '+' + v + ' XP' }); break;
+     case 'restA': out.push({ cls: 'good', ic: im('morale'), t: 'Fully rested' }); break;
+     case 'energyA': out.push({ cls: v >= 0 ? 'good' : 'bad', ic: im('power'), t: (v > 0 ? '+' : '−') + Math.abs(v) + ' energy' }); break;
+     case 'bond': case 'bondAB': out.push({ cls: 'good', ic: im('people'), t: 'Friendship' }); break;
+     case 'waterPct': case 'electricityPct': out.push({ cls: 'bad', ic: DE.Icons.res(k === 'waterPct' ? 'water' : 'electricity', 'ico-inline'), t: '−' + Math.round(-v * 100) + '% stored' }); break;
+     case 'traps': out.push({ cls: 'good', ic: im('traps'), t: '+' + v + ' traps' }); break;
+     case 'risk': out.push({ cls: 'risk', ic: im('biohazard'), t: Math.round(v[0] * 100) + '% infected' }); break;
+     case 'buff': out.push({ cls: 'good', ic: DE.Icons.room(v[0], 'ico-inline'), t: DE.Data.ROOMS[v[0]].name + ' +' + Math.round(v[1] * 100) + '% for ' + Math.round(v[2] / 60) + 'm' }); break;
+     default: break;
+   }
+ }
+ if (!out.length) out.push({ cls: 'none', t: 'Nothing changes' });
+ return out;
  }
 
  function closeModal() { const root = $('#modal-root'); root.classList.add('hidden'); root.innerHTML = ''; }
@@ -233,12 +305,13 @@ DE.UI = (function () {
  ui.drawer = name; ui.lastDrawerHtml = '';
  $('#drawer').classList.remove('hidden');
  document.querySelectorAll('#bottombar .nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
- renderDrawer();
+ renderDrawer(); placeToasts();
  }
  function closeDrawer() {
  ui.drawer = null;
  $('#drawer').classList.add('hidden');
  document.querySelectorAll('#bottombar .nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === 'bunker'));
+ placeToasts();
  }
  function renderDrawer(force) {
  if (!ui.drawer) return;

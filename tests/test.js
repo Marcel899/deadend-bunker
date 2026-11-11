@@ -131,6 +131,16 @@ t('events: choose applies effects and clears the queue', () => {
   const sc = E.resources.scrap; const r = DE.Events.choose(E, 'ex1', 0); assert(r.ok); assert(E.resources.scrap === sc - 80); assert(E.events.length === 0);
   assert(!DE.Events.choose(E, 'ex1', 0).ok, 'gone');
 });
+t('events: a cost you cannot pay blocks that choice, never the whole card', () => {
+  const E = DE.State.create(null, now); DE.Events.ensure(E); E.resources.scrap = 50;
+  const ev = { id: 'ex2', kind: 'bunker', title: 'Pipe', text: '', ctx: {}, choices: [{ label: 'Patch', effects: { scrap: -80 } }, { label: 'Drain', effects: { waterPct: -0.25 } }] };
+  E.events.push(ev);
+  assert(!DE.Events.canChoose(E, ev, 0).ok && DE.Events.canChoose(E, ev, 1).ok, 'patch blocked, drain open');
+  assert(!DE.Events.choose(E, 'ex2', 0).ok && E.resources.scrap === 50, 'nothing paid');
+  // when no choice is affordable, every choice stays open so the card can always be closed
+  const ev3 = { id: 'ex3', kind: 'bunker', title: 'Toll', text: '', ctx: {}, choices: [{ label: 'Pay', effects: { scrap: -80 } }, { label: 'Pay more', effects: { scrap: -200 } }] };
+  E.events.push(ev3); assert(DE.Events.canChoose(E, ev3, 0).ok && DE.Events.choose(E, 'ex3', 0).ok);
+});
 t('bus upgrade raises team capacity and expedition speed', () => {
   const E = DE.State.create(null, now); E.research.done.construction = true; E._fx = null; E.resources.scrap = 1e5; E.resources.concrete = 1e5; E.resources.fuel = 1e5; E.resources.research = 1e5;
   assert(DE.Events.bus(E).capacity === 3);

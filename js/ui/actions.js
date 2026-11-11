@@ -47,7 +47,7 @@ DE.Actions = (function () {
  A.nextEvent = () => { const ev = (S().events || [])[0]; if (ev) UI().eventModal(ev); };
  A.eventChoice = (p, el) => {
  const ev = (S().events || []).find(e => e.id === p.id); const r = DE.Events.choose(S(), p.id, +p.i); if (!r.ok) return fail(r);
- UI().closeModal(); UI().toast((ev ? ev.title + ': ' : '') + (r.summary || 'Done.'), 'ok', 5000, 'scroll');
+ UI().closeModal(); UI().toast((ev ? '<b>' + UI().esc(ev.title) + '</b> · ' : '') + UI().esc(r.summary || 'Done.'), 'ok', 4500, 'scroll');
  done();
  };
  A.busUpgrade = (p, el) => { const next = DE.Events.busNext(S()); const r = DE.Events.upgradeBus(S()); if (!r.ok) return fail(r); UI().purchased(el, r.cost, 'New vehicle: ' + next.name); S().log.push({ t: Date.now(), msg: 'Expedition vehicle upgraded to ' + next.name + '.' }); done(); };

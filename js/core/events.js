@@ -102,10 +102,25 @@ DE.Events = (function () {
   }
 
   /** Resolve a queued event with the chosen option; returns a summary for the UI. */
+  /** A choice that costs resources needs them (trades included). */
+  function payable(state, ch) {
+    if (ch.trade) return U().canAfford(state.resources, ch.trade.give);
+    const fx = ch.effects || {};
+    for (const k in fx) if (DE.Data.RESOURCES[k] && fx[k] < 0 && state.resources[k] + 1e-6 < -fx[k]) return false;
+    return true;
+  }
+  /** Can choice i be taken now? Unaffordable costs block it, unless no choice is affordable at all
+   *  (an event card must always have a way out). */
+  function canChoose(state, ev, i) {
+    const ch = ev && ev.choices[i]; if (!ch) return { ok: false, reason: 'No such choice' };
+    if (payable(state, ch) || !ev.choices.some(c => payable(state, c))) return { ok: true };
+    return { ok: false, reason: ch.trade ? 'Not enough to trade' : 'Not enough resources' };
+  }
   function choose(state, eventId, index) {
     ensure(state);
     const i = state.events.findIndex(e => e.id === eventId); if (i < 0) return { ok: false, reason: 'Event is gone' };
     const ev = state.events[i]; const ch = ev.choices[index]; if (!ch) return { ok: false, reason: 'No such choice' };
+    const can = canChoose(state, ev, index); if (!can.ok) return can;
     if (ch.trade) {
       if (!U().canAfford(state.resources, ch.trade.give)) return { ok: false, reason: 'Not enough to trade' };
       U().pay(state.resources, ch.trade.give); for (const r in ch.trade.get) gainRes(state, r, ch.trade.get[r]); state.rep.traders = Math.min(5, (state.rep.traders || 0) + 1);
@@ -162,5 +177,5 @@ DE.Events = (function () {
     if (state.buffs.length) { const n = state.buffs.length; state.buffs = state.buffs.filter(b => b.until > state.playtime); if (state.buffs.length !== n) state._fx = null; }
   }
 
-  return { ensure, bus, busNext, upgradeBus, noise, noiseLevel, rollMutation, mutation, tick, choose, applyEffects, activeGoals, friendsIn, encounter, bond, randomArtifact };
+  return { ensure, bus, busNext, upgradeBus, noise, noiseLevel, rollMutation, mutation, tick, choose, canChoose, applyEffects, activeGoals, friendsIn, encounter, bond, randomArtifact };
 })();

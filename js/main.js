@@ -83,24 +83,24 @@ DE.Game = (function () {
  const s = G.state; if (!events || !events.length) return;
  events.forEach(e => {
  switch (e.type) {
- case 'built': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast(DE.Icons.room(d.id, 'ico-inline') + '' + d.name + ' completed on B' + e.room.floor, 'ok'); log(d.name + ' built on B' + e.room.floor + '.'); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-built'); break; }
- case 'upgraded': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast(DE.Icons.room(d.id, 'ico-inline') + '' + d.name + ' → level ' + e.room.level, 'ok'); DE.UI.Bunker.flashRoom(e.room.id, 'just-upgraded'); break; }
- case 'expanded': DE.UI.toast(DE.Icons.img('dig', 'ico-inline') + ' B' + e.depth + ' widened: ' + DE.CONFIG.WING_CELLS + ' new cells', 'ok'); log('Floor B' + e.depth + ' widened.'); DE.UI.refresh(); break;
-      case 'research': DE.UI.toast('Research complete: ' + e.node.name, 'ok', 5000); log('Researched ' + e.node.name + '.'); break;
+ case 'built': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> built on B' + e.room.floor, 'ok', 3200, DE.Icons.room(d.id)); log(d.name + ' built on B' + e.room.floor + '.'); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-built'); break; }
+ case 'upgraded': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> upgraded to level ' + e.room.level, 'ok', 3200, DE.Icons.room(d.id), { key: 'up:' + e.room.id }); DE.UI.Bunker.flashRoom(e.room.id, 'just-upgraded'); break; }
+ case 'expanded': DE.UI.toast('B' + e.depth + ' widened: ' + DE.CONFIG.WING_CELLS + ' new cells', 'ok', 3400, 'dig'); log('Floor B' + e.depth + ' widened.'); DE.UI.refresh(); break;
+      case 'research': DE.UI.toast('Research complete: <b>' + esc(e.node.name) + '</b>', 'ok', 4500, 'research'); log('Researched ' + e.node.name + '.'); break;
  case 'excavated':
  log('Floor B' + e.depth + ' excavated' + (e.facility ? ' — discovered ' + e.facility.name + '!' : '.'));
  DE.UI.refresh(); DE.UI.Bunker.revealFloor(e.depth);
  if (e.facility) DE.UI.modal({ title: DE.Icons.img('facility', 'ico-inline') + ' Discovery: ' + esc(e.facility.name), cls: 'discovery', html: `<p class="lore">${esc(e.facility.lore)}</p><p>Floor B${e.depth} now contains a unique room: <b>${DE.Icons.room(e.facility.room, 'ico-inline')} ${esc(DE.Data.ROOMS[e.facility.room].name)}</b> — ${esc(DE.Data.ROOMS[e.facility.room].desc)}</p>` });
- else DE.UI.toast('Floor B' + e.depth + ' is ready', 'ok');
- if (e.find) { const f = e.find; const what = f.loot ? ' ' + U().costText(f.loot) : ''; DE.UI.toast((f.kind === 'survivor' ? DE.Icons.img('pop', 'ico-inline') : f.kind === 'notes' ? DE.Icons.img('research', 'ico-inline') : DE.Icons.img('chest', 'ico-inline')) + ' ' + esc(f.text) + what, 'ok', 6000); log('Digging B' + e.depth + ': ' + f.text); }
+ else DE.UI.toast('Floor <b>B' + e.depth + '</b> is ready to build on', 'ok', 4000, 'floors');
+ if (e.find) { const f = e.find; const what = f.loot ? ' ' + U().costText(f.loot) : ''; DE.UI.toast(esc(f.text) + what, 'ok', 5500, f.kind === 'survivor' ? 'pop' : f.kind === 'notes' ? 'research' : 'chest'); log('Digging B' + e.depth + ': ' + f.text); }
  break;
  case 'wave': {
  const r = e.result; DE.UI.Bunker.playWave(r);
  const loot = r.reward && Object.keys(r.reward).length ? ' Salvaged ' + U().costText(r.reward) + '.' : '';
  if (loot) setTimeout(() => DE.UI.Bunker.collectAt('#wall', r.reward), 1200);
- if (r.refugee) { DE.UI.toast(DE.Icons.img('pop', 'ico-inline') + ' ' + esc(r.refugee) + ' watched you hold the gate and asked to come in.', 'ok', 6000); log(r.refugee + ' joined after wave ' + r.wave + '.'); }
- if (r.outcome === 'victory') { DE.UI.toast((r.boss ? 'BOSS wave ' : 'Wave ') + r.wave + (r.mutation ? ' (' + r.mutation + ')' : '') + ' repelled!' + (r.streak > 1 ? ' ' + r.streak + ' in a row (+' + Math.min(50, 10 * (r.streak - 1)) + '% loot).' : '') + loot, 'ok', 5000); log('Wave ' + r.wave + ' repelled.'); }
- else if (r.outcome === 'held') { DE.UI.toast('Wave ' + r.wave + ': the wall held but took ' + r.wallDamage + ' damage.' + loot + (r.injured.length ? ' Injured: ' + r.injured.join(', ') : ''), 'warn', 6000); log('Wave ' + r.wave + ': wall damaged (−' + r.wallDamage + ').'); }
+ if (r.refugee) { DE.UI.toast('<b>' + esc(r.refugee) + '</b> saw you hold the gate and joined', 'ok', 5000, 'pop'); log(r.refugee + ' joined after wave ' + r.wave + '.'); }
+ if (r.outcome === 'victory') { DE.UI.toast('<b>' + (r.boss ? 'BOSS wave ' : 'Wave ') + r.wave + ' repelled</b>' + (r.streak > 1 ? ' · ' + r.streak + ' in a row' : '') + (r.reward && Object.keys(r.reward).length ? ' · ' + U().costText(r.reward) : ''), 'ok', 4500, 'trophy'); log('Wave ' + r.wave + ' repelled.'); }
+ else if (r.outcome === 'held') { DE.UI.toast('<b>Wave ' + r.wave + ' held</b> · wall −' + U().fmt(r.wallDamage) + (r.injured.length ? ' · ' + r.injured.length + ' injured' : '') + (r.reward && Object.keys(r.reward).length ? ' · ' + U().costText(r.reward) : ''), 'warn', 5000, 'wallicon'); log('Wave ' + r.wave + ': wall damaged (−' + r.wallDamage + ').'); }
  else {
  log('Wave ' + r.wave + ': BREACH! Resources lost.');
  DE.UI.modal({ title: 'Wave ' + r.wave + ' — BREACH', cls: 'breach', html: `<p>The horde broke through the wall.</p><p><b>Lost:</b> ${Object.keys(r.losses).map(k => DE.Icons.res(k, 'ico-inline') + '' + U().fmt(r.losses[k])).join(', ')}</p>${r.injured.length ? `<p><b>Injured:</b> ${r.injured.map(esc).join(', ')}</p>` : ''}<p class="muted">Repair the wall, post guards and consider turrets. Morale takes a hit for a while.</p>`, buttons: [{ label: 'To Defense', action: 'openDrawer', params: { drawer: 'defense' }, cls: 'primary' }, { label: 'Close', action: 'closeModal' }] });
@@ -109,14 +109,14 @@ DE.Game = (function () {
  }
  case 'expedition': {
  const r = e.result; const loc = DE.Expeditions.location(r.location);
- DE.UI.toast(DE.Icons.img('location', 'ico-inline') + ' Team back from ' + loc.name + ': ' + Object.keys(r.loot).map(k => DE.Icons.res(k, 'ico-inline') + U().fmt(r.loot[k])).join('') + (r.rescued ? ' · rescued ' + esc(r.rescued) : '') + (r.injured.length ? ' ·  ' + r.injured.length + ' injured' : ''), 'ok', 6000);
+ DE.UI.toast('<b>Team back from ' + esc(loc.name) + '</b>' + (Object.keys(r.loot).length ? ' · ' + U().costText(r.loot) : '') + (r.rescued ? ' · rescued ' + esc(r.rescued) : '') + (r.injured.length ? ' · ' + r.injured.length + ' injured' : ''), 'ok', 5000, 'vehicle');
  log('Expedition to ' + loc.name + ' returned.' + (r.rescued ? ' Rescued ' + r.rescued + '.' : ''));
  DE.UI.Bunker.collectAt('.hatch', r.loot);
  break;
  }
- case 'goal': DE.UI.toast(DE.Icons.img('medal', 'ico-inline') + ' Objective complete: ' + esc(e.goal.name) + ' — reward ' + Object.keys(e.goal.reward).map(k => (DE.Data.RESOURCES[k] ? DE.Icons.res(k, 'ico-inline') : k + ' ') + e.goal.reward[k]).join(' '), 'ok', 6000, 'medal'); DE.UI.Bunker.collectAt('#chip-pop', e.goal.reward); break;
- case 'friends': DE.UI.toast(DE.Icons.img('people', 'ico-inline') + ' ' + esc(e.a) + ' and ' + esc(e.b) + ' are now friends. They work better together.', 'ok', 5000, 'people'); break;
- case 'radio': DE.UI.toast('' + esc(e.survivor.name) + ' heard the broadcast and joined!', 'ok', 5000); log(e.survivor.name + ' answered the radio and joined.'); break;
+ case 'goal': DE.UI.toast('Objective complete: <b>' + esc(e.goal.name) + '</b> · ' + U().costText(e.goal.reward), 'ok', 4500, 'star'); DE.UI.Bunker.collectAt('#chip-pop', e.goal.reward); break;
+ case 'friends': DE.UI.toast('<b>' + esc(e.a) + '</b> and <b>' + esc(e.b) + '</b> are friends now — they work better together', 'info', 4000, 'pop'); break;
+ case 'radio': DE.UI.toast('<b>' + esc(e.survivor.name) + '</b> heard the broadcast and joined', 'ok', 4500, 'pop'); log(e.survivor.name + ' answered the radio and joined.'); break;
  default: break;
  }
  });
@@ -140,7 +140,7 @@ DE.Game = (function () {
  ${sum.newSurvivors > 0 ? `<div class="row"><span> New survivors</span><b>${sum.newSurvivors}</b></div>` : ''}`,
  buttons: [{ label: 'Back to work', action: 'closeModal', cls: 'primary' }] });
  // facilities discovered offline deserve their own note
- sum.events.filter(e => e.type === 'excavated' && e.facility).forEach(e => DE.UI.toast(DE.Icons.img('facility', 'ico-inline') + ' Discovered ' + e.facility.name + ' on B' + e.depth + '!', 'ok', 7000));
+ sum.events.filter(e => e.type === 'excavated' && e.facility).forEach(e => DE.UI.toast('Discovered <b>' + esc(e.facility.name) + '</b> on B' + e.depth, 'ok', 6000, 'facility'));
  };
 
  return G;
