@@ -23,7 +23,7 @@ DE.UI.Overworld = (function () {
       </linearGradient>
       <linearGradient id="ow-atmo" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ff9a4a" stop-opacity="0"/><stop offset="1" stop-color="#ffb060" stop-opacity=".45"/></linearGradient><linearGradient id="ow-grasslight" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2a1a30" stop-opacity=".35"/><stop offset=".45" stop-color="#2a1a30" stop-opacity="0"/><stop offset="1" stop-color="#ffd27a" stop-opacity=".28"/></linearGradient><radialGradient id="ow-ray" cx="0" cy=".5" r="1"><stop offset="0" stop-color="#fff2b0" stop-opacity=".5"/><stop offset="1" stop-color="#fff2b0" stop-opacity="0"/></radialGradient><filter id="ow-blur6" x="-30%" y="-30%" width="160%" height="160%"><feGaussianBlur stdDeviation="6"/></filter><radialGradient id="ow-sunglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#fff6c8" stop-opacity=".95"/><stop offset=".45" stop-color="#ffd27a" stop-opacity=".55"/><stop offset="1" stop-color="#ff9a3c" stop-opacity="0"/></radialGradient>
       <radialGradient id="ow-sun" cx=".45" cy=".4" r=".6"><stop offset="0" stop-color="#fffbe0"/><stop offset=".7" stop-color="#ffe08a"/><stop offset="1" stop-color="#ffc24a"/></radialGradient>
-      <linearGradient id="ow-cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffc4a6"/><stop offset=".45" stop-color="#e67e8c"/><stop offset="1" stop-color="#8a3474"/></linearGradient>
+      <linearGradient id="ow-cloud" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffd2b4"/><stop offset=".4" stop-color="#f29a94"/><stop offset=".75" stop-color="#c6567e"/><stop offset="1" stop-color="#8a3474"/></linearGradient>
       <linearGradient id="ow-cloud2" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#f8a98c"/><stop offset=".6" stop-color="#c25a7c"/><stop offset="1" stop-color="#7a2f6b"/></linearGradient>
       <linearGradient id="ow-ruinfar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8e4374"/><stop offset="1" stop-color="#5f2b62"/></linearGradient>
       <linearGradient id="ow-ruinnear" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6a2f5f"/><stop offset="1" stop-color="#3f1f45"/></linearGradient>
@@ -57,10 +57,21 @@ DE.UI.Overworld = (function () {
     </defs>`;
   }
   function symbols() {
-    return `<symbol id="ow-cloudsym" viewBox="0 0 260 110">
-        <g stroke="${INK}" stroke-width="5" stroke-linejoin="round"><ellipse cx="130" cy="78" rx="122" ry="28" fill="url(#ow-cloud)"/><circle cx="70" cy="62" r="34" fill="url(#ow-cloud)"/><circle cx="125" cy="42" r="44" fill="url(#ow-cloud)"/><circle cx="185" cy="55" r="36" fill="url(#ow-cloud)"/><circle cx="225" cy="70" r="22" fill="url(#ow-cloud)"/></g>
-        <g fill="#ffd8bd" opacity=".6"><circle cx="112" cy="28" r="13"/><circle cx="152" cy="24" r="9"/><circle cx="62" cy="48" r="8"/><circle cx="188" cy="40" r="7"/></g>
-        <path d="M30 86 q100 14 200 0" fill="none" stroke="#6e2a60" stroke-width="4" opacity=".5"/><path d="M60 96 q70 12 150 0" fill="none" stroke="#ffd0a0" stroke-width="3" opacity=".55"/>
+    return `<symbol id="ow-cloudsym" viewBox="0 0 300 130">
+        <clipPath id="ow-cloudsym-clip"><g><circle cx="70" cy="78" r="40"/><circle cx="120" cy="56" r="54"/><circle cx="176" cy="60" r="48"/><circle cx="230" cy="76" r="40"/><circle cx="150" cy="92" r="30"/><ellipse cx="150.0" cy="106" rx="130.0" ry="22"/></g></clipPath>
+        <g fill="url(#ow-cloud)" stroke="#1c1020" stroke-width="6" stroke-linejoin="round"><ellipse cx="150.0" cy="106" rx="130.0" ry="22"/><circle cx="70" cy="78" r="40"/><circle cx="120" cy="56" r="54"/><circle cx="176" cy="60" r="48"/><circle cx="230" cy="76" r="40"/><circle cx="150" cy="92" r="30"/></g>
+        <g fill="url(#ow-cloud)" stroke="none"><ellipse cx="150.0" cy="106" rx="130.0" ry="22"/><circle cx="70" cy="78" r="40"/><circle cx="120" cy="56" r="54"/><circle cx="176" cy="60" r="48"/><circle cx="230" cy="76" r="40"/><circle cx="150" cy="92" r="30"/></g>
+        <g clip-path="url(#ow-cloudsym-clip)"><rect x="0" y="71.5" width="300" height="130" fill="#7a2c6a" opacity=".55"/><rect x="0" y="93.6" width="300" height="130" fill="#5a1e58" opacity=".5"/><path d="M0 110 q150.0 -30 300 0 v40 h-300 z" fill="#ff9a6a" opacity=".35"/></g>
+        <g fill="#ffe2c8" opacity=".75"><circle cx="56" cy="60" r="12"/><circle cx="101" cy="32" r="16"/><circle cx="159" cy="38" r="14"/><circle cx="216" cy="58" r="12"/></g>
+        <g fill="#fff3e4" opacity=".6"><circle cx="52" cy="56" r="5"/><circle cx="96" cy="26" r="6"/><circle cx="154" cy="34" r="6"/><circle cx="212" cy="54" r="5"/></g>
+      </symbol>
+      <symbol id="ow-cloudsym2" viewBox="0 0 300 136">
+        <clipPath id="ow-cloudsym2-clip"><g><circle cx="60" cy="90" r="36"/><circle cx="100" cy="60" r="48"/><circle cx="150" cy="44" r="56"/><circle cx="205" cy="62" r="46"/><circle cx="250" cy="86" r="34"/><ellipse cx="150.0" cy="112" rx="130.0" ry="22"/></g></clipPath>
+        <g fill="url(#ow-cloud)" stroke="#1c1020" stroke-width="6" stroke-linejoin="round"><ellipse cx="150.0" cy="112" rx="130.0" ry="22"/><circle cx="60" cy="90" r="36"/><circle cx="100" cy="60" r="48"/><circle cx="150" cy="44" r="56"/><circle cx="205" cy="62" r="46"/><circle cx="250" cy="86" r="34"/></g>
+        <g fill="url(#ow-cloud)" stroke="none"><ellipse cx="150.0" cy="112" rx="130.0" ry="22"/><circle cx="60" cy="90" r="36"/><circle cx="100" cy="60" r="48"/><circle cx="150" cy="44" r="56"/><circle cx="205" cy="62" r="46"/><circle cx="250" cy="86" r="34"/></g>
+        <g clip-path="url(#ow-cloudsym2-clip)"><rect x="0" y="74.80000000000001" width="300" height="136" fill="#7a2c6a" opacity=".55"/><rect x="0" y="97.92" width="300" height="136" fill="#5a1e58" opacity=".5"/><path d="M0 116 q150.0 -30 300 0 v40 h-300 z" fill="#ff9a6a" opacity=".35"/></g>
+        <g fill="#ffe2c8" opacity=".75"><circle cx="83" cy="38" r="14"/><circle cx="130" cy="19" r="17"/><circle cx="189" cy="41" r="14"/></g>
+        <g fill="#fff3e4" opacity=".6"><circle cx="78" cy="34" r="6"/><circle cx="125" cy="13" r="7"/><circle cx="184" cy="37" r="6"/></g>
       </symbol>
       <symbol id="ow-pine" viewBox="0 0 120 220">
         <g stroke="${INK}" stroke-width="5" stroke-linejoin="round"><rect x="52" y="180" width="16" height="36" fill="url(#ow-wood)"/><path d="M60 10 L22 76 H40 L8 132 H34 L0 190 H120 L86 132 H112 L80 76 H98 Z" fill="url(#ow-pine)"/></g>
@@ -114,7 +125,7 @@ DE.UI.Overworld = (function () {
   function clouds() {
     const C = [[40, 30, 320, 130, 0], [420, 90, 240, 160, -40], [700, 16, 380, 180, -90], [1020, 60, 280, 150, -20], [1260, 112, 330, 170, -70], [1470, 10, 300, 140, -110], [220, 190, 200, 210, -30], [1140, 196, 220, 220, -120]];
     const far = `<g class="ow-cloud-far" opacity=".55">${[[120, 180, 440], [760, 160, 520], [1300, 175, 480]].map(([x, y, w]) => `<ellipse cx="${x + w / 2}" cy="${y + 40}" rx="${w / 2}" ry="26" fill="url(#ow-cloud2)" stroke="${INK}" stroke-width="4"/><ellipse cx="${x + w * .35}" cy="${y + 18}" rx="${w * .22}" ry="30" fill="url(#ow-cloud2)" stroke="${INK}" stroke-width="4"/><ellipse cx="${x + w * .68}" cy="${y + 22}" rx="${w * .2}" ry="26" fill="url(#ow-cloud2)" stroke="${INK}" stroke-width="4"/>`).join('')}</g>`;
-    return far + C.map(([x, y, w, sp, d]) => `<g class="ow-cloud" style="--spd:${sp}s;--d:${d}s"><use href="#ow-cloudsym" x="${x}" y="${y}" width="${w}" height="${w * 110 / 260}"/></g>`).join('');
+    return far + C.map(([x, y, w, sp, d], i) => `<g class="ow-cloud" style="--spd:${sp}s;--d:${d}s"><use href="#ow-cloudsym${i % 2 ? '2' : ''}" x="${x}" y="${y}" width="${w}" height="${w * 130 / 300}"/></g>`).join('');
   }
   function win(list, w = 10, h = 12) { return list.map(([x, y]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1"/>`).join(''); }
   function skyline() {
