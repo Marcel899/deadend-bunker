@@ -245,7 +245,9 @@ DE.UI.Drawers = (function () {
  <h4>${I('zombies', 'ico-h4')} ${boss ? 'BOSS wave' : 'Wave'} ${d.wave} <small>in ${U().fmtTime((d.nextWaveAt - now) / 1000)}</small><span class="dk-skulls">${Array.from({ length: 5 }, (_, i) => `<i class="${i < skulls ? 'on' : ''}">${I('skull2', '')}</i>`).join('')}</span></h4>
  ${row('wave', 'Horde strength', U().fmt(hp))}
  ${row('alert', 'Wall damage multiplier', comp.dmgMult.toFixed(2) + 'x' + (comp.toxic ? ` · ${comp.toxic} toxic` : ''))}
- ${row('trophy', 'Reward on victory', U().costText(reward) || '—')}
+ ${row('trophy', 'Reward on victory', (U().costText(reward) || '—') + (d.winStreak ? ` <small class="pos">+${Math.min(50, 10 * d.winStreak)}% streak bonus</small>` : ''))}
+ ${d.winStreak ? row('star', 'Victory streak', d.winStreak + ' in a row') : ''}
+ ${d.breachStreak ? row('wave', 'Horde regrouping', `next wave −${Math.round((1 - Math.max(0.6, Math.pow(0.85, d.breachStreak))) * 100)}% after ${d.breachStreak} breach${d.breachStreak > 1 ? 'es' : ''}`) : ''}
  ${row('shield', 'Your firepower', `${U().fmt(pw.total)} <small>(guards ${U().fmt(pw.guardDps, 1)}/s · turrets ${U().fmt(pw.turretDps, 1)}/s${pw.missileDps ? ' · missiles ' + U().fmt(pw.missileDps, 1) + '/s' : ''} · traps ${pw.trapDmg})</small>`)}
  ${row('timer', 'Combat time', DE.CONFIG.WAVE_DURATION + 's')}
  ${row('noise', 'Bunker noise', `<span class="noise ${lvl}">${lvl}</span>`)}
