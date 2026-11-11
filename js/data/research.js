@@ -1,0 +1,76 @@
+/* Research tree. Three branches, each node: cost (research points), time (seconds),
+ * requires (array of node ids), effects (list consumed by DE.Effects). */
+var DE = globalThis.DE = globalThis.DE || {};
+DE.Data = DE.Data || {};
+
+DE.Data.RESEARCH_BRANCHES = {
+  economy:     { name: 'Economy',     icon: '🌾', color: '#7cc46a' },
+  engineering: { name: 'Engineering', icon: '⚙️', color: '#f0a84a' },
+  survival:    { name: 'Survival',    icon: '🩺', color: '#e76f8a' },
+};
+
+DE.Data.RESEARCH = {
+  /* ---------------- Economy ---------------- */
+  farming1: { id: 'farming1', branch: 'economy', name: 'Hydroponics I', icon: '🥬', cost: 40, time: 45, requires: [],
+    desc: 'Better nutrient mixes. Farms +25%.', effects: [{ type: 'roomMult', room: 'farm', value: 0.25 }] },
+  purification: { id: 'purification', branch: 'economy', name: 'Water Purification', icon: '🚿', cost: 60, time: 60, requires: [],
+    desc: 'Finer filters. Purifiers and pumps +25%.', effects: [{ type: 'roomMult', room: 'water', value: 0.25 }, { type: 'roomMult', room: 'aquifer', value: 0.25 }] },
+  recycling: { id: 'recycling', branch: 'economy', name: 'Resource Recycling', icon: '♻️', cost: 150, time: 120, requires: ['farming1'],
+    desc: 'Nothing goes to waste. Workshops +30%, room inputs -15%.', effects: [{ type: 'roomMult', room: 'workshop', value: 0.3 }, { type: 'consumptionMult', value: -0.15 }] },
+  farming2: { id: 'farming2', branch: 'economy', name: 'Hydroponics II', icon: '🌽', cost: 450, time: 240, requires: ['farming1'],
+    desc: 'Stacked grow towers. Farms +50%.', effects: [{ type: 'roomMult', room: 'farm', value: 0.5 }] },
+  purification2: { id: 'purification2', branch: 'economy', name: 'Reverse Osmosis', icon: '🧊', cost: 500, time: 240, requires: ['purification'],
+    desc: 'Purifiers and pumps +50%.', effects: [{ type: 'roomMult', room: 'water', value: 0.5 }, { type: 'roomMult', room: 'aquifer', value: 0.5 }] },
+  automation: { id: 'automation', branch: 'economy', name: 'Automated Production', icon: '🤖', cost: 700, time: 300, requires: ['recycling'],
+    desc: 'Unstaffed rooms run at 50% instead of 25%.', effects: [{ type: 'unmannedBase', value: 0.5 }] },
+  logistics: { id: 'logistics', branch: 'economy', name: 'Logistics', icon: '🏗️', cost: 1200, time: 360, requires: ['recycling'],
+    desc: 'Smarter stacking. Storage capacity x2.', effects: [{ type: 'storageMult', value: 1 }] },
+  automation2: { id: 'automation2', branch: 'economy', name: 'Smart Automation', icon: '🧠', cost: 3000, time: 600, requires: ['automation'],
+    desc: 'Unstaffed rooms run at 75%. All production +10%.', effects: [{ type: 'unmannedBase', value: 0.75 }, { type: 'globalMult', value: 0.1 }] },
+
+  /* ---------------- Engineering ---------------- */
+  construction: { id: 'construction', branch: 'engineering', name: 'Reinforced Construction', icon: '🧱', cost: 50, time: 50, requires: [],
+    desc: 'Unlocks the Concrete Mixer and Garage. Build time -15%.', effects: [{ type: 'unlockRoom', room: 'concrete' }, { type: 'unlockRoom', room: 'garage' }, { type: 'buildTimeMult', value: -0.15 }] },
+  excavation1: { id: 'excavation1', branch: 'engineering', name: 'Excavation I', icon: '⛏️', cost: 120, time: 90, requires: ['construction'],
+    desc: 'Dig down to floor 4.', effects: [{ type: 'maxFloor', value: 4 }] },
+  electricity: { id: 'electricity', branch: 'engineering', name: 'Power Grid', icon: '🔌', cost: 200, time: 120, requires: ['construction'],
+    desc: 'Generators +30%, room power use -10%.', effects: [{ type: 'roomMult', room: 'generator', value: 0.3 }, { type: 'powerUseMult', value: -0.1 }] },
+  machinery: { id: 'machinery', branch: 'engineering', name: 'Heavy Machinery', icon: '🚜', cost: 500, time: 240, requires: ['excavation1'],
+    desc: 'Dig to floor 6, excavation -20% cost. Unlocks auto-turrets.', effects: [{ type: 'maxFloor', value: 6 }, { type: 'excavationCostMult', value: -0.2 }, { type: 'unlockTurrets' }] },
+  construction2: { id: 'construction2', branch: 'engineering', name: 'Prefab Modules', icon: '🏭', cost: 800, time: 300, requires: ['electricity'],
+    desc: 'Build & upgrade costs -15%, build time -25%.', effects: [{ type: 'buildCostMult', value: -0.15 }, { type: 'buildTimeMult', value: -0.25 }] },
+  excavation2: { id: 'excavation2', branch: 'engineering', name: 'Deep Excavation', icon: '🕳️', cost: 2000, time: 480, requires: ['machinery'],
+    desc: 'Dig to floor 9.', effects: [{ type: 'maxFloor', value: 9 }] },
+  fusion: { id: 'fusion', branch: 'engineering', name: 'Fusion Cells', icon: '☢️', cost: 4500, time: 720, requires: ['excavation2'],
+    desc: 'Generators x2, fuel use -50%.', effects: [{ type: 'roomMult', room: 'generator', value: 1.0 }, { type: 'fuelUseMult', value: -0.5 }] },
+  blueprints2: { id: 'blueprints2', branch: 'engineering', name: 'Tier 2 Blueprints', icon: '📐', cost: 220, time: 120, requires: ['construction'],
+    desc: 'Improved infrastructure: Kitchen, Hydroponics, Water Purification, Barracks, Advanced Workshop, Infirmary, Communications Center.', effects: [{ type: 'unlockRoom', room: 'blueprints2' }] },
+  blueprints3: { id: 'blueprints3', branch: 'engineering', name: 'Tier 3 Blueprints', icon: '📘', cost: 1200, time: 360, requires: ['blueprints2', 'machinery'],
+    desc: 'Advanced facilities: Greenhouse, Recycling, Security Control, Vehicle Workshop, Ammunition Factory, Cold Storage, Quarantine, Intelligence.', effects: [{ type: 'unlockRoom', room: 'blueprints3' }] },
+  blueprints4: { id: 'blueprints4', branch: 'engineering', name: 'Tier 4 Blueprints', icon: '📗', cost: 5000, time: 720, requires: ['blueprints3', 'excavation2'],
+    desc: 'High-tech facilities: Nuclear Reactor, Genetics Lab, Automated Farm, Hospital, Drone Hangar, Heavy Weapons, Tactical Command, Cryo, Seismic, Defense Control.', effects: [{ type: 'unlockRoom', room: 'blueprints4' }] },
+  blueprints5: { id: 'blueprints5', branch: 'engineering', name: 'Tier 5 Blueprints', icon: '📕', cost: 15000, time: 1200, requires: ['blueprints4', 'fusion'],
+    desc: 'Ultimate facilities: Fusion Reactor, Bioengineering, Reservoir, AI Command, Manufacturing Plant, War Room, Satellite Uplink, Medical Research, Missile Silo, Ark Habitat.', effects: [{ type: 'unlockRoom', room: 'blueprints5' }] },
+  excavation3: { id: 'excavation3', branch: 'engineering', name: 'Abyss Drilling', icon: '🌑', cost: 9000, time: 900, requires: ['excavation2'],
+    desc: 'Dig to floor 12.', effects: [{ type: 'maxFloor', value: 12 }] },
+
+  /* ---------------- Survival ---------------- */
+  medicine: { id: 'medicine', branch: 'survival', name: 'Field Medicine', icon: '💊', cost: 60, time: 60, requires: [],
+    desc: 'Unlocks the Medical Bay. Survivors heal 2x faster.', effects: [{ type: 'unlockRoom', room: 'medbay' }, { type: 'healMult', value: 1 }] },
+  housing: { id: 'housing', branch: 'survival', name: 'Communal Living', icon: '🏘️', cost: 90, time: 70, requires: [],
+    desc: 'Unlocks Cafeteria and Radio Room. Quarters +2 housing per level.', effects: [{ type: 'unlockRoom', room: 'cafeteria' }, { type: 'unlockRoom', room: 'radio' }, { type: 'housingPerLevel', value: 2 }] },
+  defense1: { id: 'defense1', branch: 'survival', name: 'Fortification', icon: '🛡️', cost: 80, time: 70, requires: [],
+    desc: 'Unlocks the Armory and traps. Wall HP +50%.', effects: [{ type: 'unlockRoom', room: 'armory' }, { type: 'unlockTraps' }, { type: 'wallHpMult', value: 0.5 }] },
+  efficiency: { id: 'efficiency', branch: 'survival', name: 'Worker Training', icon: '📋', cost: 250, time: 150, requires: ['housing'],
+    desc: 'Unlocks the Training Room. Workers +15% efficient.', effects: [{ type: 'unlockRoom', room: 'training' }, { type: 'workerEff', value: 0.15 }] },
+  defense2: { id: 'defense2', branch: 'survival', name: 'Sentry Doctrine', icon: '🎯', cost: 600, time: 240, requires: ['defense1'],
+    desc: 'Guards +50% damage, turrets +50% damage, wall HP +50%.', effects: [{ type: 'guardDmgMult', value: 0.5 }, { type: 'turretDmgMult', value: 0.5 }, { type: 'wallHpMult', value: 0.5 }] },
+  medicine2: { id: 'medicine2', branch: 'survival', name: 'Surgery', icon: '🩹', cost: 900, time: 300, requires: ['medicine'],
+    desc: '+10 morale, survivors eat and drink 10% less.', effects: [{ type: 'moraleBonus', value: 10 }, { type: 'survivorConsumptionMult', value: -0.1 }] },
+  offline: { id: 'offline', branch: 'survival', name: 'Night Shift Protocols', icon: '🌙', cost: 1500, time: 360, requires: ['efficiency'],
+    desc: 'The bunker runs itself longer while you are away: offline cap +8h.', effects: [{ type: 'offlineCapHours', value: 8 }] },
+  housing2: { id: 'housing2', branch: 'survival', name: 'Vertical Housing', icon: '🏢', cost: 1800, time: 420, requires: ['efficiency'],
+    desc: 'Quarters +4 more housing per level.', effects: [{ type: 'housingPerLevel', value: 4 }] },
+  efficiency2: { id: 'efficiency2', branch: 'survival', name: 'Expert Crews', icon: '🎓', cost: 3500, time: 600, requires: ['housing2'],
+    desc: 'Workers +25% efficient, experience +50%.', effects: [{ type: 'workerEff', value: 0.25 }, { type: 'xpMult', value: 0.5 }] },
+};

@@ -1,0 +1,122 @@
+/* ============ ROOM SCENES & ACTORS ============
+   Rooms are cutaway environments drawn by js/ui/scenes.js. The svg fills the room; the name
+   plate, rate and progress overlays sit on top. Survivors are separate actors (js/ui/actors.js)
+   that walk between rooms in an overlay layer, so rooms themselves never re-render for them. */
+.floor { min-height: 190px; }
+.slots { position: relative; }
+.room { position: relative; overflow: hidden; min-height: 180px; padding: 0; background: #2a2634; }
+.room .room-scene { position: absolute; inset: 0; }
+.room .room-scene svg.scene { width: 100%; height: 100%; display: block; }
+.room .room-head { position: absolute; top: 4px; left: 6px; right: 6px; z-index: 2; pointer-events: none; }
+.room .room-name { background: rgba(28, 16, 32, .72); padding: 2px 8px; border-radius: 8px; border: 2px solid var(--ink); font-size: 12px; flex: 0 1 auto; }
+.room .room-foot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; pointer-events: none; padding: 3px 8px 4px; background: linear-gradient(0deg, rgba(10, 8, 14, .85), transparent); }
+.room .room-art, .room .room-deco, .room .room-lamp, .room .room-workers { display: none; }
+.room .room-progress { z-index: 3; }
+.room.selected { box-shadow: inset 0 0 0 3px var(--gold), 0 0 16px rgba(255, 197, 49, .45); }
+.room.unstaffed .room-scene { filter: saturate(.75) brightness(.9); }
+.room.brownout .room-scene { filter: brightness(.55); }
+.room.brownout .p-lamp, .room.brownout .p-lampcone, .room.brownout .p-neon { animation: flicker 1s infinite; }
+.room.building .room-scene { filter: saturate(.5) brightness(.8); }
+.room.just-upgraded .room-scene .prop { animation: installpop .8s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes installpop { 0% { transform: translateY(6px); opacity: .2; } 100% { transform: none; opacity: 1; } }
+.room .builder { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 2; display: none; pointer-events: none; }
+.room.building .builder, .room.upgrading .builder { display: block; }
+.room .builder .rig { height: 48px; }
+.room .vig { fill: url(#sc-vig); }
+
+/* ---- prop animations (transform-box keeps origins local) ---- */
+.scene .prop * { transform-box: fill-box; }
+.p-screen { animation: sc-flicker 3.7s steps(1) infinite; filter: drop-shadow(0 0 4px rgba(140, 210, 255, .6)); }
+@keyframes sc-flicker { 0%, 100% { opacity: 1; } 42% { opacity: .85; } 45% { opacity: 1; } 71% { opacity: .9; } 73% { opacity: 1; } }
+.p-led { animation: sc-blink 1.6s steps(1) infinite; filter: drop-shadow(0 0 2px #7dff5a); } .p-led2 { animation: sc-blink 2.3s steps(1) infinite; animation-delay: .6s; }
+@keyframes sc-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: .25; } }
+.p-blink { animation: sc-blink 1s steps(1) infinite; }
+.p-lamp { animation: sc-lamp 5s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 220, 140, .9)); } .p-lampcone { animation: sc-lamp 5s ease-in-out infinite; }
+@keyframes sc-lamp { 0%, 100% { opacity: 1; } 48% { opacity: .85; } 50% { opacity: .6; } 52% { opacity: .9; } }
+.p-glow { animation: sc-glow 2.6s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 255, 255, .45)); }
+@keyframes sc-glow { 50% { filter: drop-shadow(0 0 9px rgba(255, 255, 255, .75)) brightness(1.15); } }
+.p-core { transform-origin: center; animation: sc-core 1.8s ease-in-out infinite; }
+@keyframes sc-core { 50% { transform: scale(1.15); opacity: .8; } }
+.p-spin { transform-origin: center; animation: sc-spin 1.2s linear infinite; }
+.p-spin-slow { transform-origin: center; animation: sc-spin 9s linear infinite; }
+.p-fan { animation: sc-spin 1.5s linear infinite; }
+.p-rotor { transform-origin: center; animation: sc-rotor .25s linear infinite; }
+@keyframes sc-spin { to { transform: rotate(360deg); } }
+@keyframes sc-rotor { 50% { transform: scaleX(.3); } }
+.p-vibrate { animation: sc-vib .12s linear infinite; } .p-vibrate-slow { animation: sc-vib .5s ease-in-out infinite; }
+@keyframes sc-vib { 25% { transform: translate(.6px, -.4px); } 75% { transform: translate(-.6px, .4px); } }
+.p-smoke { animation: sc-smoke 2.4s ease-out infinite; } .p-steam { animation: sc-smoke 2s ease-out infinite; }
+@keyframes sc-smoke { 0% { transform: translateY(0); opacity: .9; } 100% { transform: translateY(-22px) scale(1.5); opacity: 0; } }
+.p-bubbles { animation: sc-rise 3s linear infinite; }
+@keyframes sc-rise { 0% { transform: translateY(8px); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-26px); opacity: 0; } }
+.p-piston { animation: sc-piston 1s ease-in-out infinite; }
+@keyframes sc-piston { 50% { transform: translateY(10px); } }
+.p-press { animation: sc-press 2.2s ease-in infinite; }
+@keyframes sc-press { 0%, 40% { transform: translateY(0); } 55% { transform: translateY(14px); } 70%, 100% { transform: translateY(0); } }
+.p-belt path { animation: sc-belt 1s linear infinite; }
+@keyframes sc-belt { to { stroke-dashoffset: -12; } }
+.p-cargo { animation: sc-cargo 3.6s linear infinite; }
+@keyframes sc-cargo { from { transform: translateX(-30px); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } to { transform: translateX(60px); opacity: 0; } }
+.p-arm { transform-origin: bottom center; animation: sc-arm 3s ease-in-out infinite; }
+.p-arm2 { animation: sc-arm2 3s ease-in-out infinite; }
+@keyframes sc-arm { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
+@keyframes sc-arm2 { 0%, 100% { transform: rotate(10deg); } 50% { transform: rotate(-30deg); } }
+.p-hover { animation: sc-hover 2.2s ease-in-out infinite; }
+@keyframes sc-hover { 50% { transform: translateY(-6px); } }
+.p-swing { transform-origin: top center; animation: sc-swing 2.6s ease-in-out infinite; }
+@keyframes sc-swing { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.p-sway { transform-origin: bottom center; animation: sc-sway 3.4s ease-in-out infinite; }
+@keyframes sc-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2.5deg); } }
+.p-flame { transform-origin: bottom center; animation: sc-flame .5s ease-in-out infinite alternate; }
+@keyframes sc-flame { from { transform: scaleY(.9) scaleX(1.05); } to { transform: scaleY(1.12) scaleX(.95); } }
+.p-sparks { animation: sc-sparks .7s steps(1) infinite; }
+@keyframes sc-sparks { 0% { opacity: 1; } 40% { opacity: 0; } 60% { opacity: 1; transform: translate(2px, -3px); } }
+.p-needle { transform-origin: bottom left; animation: sc-needle 1.1s ease-in-out infinite alternate; }
+@keyframes sc-needle { from { transform: rotate(-12deg); } to { transform: rotate(16deg); } }
+.p-seis { animation: sc-belt .5s linear infinite; }
+.p-helix { transform-origin: center; animation: sc-helix 4s linear infinite; }
+@keyframes sc-helix { 50% { transform: scaleX(-1); } }
+.p-helix-x { animation: sc-helixx 3s linear infinite; }
+@keyframes sc-helixx { to { transform: translateX(8px); } }
+.p-radar { transform-origin: center; animation: sc-radar 2s linear infinite; }
+@keyframes sc-radar { 0% { transform: scale(.2); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+.p-radio { animation: sc-blink 1.2s steps(1) infinite; }
+.p-dish { transform-origin: bottom center; animation: sc-dish 12s ease-in-out infinite alternate; }
+@keyframes sc-dish { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+.p-scan { animation: sc-scan 5s ease-in-out infinite alternate; }
+@keyframes sc-scan { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+.p-growlight { animation: sc-glow 3s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 200, 255, .8)); }
+.p-uv { animation: sc-blink 2s steps(1) infinite; }
+.p-drip { animation: sc-drip 1.6s linear infinite; }
+@keyframes sc-drip { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(22px); opacity: 0; } }
+.p-wave { animation: sc-wave 2.4s ease-in-out infinite alternate; }
+@keyframes sc-wave { to { transform: translateX(6px); } }
+.p-lift { animation: sc-lift 8s ease-in-out infinite; }
+@keyframes sc-lift { 0%, 20% { transform: translateY(0); } 50%, 70% { transform: translateY(-16px); } 100% { transform: translateY(0); } }
+.p-frost { animation: sc-glow 4s ease-in-out infinite; }
+.p-flagwave { transform-origin: left center; animation: ow-wave 2.4s ease-in-out infinite; }
+.p-ecg { animation: sc-belt .6s linear infinite; stroke-dasharray: 40 10; }
+.p-neon { animation: sc-lamp 7s ease-in-out infinite; }
+
+/* offscreen rooms pause everything (set by IntersectionObserver in ui-bunker.js) */
+.room.offscreen .scene *, .room.offscreen .rig *, .room.offscreen .rig { animation-play-state: paused !important; }
+body.no-anim .scene * { animation: none !important; }
+
+/* ---- actors (survivors walking the bunker) ---- */
+#bunker { position: relative; }
+#actors { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; z-index: 4; overflow: visible; }
+.actor { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.actor .rig { position: absolute; left: -17px; bottom: 0; height: 54px; width: 34px; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .5)); pointer-events: auto; cursor: pointer; }
+.actor .bubble { position: absolute; left: 10px; bottom: 56px; font-family: var(--display); font-size: 10px; color: #fff; background: rgba(28, 16, 32, .8); border: 2px solid var(--ink); border-radius: 8px; padding: 1px 6px; white-space: nowrap; opacity: 0; transform: translateY(4px); transition: opacity .3s, transform .3s; pointer-events: none; }
+.actor .bubble.show { opacity: 1; transform: none; }
+.actor .bubble.zz { color: #9fe3ff; } .actor .bubble.eat { color: #ffd34a; } .actor .bubble.hurt { color: #ff8a7a; }
+.actor.riding .rig { filter: drop-shadow(0 0 6px rgba(255, 211, 74, .6)); }
+.actor.paused .rig * { animation-play-state: paused !important; }
+.actor.hurt .rig { filter: grayscale(.6) brightness(.85) drop-shadow(0 3px 2px rgba(0, 0, 0, .5)); }
+.actor:hover .bubble { opacity: 1; transform: none; }
+
+.p-light { mix-blend-mode: screen; }
+.p-light .p-lampcone { animation: sc-lamp 5s ease-in-out infinite; }
+.p-flame { filter: drop-shadow(0 0 6px rgba(255, 150, 60, .8)); }
+.p-core, .orb { filter: drop-shadow(0 0 8px rgba(160, 255, 160, .8)); }
+.room.brownout .p-light { opacity: .25; }

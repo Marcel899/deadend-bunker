@@ -1,0 +1,206 @@
+/* Versioned LocalStorage saves, export/import and defensive validation.
+ * Imported data is parsed as JSON only — never evaluated. */
+var DE = globalThis.DE = globalThis.DE || {};
+
+DE.Save = (function () {
+  const C = () => DE.CONFIG;
+  const U = () => DE.Util;
+
+  /* Migrations: key = version being upgraded FROM. Each returns the upgraded raw object. */
+  const MIGRATIONS = {
+    // 0: (raw) => { ...; raw.version = 1; return raw; }
+  };
+
+  function storage() {
+    try { return globalThis.localStorage || null; } catch (e) { return null; }
+  }
+
+  function serialize(state) {
+    const copy = Object.assign({}, state);
+    // strip transient caches (keys starting with _)
+    for (const k in copy) if (k[0] === '_') delete copy[k];
+    return JSON.stringify({ v: C().SAVE_VERSION, t: Date.now(), state: copy });
+  }
+
+  function save(state) {
+    const ls = storage(); if (!ls) return false;
+    try { state.lastSave = Date.now(); ls.setItem(C().SAVE_KEY, serialize(state)); return true; }
+    catch (e) { console.warn('Save failed', e); return false; }
+  }
+
+  function hasSave() { const ls = storage(); return !!(ls && ls.getItem(C().SAVE_KEY)); }
+
+  function load() {
+    const ls = storage(); if (!ls) return null;
+    const raw = ls.getItem(C().SAVE_KEY); if (!raw) return null;
+    const res = parse(raw);
+    if (!res.ok) { console.warn('Save rejected:', res.error); return null; }
+    return res.state;
+  }
+
+  function clear() { const ls = storage(); if (ls) ls.removeItem(C().SAVE_KEY); }
+
+  /* ---- export / import ---- */
+  function toBase64(str) {
+    if (typeof btoa === 'function') return btoa(unescape(encodeURIComponent(str)));
+    return Buffer.from(str, 'utf8').toString('base64');
+  }
+  function fromBase64(b64) {
+    if (typeof atob === 'function') return decodeURIComponent(escape(atob(b64)));
+    return Buffer.from(b64, 'base64').toString('utf8');
+  }
+  function exportString(state) { return 'DEU1:' + toBase64(serialize(state)); }
+
+  function importString(str) {
+    try {
+      str = String(str || '').trim();
+      if (!str) return { ok: false, error: 'Empty import string.' };
+      let json;
+      if (str.startsWith('DEU1:')) json = fromBase64(str.slice(5));
+      else if (str[0] === '{') json = str;
+      else json = fromBase64(str);
+      return parse(json);
+    } catch (e) { return { ok: false, error: 'Could not decode save: ' + e.message }; }
+  }
+
+  /** Parse + migrate + validate a JSON save string. */
+  function parse(json) {
+    let raw;
+    try { raw = JSON.parse(json); } catch (e) { return { ok: false, error: 'Not valid JSON.' }; }
+    if (!U().isObj(raw) || !U().isObj(raw.state)) return { ok: false, error: 'Unrecognised save format.' };
+    let v = U().num(raw.v, 0);
+    let guard = 0;
+    while (v < C().SAVE_VERSION && guard++ < 50) {
+      const m = MIGRATIONS[v];
+      if (!m) break;
+      raw = m(raw); v = U().num(raw.v, v + 1);
+    }
+    if (v > C().SAVE_VERSION) return { ok: false, error: 'Save is from a newer version (' + v + ').' };
+    const state = sanitize(raw.state);
+    if (!state) return { ok: false, error: 'Save data is corrupted.' };
+    return { ok: true, state };
+  }
+
+  /* ---- Validation: rebuild a clean state from a blank template, copying only well-formed data ---- */
+  function sanitize(src) {
+    const now = Date.now();
+    const s = DE.State.blank(now);
+    const N = (v, d) => U().num(v, d);
+    const NN = (v, d) => Math.max(0, N(v, d)); // non-negative
+    try {
+      s.createdAt = N(src.createdAt, now);
+      s.lastTick = Math.min(now, N(src.lastTick, now));
+      s.playtime = NN(src.playtime, 0);
+      s.morale = U().clamp(N(src.morale, 60), 0, 100);
+      // resources
+      if (U().isObj(src.resources)) for (const r of DE.Data.RESOURCE_ORDER) s.resources[r] = NN(src.resources[r], 0);
+      // floors
+      const slots = C().FLOOR_SLOTS;
+      if (Array.isArray(src.floors)) {
+        src.floors.forEach((f, i) => {
+          if (!U().isObj(f)) return;
+          const floor = DE.State.emptyFloor(N(f.depth, i + 1));
+          if (Array.isArray(f.slots)) for (let k = 0; k < slots; k++) floor.slots[k] = typeof f.slots[k] === 'string' ? f.slots[k] : null;
+          floor.facility = typeof f.facility === 'string' && DE.Data.FACILITIES.some(x => x.id === f.facility) ? f.facility : null;
+          s.floors.push(floor);
+        });
+      }
+      if (!s.floors.length) s.floors.push(DE.State.emptyFloor(1));
+      s.floors.sort((a, b) => a.depth - b.depth);
+      // rooms
+      if (U().isObj(src.rooms)) for (const id in src.rooms) {
+        const r = src.rooms[id];
+        if (!U().isObj(r) || !DE.Data.ROOMS[r.type]) continue;
+        const room = { id, type: r.type, floor: N(r.floor, 1), slot: N(r.slot, 0), level: NN(r.level, 1),
+          workers: Array.isArray(r.workers) ? r.workers.filter(x => typeof x === 'string') : [], construction: null };
+        if (U().isObj(r.construction)) room.construction = { kind: r.construction.kind === 'upgrade' ? 'upgrade' : 'build',
+          endsAt: N(r.construction.endsAt, now), duration: NN(r.construction.duration, 1), levels: Math.max(1, N(r.construction.levels, 1)) };
+        s.rooms[id] = room;
+      }
+      // drop slot references to missing rooms, and rooms not referenced by any slot
+      const referenced = {};
+      s.floors.forEach(f => f.slots.forEach((rid, k) => { if (rid && !s.rooms[rid]) f.slots[k] = null; else if (rid) referenced[rid] = true; }));
+      for (const id in s.rooms) if (!referenced[id]) delete s.rooms[id];
+      // survivors
+      if (U().isObj(src.survivors)) for (const id in src.survivors) {
+        const v = src.survivors[id];
+        if (!U().isObj(v) || !DE.Data.PROFESSIONS[v.profession]) continue;
+        const sv = { id, name: typeof v.name === 'string' ? v.name.slice(0, 40) : 'Survivor', profession: v.profession,
+          rarity: DE.Data.RARITIES[v.rarity] ? v.rarity : 'common',
+          level: U().clamp(N(v.level, 1), 1, C().SURVIVOR_MAX_LEVEL), xp: NN(v.xp, 0), hp: U().clamp(N(v.hp, 100), 0, 100),
+          traits: Array.isArray(v.traits) ? v.traits.filter(t => DE.Data.TRAITS[t]) : [], assignment: null,
+          energy: U().clamp(N(v.energy, 100), 0, 100), hunger: U().clamp(N(v.hunger, 0), 0, 100),
+          act: U().isObj(v.act) && typeof v.act.kind === 'string' ? { kind: v.act.kind.slice(0, 12), until: NN(v.act.until, 0), room: typeof v.act.room === 'string' ? v.act.room : null } : { kind: 'idle', until: 0, room: null } };
+        if (U().isObj(v.assignment)) {
+          const a = v.assignment;
+          if (a.kind === 'room' && s.rooms[a.id]) sv.assignment = { kind: 'room', id: a.id };
+          else if (a.kind === 'guard') sv.assignment = { kind: 'guard' };
+          else if (a.kind === 'expedition' && typeof a.id === 'string') sv.assignment = { kind: 'expedition', id: a.id };
+        }
+        s.survivors[id] = sv;
+      }
+      // reconcile room worker lists with survivor assignments (survivor record is the truth)
+      for (const id in s.rooms) s.rooms[id].workers = [];
+      for (const id in s.survivors) {
+        const a = s.survivors[id].assignment;
+        if (a && a.kind === 'room') {
+          const room = s.rooms[a.id]; const def = DE.Data.ROOMS[room.type];
+          if (room.workers.length < def.workers) room.workers.push(id); else s.survivors[id].assignment = null;
+        }
+      }
+      s.nextId = Math.max(1, N(src.nextId, 1));
+      // research
+      if (U().isObj(src.research)) {
+        if (U().isObj(src.research.done)) for (const id in src.research.done) if (DE.Data.RESEARCH[id]) s.research.done[id] = true;
+        const cur = src.research.current;
+        if (U().isObj(cur) && DE.Data.RESEARCH[cur.id] && !s.research.done[cur.id])
+          s.research.current = { id: cur.id, endsAt: N(cur.endsAt, now), duration: NN(cur.duration, 1) };
+      }
+      // excavation
+      if (U().isObj(src.excavation)) s.excavation = { depth: N(src.excavation.depth, s.floors.length + 1), endsAt: N(src.excavation.endsAt, now), duration: NN(src.excavation.duration, 1) };
+      // defense
+      if (U().isObj(src.defense)) {
+        const d = src.defense;
+        if (U().isObj(d.wall)) { s.defense.wall.level = Math.max(1, N(d.wall.level, 1)); s.defense.wall.hp = NN(d.wall.hp, 0); }
+        s.defense.turrets = NN(d.turrets, 0); s.defense.traps = NN(d.traps, 0);
+        s.defense.nextWaveAt = N(d.nextWaveAt, now + C().FIRST_WAVE_SEC * 1000);
+        s.defense.wave = Math.max(1, N(d.wave, 1)); s.defense.shock = NN(d.shock, 0);
+        if (Array.isArray(d.log)) s.defense.log = d.log.filter(U().isObj).slice(-20);
+        if (U().isObj(d.lastResult)) s.defense.lastResult = d.lastResult;
+      }
+      // expeditions
+      if (U().isObj(src.expeditions)) {
+        if (Array.isArray(src.expeditions.active)) src.expeditions.active.forEach(e => {
+          if (!U().isObj(e) || !DE.Data.LOCATIONS.some(l => l.id === e.location)) return;
+          const members = Array.isArray(e.survivors) ? e.survivors.filter(id => s.survivors[id]) : [];
+          if (!members.length) return;
+          s.expeditions.active.push({ id: typeof e.id === 'string' ? e.id : 'x' + (s.nextId++), location: e.location, survivors: members, endsAt: N(e.endsAt, now), duration: NN(e.duration, 1) });
+        });
+        if (Array.isArray(src.expeditions.log)) s.expeditions.log = src.expeditions.log.filter(U().isObj).slice(-20);
+      }
+      // survivors on expeditions that no longer exist are freed
+      const activeIds = {}; s.expeditions.active.forEach(e => activeIds[e.id] = true);
+      for (const id in s.survivors) { const a = s.survivors[id].assignment; if (a && a.kind === 'expedition' && !activeIds[a.id]) s.survivors[id].assignment = null; }
+      // prestige
+      if (U().isObj(src.prestige)) {
+        s.prestige.points = NN(src.prestige.points, 0); s.prestige.lifetime = NN(src.prestige.lifetime, 0); s.prestige.resets = NN(src.prestige.resets, 0);
+        if (U().isObj(src.prestige.upgrades)) for (const id in src.prestige.upgrades) if (DE.Data.LEGACY[id]) s.prestige.upgrades[id] = U().clamp(N(src.prestige.upgrades[id], 0), 0, DE.Data.LEGACY[id].max);
+      }
+      // stats
+      if (U().isObj(src.stats)) {
+        for (const k of ['runScore', 'zombiesKilled', 'wavesSurvived', 'breaches', 'recruited', 'maxDepth', 'expeditions', 'roomsBuilt']) s.stats[k] = NN(src.stats[k], s.stats[k]);
+        if (U().isObj(src.stats.produced)) for (const r of DE.Data.RESOURCE_ORDER) s.stats.produced[r] = NN(src.stats.produced[r], 0);
+      }
+      if (Array.isArray(src.log)) s.log = src.log.filter(x => U().isObj(x) && typeof x.msg === 'string').slice(-50);
+      if (U().isObj(src.settings)) { s.settings.autosave = src.settings.autosave !== false; s.settings.animations = src.settings.animations !== false; }
+      if (U().isObj(src.overworld) && DE.Data.OVERWORLD) for (const k in DE.Data.OVERWORLD) s.overworld[k] = U().clamp(N(src.overworld[k], 0), 0, DE.Data.OVERWORLD[k].levels.length - 1);
+      if (U().isObj(src.flags)) for (const k in src.flags) if (typeof src.flags[k] === 'boolean' || typeof src.flags[k] === 'number') s.flags[k] = src.flags[k];
+      return s;
+    } catch (e) {
+      console.warn('sanitize failed', e);
+      return null;
+    }
+  }
+
+  return { save, load, clear, hasSave, exportString, importString, parse, sanitize, serialize, MIGRATIONS };
+})();
