@@ -2,7 +2,7 @@
 <link rel="stylesheet" href="css/style.css"><link rel="stylesheet" href="css/rigs.css">
 <style>body{background:#3a3a4a;padding:10px}.row{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:14px}.row div{text-align:center;color:#fff;font:12px sans-serif}</style></head>
 <body><div class="row" id="z"></div><div class="row" id="c"></div><div class="row" id="a"></div>
-<script src="js/ui/chars.js"></script>
+<script src="js/data/sprites.js"></script><script src="js/ui/chars.js"></script>
 <script>
 const q=new URLSearchParams(location.search);const anim=q.get('anim')||'idle';const H=+(q.get('h')||130);const only=q.get('only');
 document.getElementById('z').innerHTML=Object.keys(DE.Chars.ZOMBIES).filter(k=>!only||only.includes(k)).map(k=>`<div>${DE.Chars.zombie(k,{anim,h:H})}<br>${k}</div>`).join('');

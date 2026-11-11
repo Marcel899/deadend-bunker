@@ -60,6 +60,8 @@ js/ui/
   actors.js           survivors walking, riding the lift, working, sleeping in allocated beds
   scenes.js           room prop library + renderer (100 units per cell, 1:1 scale)
   room-icons.js       generated build icons for every room and surface structure
+assets/src/           furniture / weapon / tool sprite sheets; tools/cut_sprites.py cuts them into
+                      assets/sprites/*.png + js/data/sprites.js (python tools/cut_sprites.py [--preview])
   chars.js            rigged characters; held items drawn in the hand's frame
   ui-side.js          side panel: overview / room / build menu
   ui-drawers.js       survivors, research, excavate, defense, expeditions, legacy, settings

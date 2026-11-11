@@ -344,15 +344,31 @@ DE.Data.SCENES = {
  * level (bunks give two berths, beds/medical beds one, cryopods one upright). Positions are in
  * scene units: x along the room, y = height of the mattress above the floor line (negative = up).
  * The simulation allocates these one survivor per berth; the actors lie down exactly on them. */
+/* Scene props drawn with the cut-out furniture sprites (assets/sprites, see tools/cut_sprites.py).
+ * prop name → { s: sprite, h: height in scene units (width follows the sprite's aspect ratio),
+ * y: lift above the floor line for wall-mounted items, berths: mattress heights for sleepers }.
+ * Props not listed keep their vector drawing. */
+DE.Data.SPRITE_PROPS = {
+  bunk: { s: 'bunkbed', h: 76, berths: [-24, -65] }, bed: { s: 'bed', h: 36, berths: [-27] }, medbed: { s: 'hospitalbed', h: 44, berths: [-34] },
+  locker: { s: 'locker', h: 70 }, sofa: { s: 'sofa', h: 32 }, clock: { s: 'clock', h: 22, wall: true }, poster: { s: 'painting', h: 26, wall: true },
+  generator: { s: 'generator', h: 44 }, shelf: { s: 'storagerack', h: 66 }, barrel: { s: 'barrel', h: 34 }, table: { s: 'table', h: 28 }, chair: { s: 'chair', h: 34 },
+  fridge: { s: 'fridge', h: 64 }, stove: { s: 'kitchen', h: 62 }, counter: { s: 'counter', h: 36 }, crate: { s: 'boxes', h: 40 }, weaponrack: { s: 'gunrack', h: 68 },
+  radio: { s: 'radiodesk', h: 50 }, watertank: { s: 'watertank', h: 62 }, desk: { s: 'desk', h: 44 }, workbench: { s: 'workbench', h: 52 }, bike: { s: 'bike', h: 34 },
+  cabinet: { s: 'medcabinet', h: 66 }, ivstand: { s: 'ivstand', h: 62 }, serverrack: { s: 'serverrack', h: 72 }, labbench: { s: 'labbench', h: 52 },
+  microscope: { s: 'microscope', h: 30 }, console: { s: 'console', h: 52 }, pump: { s: 'handpump', h: 44 }, vent: { s: 'vent', h: 26, wall: true },
+  hatchdoor: { s: 'hatch', h: 64 }, weights: { s: 'dumbbells', h: 34 }, gymbench: { s: 'gymbench', h: 26 }, treadmill: { s: 'treadmill', h: 46 },
+  forge: { s: 'furnace', h: 52 }, sack: { s: 'boxes', h: 30 }, ammobox: { s: 'satchel', h: 22 }, monitor: { s: 'computer', h: 40 }, freezer: { s: 'vending', h: 66 },
+  tank: { s: 'growtank', h: 64 }, reactor: { s: 'reactor', h: 86 }, centrifuge: { s: 'centrifuge', h: 30 },
+};
+
 DE.Data.bedsFor = function (type, level) {
   const L = DE.Data.SCENES[type]; if (!L) return [];
   const tier = level >= 50 ? 4 : level >= 25 ? 3 : level >= 10 ? 2 : 1;
   const list = (L.props || []).concat(tier >= 2 ? L.lv10 || [] : [], tier >= 3 ? L.lv25 || [] : [], tier >= 4 ? L.lv50 || [] : []);
   const beds = [];
   list.forEach(([name, x]) => {
-    if (name === 'bunk') beds.push({ x, y: -38, kind: 'bunk' }, { x, y: -68, kind: 'bunk' });
-    else if (name === 'bed') beds.push({ x, y: -22, kind: 'bed' });
-    else if (name === 'medbed') beds.push({ x, y: -22, kind: 'medbed' });
+    const sp = DE.Data.SPRITE_PROPS[name];
+    if (sp && sp.berths) sp.berths.forEach(y => beds.push({ x, y, kind: name }));
     else if (name === 'cryopod') beds.push({ x, y: -14, kind: 'pod', upright: true });
   });
   return beds.sort((a, b) => a.x - b.x || b.y - a.y);

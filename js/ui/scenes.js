@@ -222,7 +222,9 @@ DE.Scenes = (function () {
     const layout = DE.Data.SCENES[def.id] || DE.Data.SCENES._default;
     const size = def.size, W = CELL * size, level = room.level, tier = tierOf(level);
     let s = `<svg class="scene" viewBox="0 ${-TOP} ${W} ${180 + TOP}" preserveAspectRatio="none" aria-hidden="true">${defs()}${base(def, layout.theme, size, level, room.construction)}`;
-    const place = (list) => (list || []).forEach(p => { const [name, x, y, o] = p; const fn = P[name]; if (!fn) return; const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier; s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : ''); });
+    const place = (list) => (list || []).forEach(p => { const [name, x, y, o] = p;
+      const spr = sprite(name, o); if (spr) { const sp = DE.Data.SPRITE_PROPS[name]; s += g('prop sprite p-' + name, spr, x, sp.wall && y != null ? y : FLOOR); return; }
+      const fn = P[name]; if (!fn) return; const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier; s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : ''); });
     place(layout.props);
     if (tier >= 2) place(layout.lv10);
     if (tier >= 3) place(layout.lv25);
@@ -230,6 +232,16 @@ DE.Scenes = (function () {
     if (room.construction) s += g('construction', P.scaffold({ w: W - 30, h: 110 }), W / 2, FLOOR);
     s += `<rect x="0" y="${-TOP}" width="${W}" height="${180 + TOP}" fill="url(#sc-vig)" class="vig"/></svg>`;
     return s;
+  }
+
+  /** A prop drawn with its cut-out sprite (DE.Data.SPRITE_PROPS): bottom-centred at the origin,
+   * aspect ratio preserved, `n` copies side by side, a soft contact shadow under floor items. */
+  function sprite(name, o) {
+    const sp = DE.Data.SPRITE_PROPS && DE.Data.SPRITE_PROPS[name], px = sp && DE.Data.SPRITES && DE.Data.SPRITES[sp.s]; if (!px) return null;
+    const h = sp.h * ((o && o.scale) || 1), w = h * px[0] / px[1], n = Math.max(1, Math.min(4, (o && o.n && name !== 'weaponrack' && name !== 'serverrack') ? Math.ceil(o.n / 2) : 1));
+    let out = '';
+    for (let i = 0; i < n; i++) { const cx = (i - (n - 1) / 2) * (w * .92); out += (sp.wall ? '' : `<ellipse cx="${cx.toFixed(1)}" cy="0" rx="${(w * .48).toFixed(1)}" ry="3.5" fill="#000" opacity=".35"/>`) + `<image href="assets/sprites/${sp.s}.png" x="${(cx - w / 2).toFixed(1)}" y="${(-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMax meet"/>`; }
+    return out;
   }
 
   /** Station positions (scene x units) for an activity in a room. */
@@ -240,5 +252,5 @@ DE.Scenes = (function () {
     return list;
   }
 
-  return { P, render, stations, tierOf, defs, THEMES, FLOOR, CELL, TOP };
+  return { P, render, sprite, stations, tierOf, defs, THEMES, FLOOR, CELL, TOP };
 })();

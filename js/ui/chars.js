@@ -215,7 +215,28 @@ DE.Chars = (function () {
    * forearm away from the shoulder (the direction the item extends / a gun fires) and +x is the
    * thumb side, which faces up when the arm is raised to aim. So a weapon always points where the
    * arm points — hanging at low-ready when idle, level when aiming — and every pose stays aligned. */
+  /* Cut-out sprites for held items (assets/sprites). size = longest side in rig units;
+   * grip / tip = points in the sprite (0..1 fractions): the grip sits in the palm and the sprite is
+   * rotated so grip→tip points along +y (the way the arm points). `hang` items (cases, lanterns)
+   * dangle below the hand upright instead. */
+  const HELD = {
+    rifle: { s: 'rifle', size: 74, grip: [.4, .72], tip: [1, .3] }, shotgun: { s: 'shotgun', size: 72, grip: [.33, .7], tip: [1, .25] },
+    pistol: { s: 'pistol', size: 32, grip: [.22, .8], tip: [1, .22] }, sniper: { s: 'sniper', size: 82, grip: [.42, .7], tip: [1, .3] }, ak: { s: 'ak', size: 72, grip: [.42, .72], tip: [1, .3] },
+    wrench: { s: 'wrench', size: 48, grip: [.2, .82], tip: [.85, .15] }, pipewrench: { s: 'pipewrench', size: 44, grip: [.22, .85], tip: [.8, .12] },
+    crowbar: { s: 'crowbar', size: 58, grip: [.14, .86], tip: [.9, .1] }, pitchfork: { s: 'rake', size: 78, grip: [.72, .28], tip: [.1, .92] },
+    cleaver: { s: 'cleaver', size: 40, grip: [.86, .45], tip: [.1, .5] }, shovel: { s: 'shovel', size: 56, grip: [.8, .18], tip: [.2, .85] },
+    medkit: { s: 'medkit2', size: 32, hang: true }, flashlight: { s: 'lantern', size: 30, hang: true }, toolbox: { s: 'toolbox', size: 30, hang: true },
+  };
+  function held(t, len) {
+    const h = HELD[t], px = h && DE.Data && DE.Data.SPRITES && DE.Data.SPRITES[h.s]; if (!px) return null;
+    const k = h.size / Math.max(px[0], px[1]), w = px[0] * k, ht = px[1] * k;
+    const img = `<image href="assets/sprites/${h.s}.png" width="${w.toFixed(1)}" height="${ht.toFixed(1)}"/>`;
+    if (h.hang) return `<g transform="translate(${(-w / 2).toFixed(1)} ${(len + 4).toFixed(1)})">${img}</g>`;
+    const gx = h.grip[0] * w, gy = h.grip[1] * ht, ang = Math.atan2(h.tip[1] * ht - gy, h.tip[0] * w - gx) * 180 / Math.PI;
+    return `<g transform="translate(0 ${len}) rotate(${(90 - ang).toFixed(1)}) translate(${(-gx).toFixed(1)} ${(-gy).toFixed(1)})">${img}</g>`;
+  }
   function item(t, len) {
+    const spr = held(t, len); if (spr) return spr;
     const at = (body) => `<g transform="translate(0 ${len})">${body}</g>`;
     const metal = '#3a3540', metal2 = '#6e717b', wood = '#6b4226';
     switch (t) {
@@ -232,7 +253,7 @@ DE.Chars = (function () {
       default: return '';
     }
   }
-  const GUNS = { rifle: 1, shotgun: 1, pistol: 1 };
+  const GUNS = { rifle: 1, shotgun: 1, pistol: 1, sniper: 1, ak: 1 };
 
   /* ---------- assemble a rig ---------- */
   function rig(id, o) {
@@ -277,13 +298,13 @@ DE.Chars = (function () {
   ZOMBIES.boss = Object.assign({}, ZOMBIES.mutant, { name: 'Colossus', headW: 42, headH: 44, shoulderW: 50, hipW: 38, pose: { hips: [0, -64], neck: [0, -128], shoulders: [[-46, -118], [46, -118]], hipOff: 20, legLen: 60, armLen: 76, armF: -55, armB: 55, lean: 6 }, filter: 'hue-rotate(-40deg) saturate(1.4) contrast(1.15)', vars: { '--t': '2.6s', '--la': '14deg', '--aa': '14deg', '--bob': '6px' } });
   const CREW = {
     scavenger: C({ name: 'Scavenger', hair: { style: 'messy', color: '#5a3a22' }, brows: 'stern', shirt: '#d9c7a6', jacket: { color: '#6b4a2e', lapel: '#4a3220', pocket: true }, sleeve: '#6b4a2e', pants: '#2f2f3a', boots: '#6b4a2e', backpack: true, wristband: '#3a2a2a', item: 'crowbar', pose: { armF: -28, armB: 18 }, vars: { '--t': '1s', '--la': '24deg', '--aa': '22deg', '--bob': '2px' } }),
-    hunter:    C({ name: 'Hunter', hair: { style: 'ponytail', color: '#f2d060' }, mouth: 'smirk', cheeks: true, shirt: '#f4efe6', jacket: { color: '#c93a3a', lapel: '#9a2a2a', len: 30 }, sleeve: '#c93a3a', gloves: '#3a2a2a', pants: '#2b3350', boots: '#6b4a2e', bandolier: true, item: 'rifle', pose: { armF: -28, armB: 10 }, vars: { '--t': '.9s', '--la': '26deg', '--aa': '18deg', '--bob': '2px' } }),
+    hunter:    C({ name: 'Hunter', hair: { style: 'ponytail', color: '#f2d060' }, mouth: 'smirk', cheeks: true, shirt: '#f4efe6', jacket: { color: '#c93a3a', lapel: '#9a2a2a', len: 30 }, sleeve: '#c93a3a', gloves: '#3a2a2a', pants: '#2b3350', boots: '#6b4a2e', bandolier: true, item: 'sniper', pose: { armF: -28, armB: 10 }, vars: { '--t': '.9s', '--la': '26deg', '--aa': '18deg', '--bob': '2px' } }),
     engineer:  C({ name: 'Engineer', skin: SKIN.tan, hair: { style: 'short', color: '#6b3a1e' }, beard: { style: 'full', color: '#6b3a1e' }, brows: 'stern', mouth: 'grim', hat: { type: 'hardhat', color: '#f3c21a' }, shirt: '#2f7fd0', vest: '#f08a2a', sleeve: '#2f7fd0', pants: '#3a5a9a', boots: '#6b4a2e', toolbelt: true, kneepads: true, item: 'wrench', pose: { armF: -30, armB: 12 }, vars: { '--t': '1.1s', '--la': '20deg', '--aa': '16deg', '--bob': '2px' } }),
     medic:     C({ name: 'Medic', hair: { style: 'bun', color: '#4a2a1a' }, eyes: 'glasses', cheeks: true, dirt: false, shirt: '#9ad3ef', jacket: { color: '#f6f4ee', lapel: '#d9d6cf', len: 56, pocket: true }, sleeve: '#f6f4ee', cross: true, stethoscope: true, pants: '#4a4a58', boots: '#3a2a2a', item: 'medkit', pose: { armF: 6, armB: -6 }, vars: { '--t': '1.1s', '--la': '20deg', '--aa': '10deg', '--bob': '2px' } }),
-    soldier:   C({ name: 'Soldier', skin: SKIN.tan, mouth: 'stubble', brows: 'stern', hat: { type: 'helmet', color: '#4f6a3a', color2: '#3e5530' }, shirt: '#55683c', sleeve: '#55683c', gloves: '#2a2a2a', pants: '#4a5c36', boots: '#2a2a2a', bandolier: true, kneepads: true, item: 'rifle', pose: { armF: -28, armB: 18 }, vars: { '--t': '.95s', '--la': '24deg', '--aa': '20deg', '--bob': '2px' } }),
+    soldier:   C({ name: 'Soldier', skin: SKIN.tan, mouth: 'stubble', brows: 'stern', hat: { type: 'helmet', color: '#4f6a3a', color2: '#3e5530' }, shirt: '#55683c', sleeve: '#55683c', gloves: '#2a2a2a', pants: '#4a5c36', boots: '#2a2a2a', bandolier: true, kneepads: true, item: 'ak', pose: { armF: -28, armB: 18 }, vars: { '--t': '.95s', '--la': '24deg', '--aa': '20deg', '--bob': '2px' } }),
     farmer:    C({ name: 'Farmer', hair: { style: 'white', color: '#e6e6ea' }, beard: { style: 'long', color: '#e6e6ea' }, brows: 'stern', mouth: 'grim', shirt: '#7c8390', jacket: { color: '#7a5a3a', lapel: '#5a4028', len: 62, pocket: true }, sleeve: '#7a5a3a', pants: '#2f2f3a', boots: '#3a2a2a', bandolier: false, item: 'pitchfork', pose: { armF: -24, armB: 14 }, vars: { '--t': '1.4s', '--la': '16deg', '--aa': '12deg', '--bob': '2px' } }),
-    mechanic:  C({ name: 'Mechanic', hair: { style: 'short', color: '#5a3a22' }, hat: { type: 'goggles' }, cheeks: true, shirt: '#d9731f', sleeve: '#d9731f', gloves: '#3a2a2a', pants: '#b85f18', boots: '#3a2a2a', toolbelt: true, item: 'wrench', pose: { armF: 10, armB: -10 }, vars: { '--t': '1s', '--la': '22deg', '--aa': '18deg', '--bob': '3px' } }),
-    cook:      C({ name: 'Cook', hair: { style: 'short', color: '#5a3a22' }, hat: { type: 'chef' }, dirt: false, shirt: '#f6f4ee', sleeve: '#f6f4ee', apron: '#6b4a2e', pants: '#2f2f3a', boots: '#3a2a2a', item: 'pan', pose: { armF: 24, armB: -8 }, vars: { '--t': '1.2s', '--la': '18deg', '--aa': '14deg', '--bob': '2px' } }),
+    mechanic:  C({ name: 'Mechanic', hair: { style: 'short', color: '#5a3a22' }, hat: { type: 'goggles' }, cheeks: true, shirt: '#d9731f', sleeve: '#d9731f', gloves: '#3a2a2a', pants: '#b85f18', boots: '#3a2a2a', toolbelt: true, item: 'pipewrench', pose: { armF: 10, armB: -10 }, vars: { '--t': '1s', '--la': '22deg', '--aa': '18deg', '--bob': '3px' } }),
+    cook:      C({ name: 'Cook', hair: { style: 'short', color: '#5a3a22' }, hat: { type: 'chef' }, dirt: false, shirt: '#f6f4ee', sleeve: '#f6f4ee', apron: '#6b4a2e', pants: '#2f2f3a', boots: '#3a2a2a', item: 'cleaver', pose: { armF: 24, armB: -8 }, vars: { '--t': '1.2s', '--la': '18deg', '--aa': '14deg', '--bob': '2px' } }),
     guard:     C({ name: 'Guard', eyes: 'sunglasses', mouth: 'grim', hat: { type: 'police', color: '#2b3350' }, dirt: false, shirt: '#2b3350', sleeve: '#2b3350', gloves: '#1a1a22', pants: '#222a44', boots: '#1a1a22', badge: true, item: 'rifle', pose: { armF: -28, armB: 18 }, vars: { '--t': '1.05s', '--la': '20deg', '--aa': '16deg', '--bob': '2px' } }),
     scout:     C({ name: 'Scout', hair: { style: 'messy', color: '#5a3a22' }, cheeks: true, hat: { type: 'cap', color: '#d8303a', color2: '#f6f4ee' }, shirt: '#f6f4ee', jacket: { color: '#d8303a', lapel: '#a02028', len: 50, pocket: true }, sleeve: '#d8303a', pants: '#3a5a9a', boots: '#6b4a2e', sneakers: true, backpack: true, item: 'flashlight', pose: { armF: -40, armB: 20 }, vars: { '--t': '.8s', '--la': '28deg', '--aa': '22deg', '--bob': '3px' } }),
   };
