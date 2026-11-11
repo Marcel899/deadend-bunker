@@ -103,6 +103,7 @@ DE.UI.Battlefield = (function () {
     if (t.target && Math.abs(d) < 3 && t.cd <= 0 && (st.incoming || st.fighting) && t.target.x < OW().W - 10) {
       t.cd = .32 + Math.random() * .18;
       const r = t.a * Math.PI / 180; const mx = t.px + Math.cos(r) * 38, my = t.py + Math.sin(r) * 38;
+      DE.Audio.sfx('heavy', 90);
       tracer(mx, my, t.target.x + (Math.random() - .5) * 8, t.target.y - t.target.h * (.35 + Math.random() * .3), true);
       t.flash.setAttribute('opacity', '1'); setTimeout(() => t.flash.setAttribute('opacity', '0'), 60);
       t.recoil.setAttribute('transform', 'translate(-3 0)'); setTimeout(() => t.recoil.removeAttribute('transform'), 70);
@@ -150,7 +151,7 @@ DE.UI.Battlefield = (function () {
   function launch(a, T, dmg) {
     const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'bf-missile');
     g.innerHTML = `<path class="bf-flame" d="M-16 0 l-10 -4 l3 4 l-3 4 z" fill="#ffb13a"/><rect x="-14" y="-3.5" width="22" height="7" rx="3" fill="#d8d6d1" stroke="#1c1020" stroke-width="2"/><path d="M8 -3.5 l7 3.5 l-7 3.5 z" fill="#d8303a" stroke="#1c1020" stroke-width="2" stroke-linejoin="round"/><path d="M-14 -3.5 l-4 -4 h6 z M-14 3.5 l-4 4 h6 z" fill="#5a5f6a" stroke="#1c1020" stroke-width="1.5"/>`;
-    fx.appendChild(g);
+    fx.appendChild(g); DE.Audio.sfx('launch', 200);
     st.missiles.push({ g, a, T, t: 0, dmg, smoke: 0 });
     puff(a.x0, a.y0, 9, 'bf-smoke big');
   }
@@ -168,7 +169,7 @@ DE.UI.Battlefield = (function () {
     const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'bf-boom'); g.setAttribute('transform', `translate(${x} ${y})`);
     let debris = ''; for (let i = 0; i < 7; i++) { const a = -Math.PI * (i + .5) / 7; debris += `<rect class="bf-debris" style="--dx:${(Math.cos(a) * 60).toFixed(0)}px;--dy:${(Math.sin(a) * 70).toFixed(0)}px" x="-3" y="-3" width="6" height="6" fill="#5a3a26" stroke="#1c1020" stroke-width="1.5"/>`; }
     g.innerHTML = `<circle class="bf-boom-flash" r="46" fill="url(#ow-sunglow)"/><circle class="bf-boom-ball" r="26" fill="#ffb13a" stroke="#1c1020" stroke-width="3"/><circle class="bf-boom-core" r="14" fill="#fff4a8"/>${debris}<ellipse class="bf-boom-scorch" cy="4" rx="34" ry="6" fill="#1c1020" opacity=".45"/>`;
-    fx.appendChild(g); setTimeout(() => g.remove(), 1100);
+    fx.appendChild(g); setTimeout(() => g.remove(), 1100); DE.Audio.sfx('boom', 150);
     for (let i = 0; i < 4; i++) puff(x + (Math.random() - .5) * 40, y - 10 - Math.random() * 20, 12 + Math.random() * 8, 'bf-smoke big');
     // splash damage
     st.zombies.forEach(z => { if (!z.dead && Math.abs(z.x - x) < 70) hit(z, dmg * (1 - Math.abs(z.x - x) / 90)); });
@@ -238,7 +239,7 @@ DE.UI.Battlefield = (function () {
         face(u.rig, false); u.cd -= dt;
         if (u.cd <= 0) {
           const z = live.reduce((b, z) => (!b || z.x < b.x ? z : b), null);
-          u.cd = .45 + Math.random() * .45; anim(u.rig, 'shoot');
+          u.cd = .45 + Math.random() * .45; anim(u.rig, 'shoot'); DE.Audio.sfx('shot');
           tracer(u.x + 64 * .44, u.y - 64 * .62, z.x, z.y - z.h * (.4 + Math.random() * .3), false); hit(z, .6);
         }
       }
@@ -290,7 +291,7 @@ DE.UI.Battlefield = (function () {
     if (!ensure()) return;
     syncTurrets(s); syncLauncher(s); syncGuards(s); syncParty(s);
     st.incoming = !!flags.incoming;
-    if (st.incoming && st.wave !== s.defense.wave && !st.fighting) { st.wave = s.defense.wave; spawnHorde(s); }
+    if (st.incoming && st.wave !== s.defense.wave && !st.fighting) { st.wave = s.defense.wave; spawnHorde(s); DE.Audio.sfx('alarm', 5000); }
     if (!st.incoming && !st.fighting && st.zombies.length && st.wave !== -1) { st.zombies.forEach(z => z.el.remove()); st.zombies = []; st.wave = -1; }
     const animOn = s.settings.animations;
     if (animOn && !running) { running = true; lastT = 0; raf = requestAnimationFrame(frame); }

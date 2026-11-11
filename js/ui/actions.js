@@ -9,7 +9,7 @@ DE.Actions = (function () {
  const S = () => DE.Game.state;
  const P = () => DE.Data.PROFESSIONS;
  const done = () => DE.Game.afterAction();
- const fail = (res) => { UI().toast(res && res.reason ? res.reason : 'Cannot do that', 'err'); };
+ const fail = (res) => { DE.Audio.sfx('error'); UI().toast(res && res.reason ? res.reason : 'Cannot do that', 'err'); };
 
  const A = {};
  A.noop = () => {};
@@ -118,7 +118,7 @@ DE.Actions = (function () {
  A.cancelResearch = () => { DE.Research.cancel(S()); done(); };
 
  /* ---- excavation ---- */
- A.excavate = () => { const r = DE.Excavation.start(S()); if (!r.ok) return fail(r); UI().toast('Excavation started'); done(); };
+ A.excavate = () => { const r = DE.Excavation.start(S()); if (!r.ok) return fail(r); DE.Audio.sfx('dig'); UI().toast('Excavation started'); done(); };
 
  /* ---- defense ---- */
  A.wallUpgrade = (p, el) => { const cost = DE.Defense.wallUpgradeCost(S()); const r = DE.Defense.upgradeWall(S()); if (!r.ok) return fail(r); UI().purchased(el, cost, 'Wall reinforced'); done(); };
@@ -169,6 +169,8 @@ DE.Actions = (function () {
  UI().closeModal(); UI().closeDrawer();
  DE.Game.loadState(r.state); UI().toast('Save imported', 'ok');
  };
+ A.toggleMusic = () => { DE.Audio.set('musicOn', !DE.Audio.prefs().musicOn); UI().renderDrawer(true); };
+ A.toggleSfx = () => { DE.Audio.set('sfxOn', !DE.Audio.prefs().sfxOn); DE.Audio.sfx('click'); UI().renderDrawer(true); };
  A.toggleAnimations = () => { S().settings.animations = !S().settings.animations; document.body.classList.toggle('no-anim', !S().settings.animations); UI().renderDrawer(true); };
  A.hardReset = () => UI().confirmModal('Delete everything?', '<p>This deletes your save, including Legacy Points. There is no undo.</p>', () => { DE.Save.clear(); DE.Game.newGame(); }, 'Delete save');
  A.toMenu = () => { DE.Game.save(); DE.Game.stop(); UI().closeDrawer(); UI().showScreen('menu'); };

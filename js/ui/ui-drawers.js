@@ -86,23 +86,52 @@ DE.UI.Drawers = (function () {
  };
 
  /* ================= RESEARCH ================= */
+ /* Research: a tech tree per branch. Nodes sit in tiers by prerequisite depth and are joined by
+  * connector lines; each card shows an effect icon, name, cost/time and its state. */
+ const RS_ICON = { roomMult: null, consumptionMult: 'recycle', unmannedBase: 'gear', storageMult: 'chest', globalMult: 'up', unlockRoom: 'build', buildTimeMult: 'timer', maxFloor: 'dig2',
+   powerUseMult: 'power', excavationCostMult: 'dig2', unlockTurrets: 'turret', buildCostMult: 'coin', fuelUseMult: 'res.fuel', noiseMult: 'noise', healMult: 'medkit', housingPerLevel: 'rooms',
+   unlockTraps: 'traps', wallHpMult: 'wallicon', workerEff: 'repair2', guardDmgMult: 'guards', turretDmgMult: 'turret', moraleBonus: 'morale', survivorConsumptionMult: 'res.food', offlineCapHours: 'timer', xpMult: 'star' };
+ function rsIcon(n) { const e = n.effects[0] || {}; if (e.type === 'roomMult' || e.type === 'unlockRoom') return DE.Icons.room(e.room, 'rs-ico'); return DE.Icons.img(RS_ICON[e.type] || 'research', 'rs-ico'); }
+ function rsLayout(nodes) {
+   const depth = {}; const d = (n) => depth[n.id] != null ? depth[n.id] : (depth[n.id] = n.requires.length ? 1 + Math.max(...n.requires.map(r => d(DE.Data.RESEARCH[r]))) : 0);
+   nodes.forEach(d); const tiers = []; nodes.forEach(n => (tiers[depth[n.id]] = tiers[depth[n.id]] || []).push(n));
+   // order each tier by the average column of its parents so lines cross less
+   const col = {}; tiers.forEach((t, i) => { if (i) t.sort((a, b) => avg(a) - avg(b)); t.forEach((n, k) => col[n.id] = k); });
+   function avg(n) { return n.requires.reduce((s, r) => s + (col[r] || 0), 0) / Math.max(1, n.requires.length); }
+   return { tiers, col, depth };
+ }
  const research = {
- title: (s) => `Research <small>${U().fmt(s.resources.research)}  available</small>`,
+ title: (s) => `Research <small>${U().fmt(s.resources.research)} research points available</small>`,
  render(s) {
  const cur = s.research.current; const now = Date.now(); const B = DE.Data.RESEARCH_BRANCHES;
- let html = '';
- if (cur) { const n = DE.Data.RESEARCH[cur.id]; html += `<div class="card current-research"><h4>${DE.Icons.branch(n.branch, 'ico-inline')} Researching: ${esc(n.name)}</h4>${bar(100 * (1 - (cur.endsAt - now) / (cur.duration * 1000)), 'purple')}<div class="row"><small class="muted">${U().fmtTime((cur.endsAt - now) / 1000)} left</small><button class="btn small ghost" data-action="cancelResearch">Cancel (50% refund)</button></div></div>`; }
- else if (!Object.values(s.rooms).some(r => r.type === 'lab' || r.type === 'server')) html += `<div class="card"><p> You have no Research Lab. Build one to generate  research points.</p></div>`;
+ const hasLab = Object.values(s.rooms).some(r => (r.type === 'lab' || r.type === 'server') && r.level > 0);
+ const rate = (s._rates && s._rates.net && s._rates.net.research) || 0;
+ let html = `<div class="rs-top"><div class="rs-points">${DE.Icons.img('research', 'rs-big')}<span><small>Research points</small><b>${U().fmt(s.resources.research)}</b><i class="${rate > 0 ? 'pos' : ''}">${U().fmtRate(rate)}</i></span></div>`;
+ if (cur) { const n = DE.Data.RESEARCH[cur.id]; const pct = 100 * (1 - (cur.endsAt - now) / (cur.duration * 1000));
+   html += `<div class="rs-current">${rsIcon(n)}<div><small>Researching</small><b>${esc(n.name)}</b><div class="dk-bar"><i style="width:${pct}%;background:linear-gradient(180deg,#d7a6ff,#9a5ae0)"></i></div><small>${U().fmtTime((cur.endsAt - now) / 1000)} left</small></div><button class="btn small danger" data-action="cancelResearch">Cancel</button></div>`; }
+ else html += `<div class="rs-current idle">${DE.Icons.img(hasLab ? 'info' : 'warning', 'rs-ico')}<div><b>${hasLab ? 'No project running' : 'No Research Lab'}</b><small>${hasLab ? 'Pick an available project below.' : 'Build a Research Lab to generate research points.'}</small></div></div>`;
+ html += `</div>`;
  const br = ui().researchBranch;
- html += `<div class="tabs">${Object.keys(B).map(b => { const nodes = DE.Research.byBranch(b); const done = nodes.filter(n => s.research.done[n.id]).length; return `<button class="btn tab ${br === b ? 'active' : ''}" data-action="researchBranch" data-branch="${b}" style="--c:${B[b].color}">${DE.Icons.branch(b, 'ico-inline')} ${B[b].name} <small>${done}/${nodes.length}</small></button>`; }).join('')}</div>`;
- DE.Research.byBranch(br).forEach(n => {
- const done = s.research.done[n.id]; const avail = DE.Research.isAvailable(s, n.id); const c = DE.Research.canStart(s, n.id);
- const active = cur && cur.id === n.id;
- const cls = done ? 'done' : active ? 'active' : avail ? 'avail' : 'locked';
- html += `<div class="rs-node ${cls}"><div class="rs-icon">${DE.Icons.branch(n.branch, 'ico-inline')}</div><div class="rs-body"><b>${esc(n.name)}</b> <small class="muted"> ${U().fmt(n.cost)} · ${U().fmtTime(DE.Research.duration(s, n.id))}</small>
- <div class="rs-desc">${esc(n.desc)}</div>${n.requires.length && !done ? `<small class="muted">Requires: ${n.requires.map(r => (s.research.done[r] ? '✓ ' : '') + esc(DE.Data.RESEARCH[r].name)).join(', ')}</small>` : ''}</div>
- <div>${done ? '<span class="tag green">DONE</span>' : active ? '<span class="tag purple">IN PROGRESS</span>' : `<button class="btn primary small ${c.ok ? '' : 'cant'}" data-action="research" data-id="${n.id}" ${c.ok ? '' : 'disabled'} title="${esc(c.reason || '')}">Research</button>`}</div></div>`;
+ html += `<div class="rs-tabs">${Object.keys(B).map(b => { const nodes = DE.Research.byBranch(b); const done = nodes.filter(n => s.research.done[n.id]).length; return `<button class="btn ${br === b ? 'active' : ''}" data-action="researchBranch" data-branch="${b}">${DE.Icons.branch(b, 'ico-btn')} ${B[b].name} <span class="cost">${done}/${nodes.length}</span></button>`; }).join('')}</div>`;
+ const nodes = DE.Research.byBranch(br); const L = rsLayout(nodes);
+ const CW = 200, CH = 128, GX = 26, GY = 44, cols = Math.max(...L.tiers.map(t => t.length));
+ const W = cols * CW + (cols - 1) * GX, H = L.tiers.length * CH + (L.tiers.length - 1) * GY;
+ const pos = (n) => { const t = L.tiers[L.depth[n.id]]; const off = (W - (t.length * CW + (t.length - 1) * GX)) / 2; return { x: off + L.col[n.id] * (CW + GX), y: L.depth[n.id] * (CH + GY) }; };
+ let lines = '';
+ nodes.forEach(n => n.requires.forEach(r => { const a = pos(DE.Data.RESEARCH[r]), b = pos(n); const x1 = a.x + CW / 2, y1 = a.y + CH, x2 = b.x + CW / 2, y2 = b.y, my = (y1 + y2) / 2;
+   const lit = s.research.done[r]; lines += `<path d="M${x1} ${y1} C${x1} ${my} ${x2} ${my} ${x2} ${y2}" class="rs-link ${lit ? 'lit' : ''}"/>`; }));
+ let cards = '';
+ nodes.forEach(n => {
+   const done = s.research.done[n.id]; const avail = DE.Research.isAvailable(s, n.id); const c = DE.Research.canStart(s, n.id); const active = cur && cur.id === n.id;
+   const cls = done ? 'done' : active ? 'active' : avail ? 'avail' : 'locked'; const p = pos(n);
+   const state = done ? `<span class="rs-state ok">${DE.Icons.img('check', '')} Done</span>` : active ? `<span class="rs-state run">In progress</span>`
+     : avail ? `<button class="btn primary small ${c.ok ? '' : 'cant'}" data-action="research" data-id="${n.id}" ${c.ok ? '' : 'disabled'} title="${esc(c.reason || '')}">Research</button>`
+     : `<span class="rs-state lock">${DE.Icons.img('lock', '')} Locked</span>`;
+   cards += `<div class="rs-card ${cls}" style="left:${p.x}px;top:${p.y}px;width:${CW}px;height:${CH}px" title="${esc(n.desc)}${n.requires.length && !done ? '\nRequires: ' + n.requires.map(r => DE.Data.RESEARCH[r].name).join(', ') : ''}">
+     <div class="rs-head">${rsIcon(n)}<b>${esc(n.name)}</b></div><p>${esc(n.desc)}</p>
+     <div class="rs-foot"><span class="rs-cost">${DE.Icons.img('research', '')}${U().fmt(n.cost)} · ${U().fmtTime(DE.Research.duration(s, n.id))}</span>${state}</div></div>`;
  });
+ html += `<div class="rs-tree-wrap"><div class="rs-tree" style="width:${W}px;height:${H}px"><svg class="rs-lines" width="${W}" height="${H}">${lines}</svg>${cards}</div></div>`;
  return html;
  },
  };
@@ -247,6 +276,8 @@ DE.UI.Drawers = (function () {
  <div class="btn-row"><button class="btn primary" data-action="saveNow">Save now</button><button class="btn" data-action="exportSave">Export to text</button><button class="btn" data-action="copyExport">Copy export</button></div>
  <textarea id="export-area" class="save-area" placeholder="Export string appears here" readonly></textarea></div>
  <div class="card"><h4>Import</h4><p class="muted">Paste an exported save. It is validated and never executed.</p><textarea id="import-area" class="save-area" placeholder="Paste export string here"></textarea><button class="btn" data-action="importSave">Import save (replaces current run)</button></div>
+ <div class="card"><h4>Sound</h4>${(() => { const a = DE.Audio.prefs(); return `<div class="row"><span>Music</span><input type="range" min="0" max="1" step="0.05" value="${a.music}" data-audio="music" class="vol"><button class="btn small ${a.musicOn ? 'active' : ''}" data-action="toggleMusic">${a.musicOn ? 'On' : 'Off'}</button></div>
+ <div class="row"><span>Sound effects</span><input type="range" min="0" max="1" step="0.05" value="${a.sfx}" data-audio="sfx" class="vol"><button class="btn small ${a.sfxOn ? 'active' : ''}" data-action="toggleSfx">${a.sfxOn ? 'On' : 'Off'}</button></div>`; })()}</div>
  <div class="card"><h4>Options</h4><div class="row"><span>Animations</span><button class="btn small ${s.settings.animations ? 'active' : ''}" data-action="toggleAnimations">${s.settings.animations ? 'On' : 'Off'}</button></div>
  <div class="row"><span>Offline cap</span><b>${s._fx.offlineCapHours}h</b></div></div>
  <div class="card"><h4>Statistics</h4><div class="stats-grid">

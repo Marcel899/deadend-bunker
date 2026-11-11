@@ -32,6 +32,7 @@ DE.UI = (function () {
  if (DE.UI.Placement && DE.UI.Placement.active() && DE.UI.Placement.onClickPlace(e)) { e.preventDefault(); return; }
  const el = e.target.closest('[data-action]');
  if (!el || el.disabled) return;
+ if (el.matches('.btn, .nav-btn, .menu-btn, .res, .chip, .dk-sec-head, .room, .cell')) DE.Audio.sfx('click');
  const action = el.dataset.action;
  const fn = DE.Actions[action];
  if (!fn) { console.warn('No action', action); return; }
@@ -120,6 +121,7 @@ DE.UI = (function () {
  }
  /** Feedback for a successful purchase: button pulse, floating cost, short toast. */
  function purchased(el, cost, msg) {
+ DE.Audio.sfx(/upgrad/i.test(msg || '') ? 'upgrade' : 'buy');
  if (el) { el.classList.remove('bought'); void el.offsetWidth; el.classList.add('bought'); setTimeout(() => el.classList.remove('bought'), 700); }
  if (el && cost) { const r = el.getBoundingClientRect(); let i = 0; for (const k in cost) { if (!cost[k]) continue; const kk = k, ii = i; setTimeout(() => floatText(r.left + r.width / 2 + (ii % 2 ? 24 : -24), r.top - 4, '−' + DE.Util.fmt(cost[kk]), 'bad', DE.Icons.src('res.' + kk)), i * 120); i++; } }
  if (msg) toast(msg, 'ok', 2600, 'medal');
@@ -153,6 +155,7 @@ DE.UI = (function () {
  }
  /** A decision card: title, story text, one big button per choice. */
  function eventModal(ev) {
+ DE.Audio.sfx('event');
  const s = state(); const buttons = ev.choices.map((c, i) => {
  const tr = c.trade; const can = !tr || U().canAfford(s.resources, tr.give);
  const label = tr ? `Give ${U().costText(tr.give)} for ${U().costText(tr.get)}` : esc(c.label);

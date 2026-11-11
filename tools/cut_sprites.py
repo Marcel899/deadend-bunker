@@ -75,7 +75,7 @@ UIKIT = {'ui1': {0: 'btn-green', 4: 'btn-yellow', 27: 'btn-blue', 33: 'btn-red',
                  36: 'panel', 12: 'bar', 85: 'chevron', 43: 'ok', 44: 'no', 42: 'plus', 64: 'minus', 72: 'alert', 25: 'shield', 31: 'shield-dark'}}
 # UI icon sheets: written to assets/icons/<name>.png (the HUD / navigation icon set)
 ICONS = {'icons1': {1: 'water', 2: 'truck'}, 'power': {0: 'power'},
-  'icons2': {0: 'coin', 2: 'ingot', 3: 'jerrycan', 4: 'brick', 6: 'flask', 7: 'people', 8: 'zombie', 9: 'biohazard', 10: 'radiation', 12: 'clock', 13: 'shield', 14: 'heart',
+  'icons2': {0: 'coin', 2: 'ingot', 3: 'jerrycan', 4: 'brick', 6: 'flask', 7: 'people', 9: 'biohazard', 10: 'radiation', 12: 'clock', 13: 'shield', 14: 'heart',
              15: 'up', 16: 'alert', 17: 'gear', 18: 'star', 19: 'trophy', 20: 'medal', 21: 'scroll', 25: 'bunker', 26: 'factory', 27: 'hospital', 28: 'labbuilding', 29: 'construction',
              30: 'garage', 31: 'watchtower', 32: 'dish', 35: 'van', 37: 'wrench', 38: 'hammer', 42: 'pickaxe', 43: 'shovel', 47: 'medkit', 49: 'helmet', 51: 'check', 53: 'coins',
              54: 'home', 57: 'cross', 63: 'group', 66: 'info', 70: 'chest', 73: 'search', 75: 'warning', 82: 'chart', 88: 'move', 91: 'mappin', 93: 'lock', 99: 'mail', 104: 'turret',

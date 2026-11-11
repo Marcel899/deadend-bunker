@@ -127,6 +127,7 @@ DE.UI.DayCycle = (function () {
     // units are above the light layers: dim them to match (a little cooler at night, warmer at golden hour)
     scene.style.setProperty('--unit-light', (1 - .42 * dark).toFixed(3)); scene.style.setProperty('--unit-sat', (1 - .3 * dark).toFixed(3));
     // season + weather
+    if (DE.Audio) DE.Audio.setNight(dark > .6);
     if (scene.dataset.season !== c.season) scene.dataset.season = c.season;
     scene.dataset.tod = c.night ? 'night' : (h < 8 || h > 17) ? 'twilight' : 'day';
     const hh = Math.floor(h), mm = Math.floor((h % 1) * 60 / 15) * 15;

@@ -131,3 +131,26 @@
 .rig.portrait { height: 56px; }
 body.no-anim .rig *, body.no-anim .rig { animation: none !important; }
 .rig.a-sleep .item { display: none; }
+
+/* ---- aiming is relative to each character's base arm pose (--pf/--pb, set on the rig), so a
+   rifle is held level (arm pointing straight forward = -90deg in world space) ---- */
+.rig .muzzle { opacity: 0; }
+.rig.a-shoot .j-armF { transform: rotate(calc(-90deg - var(--pf, 0deg))); animation: rg-aimkick .36s ease-out infinite; }
+.rig.a-shoot .j-armB { transform: rotate(calc(-78deg - var(--pb, 0deg))); animation: rg-aimkick2 .36s ease-out infinite; }
+.rig.a-shoot .j-body { transform: rotate(-3deg); animation: rg-recoilbody .36s ease-out infinite; }
+.rig.a-shoot .j-head { transform: rotate(-4deg); }
+.rig.a-shoot .muzzle { animation: rg-muzzle .36s steps(1) infinite; }
+@keyframes rg-aimkick { 0% { transform: rotate(calc(-84deg - var(--pf, 0deg))); } 30%, 100% { transform: rotate(calc(-90deg - var(--pf, 0deg))); } }
+@keyframes rg-aimkick2 { 0% { transform: rotate(calc(-72deg - var(--pb, 0deg))); } 30%, 100% { transform: rotate(calc(-78deg - var(--pb, 0deg))); } }
+@keyframes rg-recoilbody { 0% { transform: rotate(-6deg) translateX(-2px); } 35%, 100% { transform: rotate(-3deg); } }
+@keyframes rg-muzzle { 0% { opacity: 1; } 18%, 100% { opacity: 0; } }
+/* guard stance: rifle at a level ready position too */
+.rig.a-guard .j-armF { transform: rotate(calc(-80deg - var(--pf, 0deg))); animation: none; }
+.rig.a-guard .j-armB { transform: rotate(calc(-70deg - var(--pb, 0deg))); }
+/* walking with a weapon: the gun arm carries it steadily (small sway), the free arm swings; longer stride */
+.rig.a-walk .j-legL, .rig.a-run .j-legL, .rig.a-walk .j-legR, .rig.a-run .j-legR { --la2: calc(var(--la) * 1.25); }
+@keyframes rg-leg { 0%, 100% { transform: rotate(var(--la2, var(--la))); } 50% { transform: rotate(calc(var(--la2, var(--la)) * -1)); } }
+.rig.armed.a-walk .j-armF, .rig.armed.a-run .j-armF { animation: rg-carry var(--t) ease-in-out infinite; }
+@keyframes rg-carry { 0%, 100% { transform: rotate(calc(-35deg - var(--pf, 0deg))); } 50% { transform: rotate(calc(-41deg - var(--pf, 0deg))); } }
+.rig.armed.a-walk .j-armB, .rig.armed.a-run .j-armB { animation: rg-carry2 var(--t) ease-in-out infinite; }
+@keyframes rg-carry2 { 0%, 100% { transform: rotate(calc(-25deg - var(--pb, 0deg))); } 50% { transform: rotate(calc(-31deg - var(--pb, 0deg))); } }

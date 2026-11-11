@@ -162,6 +162,13 @@ DE.Bunker = (function () {
     return { ok: true, cost, levels: count };
   }
 
+  /** What demolishing gives back: 50% of everything spent on the room's levels. */
+  function demolishRefund(state, room) {
+    const def = DE.Data.ROOMS[room.type]; const refund = {};
+    const spent = room.level > 0 ? U().addCost(def.cost, (() => { const o = {}; for (const r in def.cost) o[r] = U().geomSum(def.cost[r], def.costGrowth || C().COST_GROWTH, 1, room.level - 1); return o; })()) : def.cost;
+    for (const r in spent) refund[r] = Math.floor(spent[r] * 0.5);
+    return refund;
+  }
   function demolish(state, roomId) {
     const room = state.rooms[roomId];
     if (!room) return { ok: false, reason: 'No such room' };
@@ -173,10 +180,7 @@ DE.Bunker = (function () {
     room.workers.slice().forEach(id => DE.Survivors.assign(state, id, null));
     const floor = getFloor(state, room.floor);
     floor.slots.forEach((rid, k) => { if (rid === roomId) floor.slots[k] = null; });
-    // refund 50% of what was spent on levels
-    const refund = {};
-    const spent = room.level > 0 ? U().addCost(def.cost, (() => { const o = {}; for (const r in def.cost) o[r] = U().geomSum(def.cost[r], def.costGrowth || C().COST_GROWTH, 1, room.level - 1); return o; })()) : def.cost;
-    for (const r in spent) refund[r] = Math.floor(spent[r] * 0.5);
+    const refund = demolishRefund(state, room);
     for (const r in refund) state.resources[r] = Math.min(DE.Economy.storageCap(state, r), state.resources[r] + refund[r]);
     delete state.rooms[roomId];
     state._dirtyBunker = true;
@@ -223,6 +227,6 @@ DE.Bunker = (function () {
   function roomCount(state) { return Object.values(state.rooms).filter(r => r.level >= 1).length; }
   function totalLevels(state) { return Object.values(state.rooms).reduce((s, r) => s + r.level, 0); }
 
-  return { getFloor, roomsOnFloor, isUnlocked, lockReason, expansionCost, expansionTime, canExpand, expand, moveCost, move, canPlace, buildCost, buildTime, upgradeCost, upgradeTime, affordableLevels,
+  return { demolishRefund, getFloor, roomsOnFloor, isUnlocked, lockReason, expansionCost, expansionTime, canExpand, expand, moveCost, move, canPlace, buildCost, buildTime, upgradeCost, upgradeTime, affordableLevels,
     placeRoom, build, upgrade, demolish, tickConstruction, adjacencyBonus, housingCapacity, population, roomCount, totalLevels };
 })();

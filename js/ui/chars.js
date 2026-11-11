@@ -220,6 +220,7 @@ DE.Chars = (function () {
    * grip / tip = points in the sprite (0..1 fractions): the grip sits in the palm and the sprite is
    * rotated so grip→tip points along +y (the way the arm points). `hang` items (cases, lanterns)
    * dangle below the hand upright instead. */
+  const GUNS = { rifle: 1, shotgun: 1, pistol: 1, sniper: 1, ak: 1 };
   const HELD = {
     rifle: { s: 'rifle', size: 74, grip: [.4, .72], tip: [1, .3] }, shotgun: { s: 'shotgun', size: 72, grip: [.33, .7], tip: [1, .25] },
     pistol: { s: 'pistol', size: 32, grip: [.22, .8], tip: [1, .22] }, sniper: { s: 'sniper', size: 82, grip: [.42, .7], tip: [1, .3] }, ak: { s: 'ak', size: 72, grip: [.42, .72], tip: [1, .3] },
@@ -234,7 +235,9 @@ DE.Chars = (function () {
     const img = `<image href="assets/sprites/${h.s}.png" width="${w.toFixed(1)}" height="${ht.toFixed(1)}"/>`;
     if (h.hang) return `<g transform="translate(${(-w / 2).toFixed(1)} ${(len + 4).toFixed(1)})">${img}</g>`;
     const gx = h.grip[0] * w, gy = h.grip[1] * ht, ang = Math.atan2(h.tip[1] * ht - gy, h.tip[0] * w - gx) * 180 / Math.PI;
-    return `<g transform="translate(0 ${len}) rotate(${(90 - ang).toFixed(1)}) translate(${(-gx).toFixed(1)} ${(-gy).toFixed(1)})">${img}</g>`;
+    const dist = Math.hypot(h.tip[0] * w - gx, h.tip[1] * ht - gy);
+    const flash = GUNS[t] ? `<g class="muzzle" transform="translate(0 ${(len + dist + 3).toFixed(1)}) rotate(90)"><path d="M0 0 L14 -6 L10 0 L14 6 Z M0 0 L8 -10 L6 0 L8 10 Z" fill="#ffe27a" stroke="#ff9a2a" stroke-width="1.5"/><circle r="4" fill="#fff6c8"/></g>` : '';
+    return `<g transform="translate(0 ${len}) rotate(${(90 - ang).toFixed(1)}) translate(${(-gx).toFixed(1)} ${(-gy).toFixed(1)})">${img}</g>${flash}`;
   }
   function item(t, len) {
     const spr = held(t, len); if (spr) return spr;
@@ -254,7 +257,6 @@ DE.Chars = (function () {
       default: return '';
     }
   }
-  const GUNS = { rifle: 1, shotgun: 1, pistol: 1, sniper: 1, ak: 1 };
 
   /* ---------- assemble a rig ---------- */
   function rig(id, o) {
@@ -275,8 +277,8 @@ DE.Chars = (function () {
       <g class="pivot-armF" transform="translate(${p.shoulders[1][0]} ${p.shoulders[1][1]}) rotate(${p.armF})"><g class="j j-armF">${arm(cc, armLen, item, id)}</g></g>`;
     const h = o.h || 48; const w = Math.round(h * 140 / 225);
     const vars = Object.entries(c.vars || {}).map(([k, v]) => `${k}:${v}`).join(';');
-    const style = `height:${h}px;width:${w}px;${vars}${c.filter ? ';filter:' + c.filter : ''}`;
-    return `<svg class="rig rig-${id} kind-${c.kind} a-${o.anim || 'idle'} ${o.flip ? 'flip' : ''} ${o.cls || ''}" viewBox="-70 -215 140 225" style="${style}" ${o.title ? `data-title="${o.title}"` : ''} aria-hidden="true"><title>${o.title || c.name || id}</title>${defs(id, c)}
+    const style = `height:${h}px;width:${w}px;${vars};--pf:${p.armF}deg;--pb:${p.armB}deg${c.filter ? ';filter:' + c.filter : ''}`;
+    return `<svg class="rig rig-${id} kind-${c.kind} a-${o.anim || 'idle'} ${GUNS[item] ? 'armed' : ''} ${o.flip ? 'flip' : ''} ${o.cls || ''}" viewBox="-70 -215 140 225" style="${style}" ${o.title ? `data-title="${o.title}"` : ''} aria-hidden="true"><title>${o.title || c.name || id}</title>${defs(id, c)}
       <ellipse class="shadow" cx="0" cy="2" rx="${c.big ? 40 : 30}" ry="6" fill="#000" opacity=".3"/>
       <g class="j j-body" transform="rotate(${p.lean})"><g class="j j-body2">${parts}</g></g></svg>`;
   }

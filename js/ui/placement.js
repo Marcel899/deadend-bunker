@@ -30,18 +30,18 @@ DE.UI.Placement = (function () {
     if (!mode) return;
     if (mode.moved && mode.valid) { commit(); return; }
     if (mode.moved && !mode.valid) { cancel(); DE.UI.toast('Nowhere to put it there.', 'warn'); return; }
-    // no drag: sticky click-to-place; the next click decides
-    mode.sticky = true; mode.moved = true;
+    // no drag: sticky click-to-place; the NEXT click decides (the click that ends this very press is ignored)
+    mode.sticky = true; mode.moved = true; mode.skipClick = true;
   }
   function onKey(e) { if (e.key === 'Escape') cancel(); }
   function onCtx(e) { if (mode) { e.preventDefault(); cancel(); } }
-  function onClickPlace(ev) { if (!mode || !mode.sticky) return false; track(ev); if (mode.valid) commit(); else { DE.UI.toast('Cannot build there.', 'warn'); } return true; }
+  function onClickPlace(ev) { if (!mode || !mode.sticky) return false; if (mode.skipClick) { mode.skipClick = false; return true; } track(ev); if (mode.valid) commit(); else { DE.UI.toast('Cannot build there.', 'warn'); } return true; }
 
   /** Position the ghost under the pointer, snapped to the grid, and evaluate validity. */
   function track(ev) {
     const s = DE.UI.state(); const floors = document.getElementById('floors'); const base = floors.getBoundingClientRect();
     let hit = null;
-    document.querySelectorAll('.floor[data-depth] .cells').forEach(c => { const r = c.getBoundingClientRect(); if (ev.clientY >= r.top - 20 && ev.clientY <= r.bottom + 20) hit = { el: c, r, depth: +c.closest('.floor').dataset.depth }; });
+    document.querySelectorAll('.floor[data-depth] .cells').forEach(c => { const r = c.getBoundingClientRect(); if (ev.clientY >= r.top - 20 && ev.clientY <= r.bottom + 20 && ev.clientX >= r.left - 40 && ev.clientX <= r.right + 40) hit = { el: c, r, depth: +c.closest('.floor').dataset.depth }; });
     if (!hit) { mode.ghost.style.display = 'none'; mode.tip.style.display = 'none'; mode.valid = false; return; }
     const floor = DE.Bunker.getFloor(s, hit.depth); const cols = floor.slots.length;
     let slot = Math.round((ev.clientX - hit.r.left) / CELL - mode.size / 2); slot = Math.max(0, Math.min(cols - mode.size, slot));
@@ -60,7 +60,7 @@ DE.UI.Placement = (function () {
   }
   function commit() {
     const m = mode; cancel();
-    if (m.roomId) DE.Actions.moveRoom({ id: m.roomId, depth: m.floor, slot: m.slot });
+    if (m.roomId) { const r = DE.UI.state().rooms[m.roomId]; if (r && r.floor === m.floor && r.slot === m.slot) return; DE.Actions.moveRoom({ id: m.roomId, depth: m.floor, slot: m.slot }); }
     else DE.Actions.build({ type: m.type, depth: m.floor, slot: m.slot }, null);
   }
   function cancel() {
