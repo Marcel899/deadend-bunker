@@ -59,9 +59,12 @@ DE.UI = (function () {
  ${R[r].capped ? '' : `<span class="res-plus" data-action="openDrawer" data-drawer="research" title="Research">+</span>`}
  <i class="res-rate">+0/s</i>
  </div>`).join('');
- $('#chips').innerHTML = `<div class="chip" id="chip-pop" data-action="openDrawer" data-drawer="survivors" title="Population / housing">${DE.Icons.img('pop')}<b>0/0</b></div>
+ // defense per second sits first, right before the survivor counter: damage/s plus a bar for how
+ // much of the next wave that firepower would cut down
+ $('#chips').innerHTML = `<div class="chip def" id="chip-def" data-action="openDrawer" data-drawer="defense" title="Defense">${DE.Icons.img('shield')}<span class="cd-body"><b>0/s</b><span class="cd-bar"><i></i></span></span></div>
+ <div class="chip" id="chip-pop" data-action="openDrawer" data-drawer="survivors" title="Population / housing">${DE.Icons.img('pop')}<b>0/0</b></div>
  <div class="chip" id="chip-morale" title="Morale">${DE.Icons.img('morale')}<b>60</b></div>
- <div class="chip" id="chip-wave" data-action="openDrawer" data-drawer="defense" title="Next zombie wave">${DE.Icons.img('wave')}<b>--</b></div>
+ <div class="chip" id="chip-wave" data-action="openDrawer" data-drawer="defense" title="Next zombie wave">${DE.Icons.img('wave')}<b>--</b><small class="cw-n">W1</small></div>
  <div class="chip" id="chip-lp" data-action="openDrawer" data-drawer="legacy" title="Legacy Points">${DE.Icons.img('res.legacy')}<b>0</b></div>
  <div class="chip decide" id="chip-events" data-action="nextEvent" title="Decisions waiting for you">${DE.Icons.img('scroll')}<b>0</b></div>`;
  }
@@ -87,6 +90,7 @@ DE.UI = (function () {
    el.innerHTML = w.alert ? `<img src="assets/icons/alert.png" alt="!">` : `<b>${w.n > 9 ? '9+' : w.n}</b>`;
  }
  }
+ let fitDirty = true; window.addEventListener('resize', () => { fitDirty = true; });
  function updateResbar() {
  const s = state(); const rates = s._rates; if (!rates) return;
  updateNavBadges(s);
@@ -101,10 +105,14 @@ DE.UI = (function () {
  const maxEl = el.querySelector('.res-max');
  if (isFinite(cap)) { capEl.style.width = Math.min(100, amt / cap * 100) + '%'; capEl.parentElement.style.display = ''; capEl.parentElement.className = 'res-cap' + (amt >= cap * 0.98 ? ' full' : ''); maxEl.textContent = '\u00a0/\u00a0' + U().fmt(cap); }
  else { capEl.parentElement.style.display = 'none'; maxEl.textContent = ''; }
+ // narrow screens: drop the "/ cap" when the number would not fit (the bar still shows the fill)
+ const len = el.querySelector('.res-amt').textContent.length + maxEl.textContent.length;
+ if (el._len !== len || fitDirty) { el._len = len; el.classList.remove('tight'); const line = el.querySelector('.res-line'); if (line.scrollWidth > line.clientWidth + 1) el.classList.add('tight'); }
  el.classList.toggle('empty', amt <= 0.01 && net < 0);
  const eta = net < -1e-6 ? '\nEmpty in ' + U().fmtTime(amt / -net) : (net > 1e-6 && isFinite(cap) && amt < cap) ? '\nFull in ' + U().fmtTime((cap - amt) / net) : '';
  el.title = DE.Data.RESOURCES[r].name + (isFinite(cap) ? ' · cap ' + U().fmt(cap) : '') + '\n+' + U().fmt(rates.production[r], 2) + '/s  −' + U().fmt(rates.consumption[r], 2) + '/s' + eta + '\nClick for the production dashboard';
  });
+ fitDirty = false;
  const pop = DE.Bunker.population(s), cap = DE.Bunker.housingCapacity(s);
  $('#chip-pop b').textContent = pop + '/' + cap;
  $('#chip-pop').classList.toggle('warn', pop > cap);
@@ -113,11 +121,41 @@ DE.UI = (function () {
  mc.className = 'chip ' + (m >= 50 ? 'good' : m >= 30 ? 'warn' : 'bad');
  mc.title = 'Morale ' + m + ' → production ×' + DE.Economy.moraleMult(s.morale).toFixed(2);
  const secs = (s.defense.nextWaveAt - Date.now()) / 1000;
- $('#chip-wave b').textContent = 'W' + s.defense.wave + '' + U().fmtTime(secs);
- $('#chip-wave').classList.toggle('warn', secs < 30);
+ const cw = $('#chip-wave'), boss = DE.Defense.isBossWave(s.defense.wave);
+ cw.querySelector('b').textContent = clock(secs);
+ cw.querySelector('.cw-n').textContent = (boss ? 'BOSS ' : 'W') + s.defense.wave;
+ cw.classList.toggle('warn', secs < 30); cw.classList.toggle('boss', boss);
+ cw.title = (boss ? 'BOSS wave ' : 'Zombie wave ') + s.defense.wave + ' in ' + U().fmtTime(secs) + '\nClick to open Defense';
+ updateDefChip(s);
  const nEv = (s.events || []).length; const ce = $('#chip-events'); if (ce) { ce.querySelector('b').textContent = nEv; ce.style.display = nEv ? '' : 'none'; }
  $('#chip-lp b').textContent = U().fmt(s.prestige.points);
  $('#chip-lp').style.display = (s.prestige.lifetime > 0 || s.stats.maxDepth >= 3) ? '' : 'none';
+ }
+
+ /** "4:05" / "1:02:30" — compact countdown for the wave chip. */
+ function clock(sec) {
+ sec = Math.max(0, Math.ceil(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60;
+ return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0');
+ }
+ /** Shield chip: total damage per second of guards, turrets and missiles, and how much of the next
+  *  wave it would kill (bar; green = the wave is beaten before it reaches the wall). */
+ function updateDefChip(s) {
+ const el = $('#chip-def'); if (!el) return;
+ const pw = DE.Defense.defensePower(s), threat = DE.Defense.waveHp(s);
+ const dps = pw.guardDps + pw.turretDps + pw.missileDps, ratio = threat > 0 ? pw.total / threat : 1;
+ const f = (n) => U().fmt(n, n > 0 && n < 10 ? 1 : undefined);
+ el.querySelector('b').textContent = f(dps) + '/s';
+ el.querySelector('.cd-bar i').style.width = Math.min(100, ratio * 100).toFixed(1) + '%';
+ const cls = 'chip def ' + (ratio >= 1 ? 'good' : ratio >= 0.6 ? 'meh' : 'bad');
+ if (el.className !== cls) el.className = cls;
+ el.title = 'Defense: ' + f(dps) + ' damage per second'
+   + '\n• Guards ' + f(pw.guardDps) + '/s (' + pw.guards + ')'
+   + '\n• Turrets ' + f(pw.turretDps) + '/s (' + s.defense.turrets + ')'
+   + (pw.missileDps ? '\n• Missiles ' + f(pw.missileDps) + '/s' : '')
+   + (pw.trapDmg ? '\n• Traps ' + f(pw.trapDmg) + ' per wave' : '')
+   + '\nNext wave: ' + U().fmt(threat) + ' threat vs ' + U().fmt(pw.total) + ' damage (' + Math.round(ratio * 100) + '%)'
+   + (ratio >= 1 ? ' — they fall before the wall' : ' — the wall will take hits')
+   + '\nClick to open Defense';
  }
 
  /* ---------- toasts & floaters ---------- */
