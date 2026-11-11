@@ -155,7 +155,7 @@ DE.UI.Side = (function () {
  } else if (room.level >= def.maxLevel) html += `<div class="card"><b class="gold">★ MAX LEVEL</b></div>`;
 
  if (!def.unique) { const mc = DE.Bunker.moveCost(s, room), rf = DE.Bunker.demolishRefund(s, room), canMove = !room.construction && U().canAfford(s.resources, mc);
- html += `<div class="room-actions"><button class="ra-btn btn drag-handle ${canMove ? '' : 'cant'}" data-move="${room.id}" ${room.construction ? 'disabled' : ''} title="Drag (or tap, then tap a spot) to move the room">${DE.Icons.img('move', 'ra-ico')}<span><b>Relocate</b><small>costs ${U().costText(mc)}</small></span></button>
+ html += `<div class="room-actions"><button class="ra-btn btn drag-handle ${canMove ? '' : 'cant'}" data-move="${room.id}" ${room.construction ? 'disabled' : ''} title="Drag (or tap, then tap a spot) to move the room">${DE.Icons.img('move4', 'ra-ico')}<span><b>Relocate</b><small>costs ${U().costText(mc)}</small></span></button>
  <button class="ra-btn btn danger" data-action="demolish" data-id="${room.id}" title="Tear down this room">${DE.Icons.img('trash', 'ra-ico')}<span><b>Demolish</b><small>refund ${U().costText(rf)}</small></span></button></div>`; }
  html += `<button class="btn ghost" data-action="selectNone">← Back to overview</button>`;
  return html;
