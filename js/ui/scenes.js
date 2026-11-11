@@ -227,9 +227,10 @@ DE.Scenes = (function () {
     const img = (it, y, flip) => `<g transform="translate(${it.x.toFixed(1)} ${y.toFixed(1)})"><image href="assets/sprites/${it.s}.png" x="${(-it.w / 2).toFixed(1)}" y="${(-it.h).toFixed(1)}" width="${it.w.toFixed(1)}" height="${it.h.toFixed(1)}" preserveAspectRatio="xMidYMax meet"${flip ? ' transform="scale(-1 1)"' : ''}/></g>`;
     lay.wall.forEach(it => { s += `<g class="prop sprite sp-${it.name}">${img(it, it.y)}</g>`; });
     lay.floor.forEach(it => {
-      let out = `<ellipse cx="${it.x.toFixed(1)}" cy="${FLOOR}" rx="${(it.wfull * .48).toFixed(1)}" ry="3.5" fill="#000" opacity=".35"/>`;
-      if (it.sp.pair) out += img(Object.assign({}, it, { x: it.x - it.sp.pair }), FLOOR) + img(Object.assign({}, it, { x: it.x + it.sp.pair }), FLOOR, true);
-      else out += img(it, FLOOR);
+      const FB = FLOOR + DE.Data.FLOOR_DROP;
+      let out = `<ellipse cx="${it.x.toFixed(1)}" cy="${FB}" rx="${(it.wfull * .48).toFixed(1)}" ry="3.5" fill="#000" opacity=".35"/>`;
+      if (it.sp.pair) out += img(Object.assign({}, it, { x: it.x - it.sp.pair }), FB) + img(Object.assign({}, it, { x: it.x + it.sp.pair }), FB, true);
+      else out += img(it, FB);
       s += `<g class="prop sprite sp-${it.name}">${out}</g>`;
     });
     lay.top.forEach(it => { s += `<g class="prop sprite sp-${it.name}">${img(it, it.y)}</g>`; });

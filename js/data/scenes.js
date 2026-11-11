@@ -380,9 +380,11 @@ DE.Data.SPRITE_PROPS = {
  *   bench items  (surface: true) sit on top of the floor item they were authored next to
  *   wall items   hang at eye level, just above whatever stands beneath them, packed too
  * Returns { floor:[{name,s,x,w,h,flip?}], top:[...], wall:[{...,y}], W }  (y = bottom edge). */
+/** Furniture stands this far below the wall line, on the floor plate (scene units). */
+DE.Data.FLOOR_DROP = 9;
 DE.Data.layoutRoom = function (type, level) {
   const L = DE.Data.SCENES[type] || DE.Data.SCENES._default, def = (DE.Data.ROOMS || {})[type] || { size: 2 };
-  const W = 100 * def.size, FLOOR = 150, GAP = 5, SP = DE.Data.SPRITE_PROPS, PX = DE.Data.SPRITES || {};
+  const W = 100 * def.size, FLOOR = 150 + DE.Data.FLOOR_DROP, GAP = 5, SP = DE.Data.SPRITE_PROPS, PX = DE.Data.SPRITES || {};
   const tier = level >= 50 ? 4 : level >= 25 ? 3 : level >= 10 ? 2 : 1;
   const all = [];
   [[L.props, 1], [L.lv10, 2], [L.lv25, 3], [L.lv50, 4]].forEach(([list, t]) => { if (t <= tier) (list || []).forEach((p, i) => all.push({ p, t, i })); });
@@ -420,7 +422,7 @@ DE.Data.layoutRoom = function (type, level) {
   const wall = [];
   walls.forEach(it => {
     const under = floor.filter(f => Math.abs(f.x - it.x) < (f.w + it.w) / 2).reduce((m, f) => Math.max(m, f.h), 0);
-    const y = Math.min(FLOOR - 52, FLOOR - under - 8);                               // bottom edge
+    const y = Math.min(FLOOR - 40, FLOOR - under - 6);                               // bottom edge
     if (y - it.h < 22) return;                                                        // no room under the ceiling
     wall.push(Object.assign(it, { y }));
   });
@@ -430,7 +432,7 @@ DE.Data.layoutRoom = function (type, level) {
 DE.Data.bedsFor = function (type, level) {
   const lay = DE.Data.layoutRoom(type, level), beds = [];
   lay.floor.forEach(f => {
-    if (f.sp.berths) f.sp.berths.forEach(y => beds.push({ x: f.x, y, kind: f.name }));
+    if (f.sp.berths) f.sp.berths.forEach(y => beds.push({ x: f.x, y: y + DE.Data.FLOOR_DROP, kind: f.name }));
     else if (f.name === 'cryopod') beds.push({ x: f.x, y: -14, kind: 'pod', upright: true });
   });
   return beds.sort((a, b) => a.x - b.x || b.y - a.y);
