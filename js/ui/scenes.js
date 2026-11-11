@@ -164,7 +164,7 @@ DE.Scenes = (function () {
   P.sign = (o) => rect(-22, -16, 44, 16, o.color || '#d8303a', 2) + txt(0, -4, o.text || 'KEEP OUT', 7, '#fff');
   P.wire = (o) => { const w = o.w || 100; return `<path d="M${-w / 2} 0 q${w / 4} 18 ${w / 2} 0 t${w / 2} 0" fill="none" stroke="${INK}" stroke-width="2.5"/>`; };
   P.lamp = (o) => { const d = o.drop || 10, c = o.color || '#ffd98a'; return `<path d="M0 0 v${d}" stroke="${INK}" stroke-width="2"/>` + rect(-14, d, 28, 6, '#3a3f4a', 2, S2)
-    + `<g class="p-light"><ellipse cx="0" cy="${d + 40}" rx="48" ry="34" fill="${c}" opacity=".16" filter="url(#sc-blur8)"/><path class="p-lampcone" d="M-11 ${d + 8} L-58 ${d + 136} H58 L11 ${d + 8} z" fill="${c}" opacity=".22" mask="none" style="fill:${c}"/><path d="M-11 ${d + 8} L-58 ${d + 136} H58 L11 ${d + 8} z" fill="url(#sc-cone)" opacity=".35"/><ellipse class="p-pool" cx="0" cy="${d + 136}" rx="52" ry="9" fill="${c}" opacity=".28" filter="url(#sc-blur4)"/></g>`
+
     + `<rect class="p-lamp" x="-11" y="${d + 5}" width="22" height="3" fill="${c}"/><ellipse cx="0" cy="${d + 7}" rx="16" ry="6" fill="${c}" opacity=".6" filter="url(#sc-blur4)"/>`; };
   P.neon = (o) => { const w = o.w || 40, c = o.color || '#c07aff'; return `<rect x="${-w / 2}" y="-6" width="${w}" height="10" rx="4" fill="${c}" opacity=".5" filter="url(#sc-blur4)"/><rect class="p-lamp" x="${-w / 2}" y="-4" width="${w}" height="4" rx="2" fill="${c}"/><rect x="${-w / 2}" y="-2" width="${w}" height="34" fill="url(#sc-cone)" opacity=".25" style="fill:${c}"/>`; };
   P.railing = (o) => { const w = o.w || 60; let s = rect(-w / 2, -22, w, 3, '#8a8e98', 1, S2); for (let i = 0; i <= w / 15; i++) s += rect(-w / 2 + i * 15 - 1, -22, 3, 22, '#8a8e98', 1, S2); return s; };
@@ -238,7 +238,7 @@ DE.Scenes = (function () {
     [layout.props, tier >= 2 && layout.lv10, tier >= 3 && layout.lv25, tier >= 4 && layout.lv50].filter(Boolean).flat().forEach(p => {
       const [name, x, y, o] = p; if (DE.Data.SPRITE_PROPS[name]) return; const fn = P[name]; if (!fn) return;
       const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier;
-      s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : '');
+      s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] || y >= FLOOR ? FLOOR + DE.Data.FLOOR_DROP : y, opts.scale ? `scale(${opts.scale})` : '');
     });
     if (room.construction) s += g('construction', P.scaffold({ w: W - 30, h: 110 }), W / 2, FLOOR);
     s += `<rect x="0" y="${-TOP}" width="${W}" height="${180 + TOP}" fill="url(#sc-vig)" class="vig"/></svg>`;

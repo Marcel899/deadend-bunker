@@ -124,6 +124,7 @@ DE.UI.Bunker = (function () {
       el.classList.toggle('upgrading', !!c && c.kind === 'upgrade');
       el.classList.toggle('unstaffed', room.level > 0 && def.workers > 0 && room.workers.length === 0);
       el.classList.toggle('brownout', !!(info && info.power < 1));
+      if (info && info.power < 1) { const v = Math.max(0, info.power).toFixed(2); if (el.style.getPropertyValue('--pw') !== v) el.style.setProperty('--pw', v); }
       el.classList.toggle('selected', !!(sel && sel.type === 'room' && sel.id === id));
       const tier = room.level >= 50 ? 4 : room.level >= 25 ? 3 : room.level >= 10 ? 2 : 1;
       if (!el.classList.contains('tier-' + tier)) { el.classList.remove('tier-1', 'tier-2', 'tier-3', 'tier-4'); el.classList.add('tier-' + tier); }
