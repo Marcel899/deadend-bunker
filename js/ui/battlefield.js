@@ -48,7 +48,12 @@ DE.UI.Battlefield = (function () {
   }
   function unit(html, cls) { const el = document.createElement('div'); el.className = 'bf-unit ' + (cls || ''); el.innerHTML = html; world.appendChild(el); return el; }
   function put(el, x, y) { el.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`; }
-  function anim(rig, a) { if (!rig || rig.dataset.anim === a) return; rig.dataset.anim = a; rig.classList.forEach(c => { if (c.startsWith('a-')) rig.classList.remove(c); }); rig.classList.add('a-' + a); }
+  function anim(rig, a) {
+    if (!rig || rig.dataset.anim === a) return; rig.dataset.anim = a;
+    // copy the class list first: removing from a live DOMTokenList while iterating skips entries and
+    // left stale animation classes behind (e.g. a-die, which fades the body out) on living units
+    Array.from(rig.classList).forEach(c => { if (c.startsWith('a-')) rig.classList.remove(c); }); rig.classList.add('a-' + a);
+  }
   function face(rig, left) { if (rig) rig.classList.toggle('flip', !!left); }
   const ang = (a) => { a = a % 360; if (a > 180) a -= 360; if (a < -180) a += 360; return a; };
 
@@ -260,7 +265,7 @@ DE.UI.Battlefield = (function () {
     });
     for (const id in st.party) if (!seen[id]) { st.party[id].el.remove(); delete st.party[id]; }
   }
-  function stepParty(p, dt) { p.x += 34 * dt; if (p.x > OW().W + 40) p.x = OW().LAYOUT.doorX; put(p.el, p.x - 56 * 70 / 225, p.y - 56 * 215 / 225); p.el.style.opacity = p.x > OW().W - 60 ? .3 : 1; }
+  function stepParty(p, dt) { p.x += 34 * dt; if (p.x > OW().W + 40) p.x = OW().LAYOUT.doorX; put(p.el, p.x - 56 * 70 / 225, p.y - 56 * 215 / 225);  }
 
   /* ---------- loop ---------- */
   function frame(t) {

@@ -54,6 +54,7 @@ js/ui/
   ui-core.js          DOM helpers, delegation, toasts, modals, drawers, top bar
   ui-bunker.js        cutaway rendering and per-tick updates
   overworld.js        layered SVG surface scene; upgrade tiers shown via #scene data-levels
+  daycycle.js         day/night (sun, moon, sky, ambient + artificial light layers) and seasons
   battlefield.js      guards, turrets, missile battery, horde and shots in overworld coordinates
   geology.js          one continuous underground cutaway (topsoil → dark earth → stone → deep rock)
   elevator.js         the single lift: one shaft, one cabin, ride tickets (board → ride → exit)

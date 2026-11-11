@@ -34,7 +34,7 @@ DE.UI.Overworld = (function () {
       <linearGradient id="ow-wood" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8d5b36"/><stop offset="1" stop-color="#4f3020"/></linearGradient>
       <linearGradient id="ow-wood2" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#6b4228"/><stop offset=".5" stop-color="#9a6238"/><stop offset="1" stop-color="#5a351f"/></linearGradient>
       <linearGradient id="ow-pine" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#2d4a30"/><stop offset=".5" stop-color="#4a6e3a"/><stop offset="1" stop-color="#243a28"/></linearGradient>
-      <linearGradient id="ow-grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ca03a"/><stop offset="1" stop-color="#5b6e22"/></linearGradient>
+      <linearGradient id="ow-grass" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#93b043"/><stop offset=".5" stop-color="#6f8a2e"/><stop offset="1" stop-color="#4c6020"/></linearGradient><linearGradient id="ow-grassblade" x1="0" y1="1" x2="0" y2="0"><stop offset="0" stop-color="#4c6020"/><stop offset=".6" stop-color="#7f9c36"/><stop offset="1" stop-color="#b9cf62"/></linearGradient><linearGradient id="ow-hillfar" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a6a62"/><stop offset="1" stop-color="#7e5a4e"/></linearGradient><linearGradient id="ow-hillnear" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8a7a46"/><stop offset="1" stop-color="#6a5a34"/></linearGradient><linearGradient id="ow-snow" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#ffffff"/><stop offset="1" stop-color="#c8d6ee"/></linearGradient><linearGradient id="ow-path" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#9a7a56"/><stop offset="1" stop-color="#6e523a"/></linearGradient>
       <linearGradient id="ow-dirt" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6a4530"/><stop offset="1" stop-color="#4a2e20"/></linearGradient>
       <linearGradient id="ow-rock" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#a7a5ab"/><stop offset="1" stop-color="#5e5c66"/></linearGradient>
       <linearGradient id="ow-lamp" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff7c0"/><stop offset="1" stop-color="#ffb63a"/></linearGradient>
@@ -135,7 +135,7 @@ DE.UI.Overworld = (function () {
   function sky() {
     return `<rect class="ow-skyfill" x="0" y="0" width="${W}" height="${GROUND + 10}" fill="url(#ow-sky)"/>
       <ellipse class="ow-horizonhaze" cx="1000" cy="330" rx="900" ry="110" fill="#ffb460" opacity=".35" filter="url(#ow-haze)"/>
-      <g class="ow-stars" fill="#fff6d8">${stars()}</g>
+      <g class="ow-stars" fill="#fff6d8">${stars()}</g><g class="dc-moon" style="opacity:0"><circle r="34" fill="#eef2ff" stroke="#c9d2f0" stroke-width="3"/><circle cx="-10" cy="-6" r="7" fill="#d4dcf2"/><circle cx="12" cy="10" r="5" fill="#d4dcf2"/><circle cx="6" cy="-14" r="3.5" fill="#d4dcf2"/></g>
       <g class="ow-sunwrap"><circle class="ow-sunglow" cx="1120" cy="265" r="230" fill="url(#ow-sunglow)"/>
       <g class="ow-godrays" opacity=".55">${[0, 25, 55, 95, 130, 160, 200, 235, 275, 300, 330].map(a => `<path d="M1120 265 L${(1120 + Math.cos(a * Math.PI / 180) * 700).toFixed(0)} ${(265 + Math.sin(a * Math.PI / 180) * 700 - 40).toFixed(0)} L${(1120 + Math.cos((a + 9) * Math.PI / 180) * 700).toFixed(0)} ${(265 + Math.sin((a + 9) * Math.PI / 180) * 700 + 40).toFixed(0)} z" fill="url(#ow-ray)"/>`).join('')}</g>
       <circle cx="1120" cy="265" r="96" fill="#ffe08a" opacity=".22" filter="url(#ow-haze)"/><circle class="ow-sun" cx="1120" cy="265" r="66" fill="url(#ow-sun)" filter="url(#ow-sunblur)"/><circle cx="1120" cy="265" r="62" fill="url(#ow-sun)"/><ellipse cx="1102" cy="246" rx="26" ry="18" fill="#fffdf0" opacity=".55"/>
@@ -182,21 +182,26 @@ DE.UI.Overworld = (function () {
     const pylons = `<g class="ow-pylons" stroke="${INK}" stroke-width="4" stroke-linecap="round"><path d="M1420 350 V250 M1410 262 h20 M1412 290 h16" /><path d="M1250 350 V262 M1240 274 h20 M1242 300 h16"/><path d="M1260 268 q80 30 160 -6" fill="none" stroke-width="2"/></g>`;
     return lattice + pylons + ferris;
   }
+  /* Three mountain ranges with aerial perspective: further = paler, bluer, softer. */
   function mountains() {
-    return `<path class="ow-mtn" d="M0 320 L90 262 L170 296 L260 236 L360 290 L430 270 L520 300 L640 250 L760 292 L880 258 L1000 300 L1120 266 L1260 300 L1380 248 L1500 290 L1600 262 L1664 280 V360 H0 Z" fill="url(#ow-mtn)" opacity=".75"/>
-      <path d="M260 236 L240 256 L262 252 L282 262 Z M640 250 L622 268 L644 264 L662 272 Z M1380 248 L1362 266 L1384 262 L1404 270 Z" fill="#e8a0a0" opacity=".45"/>
-      <rect x="0" y="250" width="${W}" height="110" fill="url(#ow-atmo)" opacity=".8"/>`;
+    const range = (base, amp, step, seed) => { let r = seed, d = `M0 ${base}`; for (let x = 0; x <= W + step; x += step) { r = (r * 9301 + 49297) % 233280; const k = r / 233280; d += ` L${x} ${(base - amp * (.35 + .65 * k)).toFixed(0)}`; } return d + ` V${GROUND} H0 Z`; };
+    return `<g class="ow-mtns"><path d="${range(330, 120, 90, 3)}" fill="#b07a9a" opacity=".55"/><path d="${range(345, 95, 70, 17)}" fill="#9a6488" opacity=".7"/>
+      <path d="${range(360, 70, 55, 41)}" fill="#7e5274" opacity=".85"/></g>
+      <rect x="0" y="240" width="${W}" height="130" fill="url(#ow-atmo)" opacity=".9"/>`;
   }
+
+  /* Rolling hills: a far band and a nearer grassy band, each with rim light on the crest. */
   function hills() {
     const shrubs = [[40, 372, 50], [300, 376, 40], [610, 370, 56], [900, 378, 38], [1130, 372, 48], [1350, 376, 44], [1590, 370, 52]];
-    return `<path class="ow-hills" d="M0 368 Q120 338 240 360 T520 354 T800 366 T1080 352 T1360 364 T1664 350 V392 H0 Z" fill="#7a5a44" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
-      <path d="M0 372 Q120 344 240 364 T520 358 T800 370 T1080 356 T1360 368 T1664 354" fill="none" stroke="#a37a52" stroke-width="3" opacity=".6"/>
-      <g opacity=".85">${shrubs.map(([x, y, w]) => `<use href="#ow-bush" x="${x}" y="${y - w * .56}" width="${w}" height="${w * .56}" style="filter:saturate(.7) brightness(.85)"/>`).join('')}</g>
-      <path class="ow-hills2" d="M0 384 Q200 366 400 384 T820 378 T1240 388 T1664 374 V${GROUND} H0 Z" fill="#8a6646"/>
-      <path d="M0 384 Q200 366 400 384 T820 378 T1240 388 T1664 374" fill="none" stroke="#6b4c34" stroke-width="3"/>
-      <g class="ow-tufts" stroke="#9aa040" stroke-width="3" stroke-linecap="round" fill="none">${[90, 230, 470, 560, 960, 1180, 1470, 1600].map(x => `<path d="M${x} 392 l-4 -14 M${x + 6} 392 l2 -16 M${x + 12} 392 l6 -12"/>`).join('')}</g>`;
+    const far = `M0 368 Q120 338 240 360 T520 354 T800 366 T1080 352 T1360 364 T1664 350`, near = `M0 386 Q200 364 400 384 T820 376 T1240 388 T1664 372`;
+    return `<path class="ow-hills" d="${far} V400 H0 Z" fill="url(#ow-hillfar)" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/>
+      <path d="${far}" fill="none" stroke="#e8b48a" stroke-width="2.5" opacity=".45"/>
+      <g opacity=".75">${shrubs.map(([x, y, w]) => `<use href="#ow-bush" x="${x}" y="${y - w * .56}" width="${w}" height="${w * .56}" style="filter:saturate(.6) brightness(.8)"/>`).join('')}</g>
+      <path class="ow-hills2" d="${near} V${GROUND} H0 Z" fill="url(#ow-hillnear)"/>
+      <path d="${near}" fill="none" stroke="${INK}" stroke-width="3"/><path d="${near}" fill="none" stroke="#c9c47a" stroke-width="2" opacity=".5" transform="translate(0 3)"/>
+      <path class="season-winter" d="${far} V376 Q800 368 0 380 Z" fill="url(#ow-snow)" opacity=".9"/><path class="season-winter" d="${near} V396 Q800 388 0 398 Z" fill="url(#ow-snow)" opacity=".9"/>`;
   }
-  /** Foreground vegetation and clutter on the grass, in front of the fence line. */
+
   function foliage() {
     const bushes = [[-10, 64], [118, 48], [884, 58], [1210, 46], [1420, 60], [1600, 70]];
     const clumps = [60, 150, 760, 820, 1000, 1080, 1270, 1340, 1530, 1640];
@@ -343,16 +348,43 @@ DE.UI.Overworld = (function () {
     const T = [[1000, 318, 100, 0], [1056, 340, 76, 1], [1584, 296, 112, 2], [1636, 334, 76, 3], [1520, 352, 56, 4]];
     return `<g class="ow-trees">${T.map(([x, y, w, i]) => `<g class="ow-tree" style="--d:${(i * .7).toFixed(1)}s"><use href="#ow-pine" x="${x}" y="${y}" width="${w}" height="${w * 220 / 120}"/></g>`).join('')}</g>`;
   }
+  /* Ground: a slightly undulating turf band with a dense, static hand-drawn grass fringe (no
+   * whole-strip skewing), a worn dirt path from the bunker door to the road, pebbles, a cut
+   * earth edge and topsoil below. Units stand on GROUND. */
   function ground() {
-    const blades = []; for (let x = 6; x < W; x += 22) blades.push(`<path d="M${x} ${GROUND + 2} l-5 -13 M${x + 7} ${GROUND + 2} l1 -17 M${x + 14} ${GROUND + 2} l6 -12"/>`);
+    let seed = 5; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    let top = `M0 ${GROUND}`; for (let x = 0; x <= W; x += 40) top += ` Q${x + 20} ${(GROUND - 3 + rnd() * 6).toFixed(1)} ${x + 40} ${GROUND}`;
+    // fringe of individual blades in three tones, drawn once
+    let dark = '', mid = '', lite = '';
+    for (let x = 0; x < W; x += 5) {
+      const h = 7 + rnd() * 13, lean = (rnd() - .5) * 8, b = `M${x} ${GROUND + 3} q${(lean * .3).toFixed(1)} ${(-h * .6).toFixed(1)} ${lean.toFixed(1)} ${(-h).toFixed(1)}`;
+      const k = rnd(); if (k < .3) dark += b; else if (k < .8) mid += b; else lite += b;
+    }
     let lip = `M0 ${GROUND + 20}`; for (let x = 0; x <= W; x += 32) lip += ` q8 ${10 + (x % 3) * 3} 16 0 q8 ${8 + (x % 5) * 2} 16 0`;
-    return `<g class="ow-ground"><rect x="0" y="${GROUND - 2}" width="${W}" height="30" fill="url(#ow-grass)" stroke="${INK}" stroke-width="5"/>
-      <g class="ow-blades" stroke="#a7b84a" stroke-width="3" stroke-linecap="round" fill="none">${blades.join('')}</g>
-      <rect x="0" y="${GROUND - 2}" width="${W}" height="30" fill="url(#ow-grasslight)"/>
-      <g class="ow-shadows" fill="#1c1020" opacity=".28"><path d="M${BK.l} ${GROUND + 2} H${BK.r} L${BK.r - 90} ${GROUND + 26} H${BK.l - 160} z"/></g>
-      <rect x="0" y="${GROUND + 24}" width="${W}" height="${H - GROUND - 24}" fill="url(#ow-topsoil)"/><rect x="0" y="${GROUND + 30}" width="${W}" height="${H - GROUND - 30}" fill="url(#ow-dirtpat)" opacity=".55"/>
-      <path d="${lip} V${GROUND + 18} H0 Z" fill="#5b6e22" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+    const pebbles = Array.from({ length: 26 }, () => { const x = rnd() * W, y = GROUND + 6 + rnd() * 12, r = 1.6 + rnd() * 2.6; return `<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="${r.toFixed(1)}" ry="${(r * .7).toFixed(1)}"/>`; }).join('');
+    const door = BK.c, road = FR + 30;
+    return `<g class="ow-ground">
+      <path d="${top} V${GROUND + 28} H0 Z" fill="url(#ow-grass)" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M${door - 70} ${GROUND + 1} Q${door} ${GROUND - 3} ${door + 90} ${GROUND + 4} T${road} ${GROUND + 2} L${road + 40} ${GROUND + 12} Q${door + 60} ${GROUND + 20} ${door - 90} ${GROUND + 14} Z" fill="url(#ow-path)" opacity=".9"/>
+      <g fill="#5a4630" opacity=".55">${pebbles}</g>
+      <g class="ow-shadows" fill="#1c1020" opacity=".3"><path d="M${BK.l} ${GROUND + 2} H${BK.r} L${BK.r - 60} ${GROUND + 18} H${BK.l - 120} z"/></g>
+      <g class="ow-blades" fill="none" stroke-linecap="round"><path d="${dark}" stroke="#3f521c" stroke-width="2.4"/><path d="${mid}" stroke="#6f8c2c" stroke-width="2.2"/><path d="${lite}" stroke="#b5cc5c" stroke-width="1.8"/></g>
+      <path class="season-winter" d="${top} V${GROUND + 10} H0 Z" fill="url(#ow-snow)" stroke="#9aaccc" stroke-width="2"/>
+      <rect x="0" y="${GROUND + 24}" width="${W}" height="${H - GROUND - 24}" fill="url(#ow-topsoil)"/><rect x="0" y="${GROUND + 30}" width="${W}" height="${H - GROUND - 30}" fill="url(#ow-dirtpat)" opacity=".5"/>
+      <path d="${lip} V${GROUND + 18} H0 Z" fill="#4c6020" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
+      <path class="season-winter" d="${lip} V${GROUND + 18} H0 Z" fill="#e8eef8" stroke="${INK}" stroke-width="4" stroke-linejoin="round"/>
       <g fill="#2a1a12" opacity=".5">${[120, 410, 690, 980, 1260, 1530].map((x, i) => `<path d="M${x} ${GROUND + 46 + (i % 2) * 18} l14 -6 l10 8 l-4 10 l-16 2 z"/>`).join('')}</g></g>`;
+  }
+
+  /* Season dressing: snow on the bunker roof and towers, leaf litter in autumn, flowers in spring. */
+  function seasonal() {
+    const { l, r } = BK;
+    let seed = 9; const rnd = () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; };
+    const leaves = Array.from({ length: 60 }, () => { const x = rnd() * W, y = GROUND + 2 + rnd() * 10; return `<ellipse cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" rx="3.4" ry="1.8" transform="rotate(${(rnd() * 180).toFixed(0)} ${x.toFixed(0)} ${y.toFixed(0)})" fill="${['#d0702a', '#e0a030', '#a8401e', '#c88a2a'][(rnd() * 4) | 0]}"/>`; }).join('');
+    const flowers = Array.from({ length: 40 }, () => { const x = rnd() * W, y = GROUND - 2 - rnd() * 8; return `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="2.6" fill="${['#ffd34a', '#ff8ab0', '#ffffff', '#b08aff'][(rnd() * 4) | 0]}" stroke="${INK}" stroke-width="1"/>`; }).join('');
+    return `<g class="season-winter"><path d="M${l + 4} 368 Q${l + 8} 352 ${l + 30} 350 H${r - 30} Q${r - 8} 352 ${r - 4} 368 Q${(l + r) / 2} 360 ${l + 4} 368 Z" fill="url(#ow-snow)" stroke="${INK}" stroke-width="3"/>
+        <g class="lv ge-towers-1">${[TL, TR].map(x => `<path d="M${x + 12} 200 h126 q-6 -12 -63 -14 q-57 2 -63 14 z" fill="url(#ow-snow)" stroke="${INK}" stroke-width="3"/>`).join('')}</g></g>
+      <g class="season-autumn">${leaves}</g><g class="season-spring">${flowers}</g>`;
   }
   function dust() {
     return `<g class="ow-dust" fill="#f7d9a0" opacity=".35">${[300, 700, 1100, 1450].map((x, i) => `<circle class="ow-mote" style="--d:${-i * 2.3}s" cx="${x}" cy="${GROUND - 40}" r="2.5"/>`).join('')}</g>`;
@@ -360,7 +392,7 @@ DE.UI.Overworld = (function () {
 
   function svg() {
     return `<svg class="ow-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      ${defs()}${sky()}${mountains()}${clouds()}${farLandmarks()}${skyline()}${hills()}${trees()}${road()}${wasteland()}${fence()}${flag()}${towers()}${compoundProps()}${bunker()}${barricades()}${ground()}${foliage()}${dust()}
+      ${defs()}${sky()}${mountains()}${clouds()}${farLandmarks()}${skyline()}${hills()}${trees()}${road()}${wasteland()}${fence()}${flag()}${towers()}${compoundProps()}${bunker()}${barricades()}${ground()}${foliage()}${seasonal()}${dust()}
     </svg>`;
   }
 

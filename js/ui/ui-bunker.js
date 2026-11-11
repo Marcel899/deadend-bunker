@@ -180,6 +180,7 @@ DE.UI.Bunker = (function () {
     surface.classList.toggle('incoming', incoming && !fighting);
     surface.classList.toggle('fight', fighting);
     DE.UI.Battlefield.sync(s, { incoming, fighting });
+    DE.UI.DayCycle.update(s);
   }
 
   /** Called when a wave resolves: the battlefield plays out the result (see battlefield.js). */

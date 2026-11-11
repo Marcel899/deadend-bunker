@@ -28,8 +28,6 @@
 @keyframes ow-flicker { 0%, 100% { opacity: .9; } 30% { opacity: .65; } 55% { opacity: 1; } 70% { opacity: .75; } }
 .ow-doorglow { animation: ow-flicker 4s ease-in-out infinite; } .ow-doorlamp { animation: ow-lampflash 4s ease-in-out infinite; }
 @keyframes ow-lampflash { 0%, 100% { opacity: 1; } 40% { opacity: .8; } 46% { opacity: 1; } 52% { opacity: .7; } }
-.ow-blades { animation: ow-grass 3s ease-in-out infinite alternate; transform-origin: 50% 100%; }
-@keyframes ow-grass { to { transform: skewX(4deg); } }
 body.no-anim .ow-svg * { animation: none !important; }
 
 /* --- game overlays (coords in % of the 1664x600 box) --- */
@@ -135,8 +133,8 @@ body.no-anim .ow-svg * { animation: none !important; }
 .bf-turret { z-index: 12; } .bf-turret.ground { z-index: 31; } .bf-launcher { z-index: 11; }
 .bf-turret svg, .bf-launcher svg { display: block; overflow: visible; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }
 .bf-guard { z-index: 30; } .bf-party { z-index: 14; }
-.bf-z.pinged .rig { filter: brightness(1.7) saturate(.6); }
-.bf-z.dead { opacity: 0; transition: opacity 1s ease .5s; } .bf-z.gone { opacity: 0; transition: opacity .5s; }
+.bf-z.pinged .rig { filter: drop-shadow(0 0 3px rgba(255, 60, 40, .9)) drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }
+.bf-z.dead { opacity: 0; transition: opacity .6s ease 1s; } .bf-z.gone { opacity: 0; transition: opacity .5s; }
 .bf-eye { animation: ow-blinkred 1.4s steps(1) infinite; }
 .bf-tracer { stroke: #fff2a8; stroke-width: 2; stroke-linecap: round; animation: bf-fade .16s linear forwards; }
 .bf-tracer.heavy { stroke: #ffd34a; stroke-width: 3.2; }
@@ -154,3 +152,38 @@ body.no-anim .ow-svg * { animation: none !important; }
 @keyframes bf-debris { to { transform: translate(var(--dx), var(--dy)) rotate(260deg); opacity: 0; } }
 .bf.shake .bf-world > * { animation: bf-shake .2s linear; } @keyframes bf-shake { 25% { translate: 2px 1px; } 75% { translate: -2px -1px; } }
 .ow-info small.bad { display: block; color: #ff8a7a; }
+
+/* ============ DAY / NIGHT & SEASONS (js/ui/daycycle.js) ============ */
+.dc-ambient { position: absolute; inset: 0; z-index: 1; pointer-events: none; mix-blend-mode: multiply; background: #fff; transition: background-color 1.5s linear; }
+.dc-lights { z-index: 1; pointer-events: none; mix-blend-mode: screen; opacity: 0; transition: opacity 1.5s linear; }
+.dc-lights .dc-flicker { animation: ow-flicker 3.4s ease-in-out infinite; } .dc-lights .dc-blink { animation: ow-blinkglow 2s steps(1) infinite; }
+.ow-sunwrap, .dc-moon, .ow-stars, .ow-godrays { transition: opacity 1.5s linear; }
+.ow-sunwrap { transition: transform 1s linear, opacity 1.5s linear; }
+.ow-svg .season-winter, .ow-svg .season-autumn, .ow-svg .season-spring { display: none; }
+#scene[data-season="winter"] .season-winter, #scene[data-season="autumn"] .season-autumn, #scene[data-season="spring"] .season-spring { display: inline; }
+/* vegetation palette per season */
+#scene[data-season="spring"] :is(.ow-blades, .ow-foliage, .ow-trees, .ow-hills2) { filter: saturate(1.25) hue-rotate(8deg); }
+#scene[data-season="summer"] :is(.ow-blades, .ow-foliage, .ow-trees, .ow-hills2) { filter: saturate(1.1) brightness(1.04); }
+#scene[data-season="autumn"] :is(.ow-blades, .ow-foliage, .ow-trees, .ow-hills2, .ow-bushfg) { filter: hue-rotate(-38deg) saturate(1.25) brightness(1.02); }
+#scene[data-season="winter"] :is(.ow-foliage, .ow-trees, .ow-hills2) { filter: saturate(.3) brightness(1.08); }
+#scene[data-season="winter"] .ow-blades { opacity: .35; }
+/* distant layers lose their sunset purple in broad daylight (aerial perspective) */
+:is(.ow-mtns, .ow-ruins-far, .ow-ruins-near, .ow-latticetower, .ow-ferris, .ow-gasstation) { transition: filter 2s; }
+#scene[data-tod="day"] :is(.ow-mtns, .ow-ruins-far) { filter: hue-rotate(-50deg) saturate(.55) brightness(1.18); }
+#scene[data-tod="day"] :is(.ow-ruins-near, .ow-latticetower, .ow-ferris, .ow-gasstation) { filter: hue-rotate(-45deg) saturate(.6) brightness(1.08); }
+#scene[data-tod="day"] .ow-ruins-glow, #scene[data-tod="day"] .ow-flare { opacity: 0 !important; }
+/* weather */
+.dc-weather { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; display: none; }
+.dc-weather i { position: absolute; top: -12px; width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: .85; animation: dc-fall linear infinite; }
+#scene[data-season="winter"] .dc-weather, #scene[data-season="autumn"] .dc-weather, #scene[data-season="spring"] .dc-weather { display: block; }
+#scene[data-season="autumn"] .dc-weather i { border-radius: 60% 0; background: #d0702a; width: calc(var(--s) * 2); }
+#scene[data-season="autumn"] .dc-weather i:nth-child(3n) { background: #e0a030; } #scene[data-season="autumn"] .dc-weather i:nth-child(2n) { display: none; }
+#scene[data-season="spring"] .dc-weather i { width: 1.5px; height: 14px; border-radius: 1px; background: #cfe2ff; opacity: .55; animation-duration: .8s !important; }
+#scene[data-season="spring"] .dc-weather i:nth-child(3n) { display: none; }
+@keyframes dc-fall { from { transform: translate(0, 0) rotate(0); } to { transform: translate(var(--dx), 640px) rotate(540deg); } }
+body.no-anim .dc-weather { display: none !important; }
+.dc-chip { position: absolute; left: 10px; top: 8px; padding: 3px 10px; border-radius: 10px; background: rgba(20, 14, 30, .72); border: 2px solid var(--ink); color: #f4ead0; font-size: 12px; font-weight: 800; pointer-events: none; }
+.dc-chip b { color: #ffd34a; margin-right: 2px; }
+/* artificial light cones live in the light layer now; the art's own cones only show beams at dusk/night */
+.ow-floodcone, .ow-lampcone { display: none; }
+#scene[data-tod="day"] .ow-searchlight { opacity: 0; } .ow-searchlight { transition: opacity 2s; }
