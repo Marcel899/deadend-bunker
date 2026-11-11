@@ -177,7 +177,7 @@ body.no-anim .ow-svg * { animation: none !important; }
 #scene[data-tod="day"] :is(.ow-ruins-near, .ow-latticetower, .ow-ferris, .ow-gasstation) { filter: hue-rotate(-45deg) saturate(.6) brightness(1.08); }
 #scene[data-tod="day"] .ow-ruins-glow, #scene[data-tod="day"] .ow-flare { opacity: 0 !important; }
 /* weather */
-.dc-weather { position: absolute; inset: 0; z-index: 1; pointer-events: none; overflow: hidden; display: none; }
+.dc-weather { position: absolute; left: 0; right: 0; top: 0; z-index: 1; pointer-events: none; overflow: hidden; display: none; }
 .dc-weather i { position: absolute; top: -12px; width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: .85; animation: dc-fall linear infinite; }
 #scene[data-season="winter"] .dc-weather, #scene[data-season="autumn"] .dc-weather, #scene[data-season="spring"] .dc-weather { display: block; }
 #scene[data-season="autumn"] .dc-weather i { border-radius: 60% 0; background: #d0702a; width: calc(var(--s) * 2); }
@@ -193,3 +193,8 @@ body.no-anim .dc-weather { display: none !important; }
 /* artificial light cones live in the light layer now; the art's own cones only show beams at dusk/night */
 .ow-floodcone, .ow-lampcone { display: none; }
 #scene[data-tod="day"] .ow-searchlight { opacity: 0; } .ow-searchlight { transition: opacity 2s; }
+
+/* particles fall to the bottom of the weather layer (= the grass), never into the ground */
+@keyframes dc-fall { from { top: -12px; transform: translateX(0) rotate(0); } to { top: 100%; transform: translateX(var(--dx)) rotate(540deg); } }
+@keyframes dc-rain { from { top: -30px; transform: translateX(0) rotate(12deg); } to { top: 100%; transform: translateX(-90px) rotate(12deg); } }
+.dc-weather i { margin-top: calc(var(--s) * -1); }

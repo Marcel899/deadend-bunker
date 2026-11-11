@@ -127,6 +127,9 @@ DE.UI.DayCycle = (function () {
     // units are above the light layers: dim them to match (a little cooler at night, warmer at golden hour)
     scene.style.setProperty('--unit-light', (1 - .42 * dark).toFixed(3)); scene.style.setProperty('--unit-sat', (1 - .3 * dark).toFixed(3));
     // season + weather
+    // weather stops at the grass line (the scene is drawn bottom-anchored and scaled to cover)
+    const OW = DE.UI.Overworld, k = Math.max(scene.clientWidth / OW.W, scene.clientHeight / OW.H);
+    built.fx.style.bottom = ((OW.H - OW.GROUND - 2) * k).toFixed(0) + 'px';
     if (DE.Audio) DE.Audio.setNight(dark > .6);
     if (scene.dataset.season !== c.season) scene.dataset.season = c.season;
     scene.dataset.tod = c.night ? 'night' : (h < 8 || h > 17) ? 'twilight' : 'day';
