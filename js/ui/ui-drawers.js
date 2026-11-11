@@ -187,7 +187,15 @@ DE.UI.Drawers = (function () {
  ${m ? row('biohazard', 'Mutation', esc(m.name) + ` <small>${esc(m.desc)}</small>`) : ''}
  <div class="dk-bar ${verdict[0]}"><i style="width:${Math.min(100, 100 * pw.total / hp)}%"></i></div>
  <div class="dk-verdict ${verdict[0]}">${I(verdict[0] === 'pos' ? 'check' : 'warning')}<div><b>${verdict[1]}</b><small>${verdict[2]}</small></div></div></div>
- <div class="dk-wave-art"><div class="dk-horde">${kinds.slice(0, 4).map(z => `<span title="${esc(z.name)} ×${comp.counts[z.id]}">${DE.Chars.zombie(z.id, { anim: 'walk', h: z.boss || z.id === 'brute' || z.id === 'mutant' ? 70 : 52, flip: true })}<em>×${comp.counts[z.id]}</em></span>`).join('')}</div><div class="dk-flag">${I('battle', '')}</div></div></div>`;
+ <div class="dk-wave-art"><svg class="dk-field" viewBox="0 0 300 190" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+   <defs><linearGradient id="dkf-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2a5e"/><stop offset=".55" stop-color="#c8604a"/><stop offset="1" stop-color="#f0a050"/></linearGradient>
+   <linearGradient id="dkf-gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f8a2e"/><stop offset="1" stop-color="#4c6020"/></linearGradient></defs>
+   <rect width="300" height="190" fill="url(#dkf-sky)"/><circle cx="235" cy="112" r="20" fill="#ffd27a" opacity=".9"/>
+   <path d="M0 132 V102 H18 V84 H36 V102 H52 V92 H70 V132 Z M110 132 V96 H128 V78 H150 V100 H166 V132 Z M196 132 V104 H214 V88 H230 V132 Z M250 132 V96 H272 V108 H300 V132 Z" fill="#6a2f5f" opacity=".85"/>
+   <path d="M0 132 Q75 120 150 130 T300 126 V140 H0 Z" fill="#7a5a44"/>
+   <g stroke="#1c1020" stroke-width="2">${Array.from({ length: 8 }, (_, i) => `<rect x="${6 + i * 11}" y="${118 + (i % 2)}" width="8" height="${30 - (i % 3) * 3}" fill="#8d5b36"/>`).join('')}</g>
+   <rect x="0" y="146" width="300" height="44" fill="url(#dkf-gr)" stroke="#1c1020" stroke-width="2"/><rect x="0" y="160" width="300" height="30" fill="#5a3a26"/>
+   </svg><div class="dk-horde">${kinds.slice(0, 4).map((z, i) => `<span style="animation-delay:${-i * .9}s" title="${esc(z.name)} ×${comp.counts[z.id]}">${DE.Chars.zombie(z.id, { anim: 'walk', h: z.boss || z.id === 'brute' || z.id === 'mutant' ? 74 : 58, flip: true })}<em>×${comp.counts[z.id]}</em></span>`).join('')}</div><div class="dk-flag">${I('battle', '')}</div></div></div>`;
  // ---- wall ----
  const wc = DE.Defense.wallUpgradeCost(s); const rc = DE.Defense.repairCost(s); const wpct = 100 * d.wall.hp / maxHp;
  html += `<div class="dk-card dk-wallcard">${DE.Icons.structure('wall', 'dk-big')}<div class="dk-body"><div class="dk-titleline"><b>Wall · Level ${d.wall.level}</b><small>${d.wall.level < 3 ? 'cracked & patched' : d.wall.level < 6 ? 'steel-plated' : 'armoured'}</small><span class="dk-hp">${U().fmt(d.wall.hp)} / ${U().fmt(maxHp)}</span></div>

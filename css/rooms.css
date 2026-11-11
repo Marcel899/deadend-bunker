@@ -225,3 +225,4 @@ body.placing { cursor: grabbing; user-select: none; }
 .room, .room:hover, .room.selected { transform: none !important; z-index: 1 !important; box-shadow: none !important; border: 0 !important; }
 .room.selected .room-scene { box-shadow: inset 0 0 0 3px #ffc531, inset 0 0 22px rgba(255, 197, 49, .45); }
 .room:hover:not(.selected) .room-scene { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .25); }
+.room .door::after { display: none; }

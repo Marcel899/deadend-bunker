@@ -192,8 +192,8 @@ DE.UI.Battlefield = (function () {
       const speed = zd.id === 'runner' ? 74 : zd.id === 'leaper' ? 62 : zd.id === 'crawler' ? 38 : big ? 22 : 30;
       const lane = (i * 7) % 5;
       const el = unit(DE.Chars.zombie(zd.id, { anim: zd.id === 'runner' ? 'run' : 'walk', h, flip: true }), 'bf-z');
-      const z = { el, rig: el.querySelector('.rig'), id: zd.id, big, h, speed, lane, x: OW().W + 30 + Math.random() * 60 + i * 34, y: OW().GROUND + 4 + lane * 3,
-        stopX: FENCE() + 18 + lane * 9 + Math.random() * 70, hp: 1, delay: Math.random() * 5, walking: true, dead: false, through: false };
+      const z = { el, rig: el.querySelector('.rig'), id: zd.id, big, h, speed, lane, x: OW().W + 30 + Math.random() * 40, y: OW().GROUND + 4 + lane * 3,
+        stopX: FENCE() + 18 + lane * 9 + Math.random() * 70, hp: 1, delay: i * 2.4 + Math.random() * 1.5, walking: true, dead: false, through: false };
       el.style.zIndex = 20 + lane; el.style.width = (h * 140 / 225) + 'px'; el.style.height = h + 'px';
       place(z); st.zombies.push(z);
     });
