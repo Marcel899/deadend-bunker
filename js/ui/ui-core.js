@@ -62,8 +62,18 @@ DE.UI = (function () {
  <div class="chip decide" id="chip-events" data-action="nextEvent" title="Decisions waiting for you">${DE.Icons.img('scroll')}<b>0</b></div>`;
  }
 
+ /** Little red counters on the nav dock: what needs attention where. */
+ function updateNavBadges(s) {
+ const idle = DE.Survivors.idle(s).length;
+ const research = !s.research.current && s.resources.research >= 40 ? '!' : '';
+ const wave = (s.defense.nextWaveAt - Date.now()) / 1000 < DE.Defense.warningSec(s) ? '!' : '';
+ const set = (nav, v) => { const b = document.querySelector(`#bottombar .nav-btn[data-nav="${nav}"]`); if (!b) return; let el = b.querySelector('.nav-badge');
+   if (!v) { if (el) el.remove(); return; } if (!el) { el = document.createElement('i'); el.className = 'nav-badge'; b.appendChild(el); } if (el.textContent !== String(v)) el.textContent = v; };
+ set('survivors', idle || ''); set('research', research); set('defense', wave);
+ }
  function updateResbar() {
  const s = state(); const rates = s._rates; if (!rates) return;
+ updateNavBadges(s);
  document.querySelectorAll('#resbar .res').forEach(el => {
  const r = el.dataset.res;
  const amt = s.resources[r], net = rates.net[r], cap = DE.Economy.storageCap(s, r);
