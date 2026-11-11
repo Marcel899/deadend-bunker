@@ -17,6 +17,15 @@ DE.Defense = (function () {
     const missing = wallMaxHp(state) - state.defense.wall.hp;
     return { scrap: Math.ceil(missing * 0.25) };
   }
+  /** Damage per second of one turret: base × research/structure bonuses × calibre upgrades. */
+  function turretDmg(state) { return C().TURRET_DMG * DE.Effects.get(state).turretDmgMult * (1 + 0.25 * (state.defense.turretLevel || 0)); }
+  function calibreCost(state) { const l = state.defense.turretLevel || 0; return { scrap: Math.ceil(350 * Math.pow(1.55, l)), concrete: Math.ceil(60 * Math.pow(1.55, l)) }; }
+  function upgradeCalibre(state) {
+    if (!DE.Effects.get(state).turretsUnlocked) return { ok: false, reason: 'Requires Heavy Machinery' };
+    if (!state.defense.turrets) return { ok: false, reason: 'Install a turret first' };
+    const c = calibreCost(state); if (!U().canAfford(state.resources, c)) return { ok: false, reason: 'Not enough resources' };
+    U().pay(state.resources, c); state.defense.turretLevel = (state.defense.turretLevel || 0) + 1; return { ok: true, level: state.defense.turretLevel, cost: c };
+  }
   function turretCost(state) { const n = state.defense.turrets; return { scrap: Math.ceil(200 * Math.pow(1.35, n)), concrete: Math.ceil(40 * Math.pow(1.35, n)) }; }
   function trapCost(state) { return { scrap: 45 }; }
   function maxTurrets(state) { return DE.Effects.get(state).turretCap; }
@@ -68,7 +77,9 @@ DE.Defense = (function () {
     n = n || state.defense.wave;
     const weaken = isBossWave(n) ? 1 - (DE.Effects.get(state).bossWeaken || 0) : 1;
     const mut = n === state.defense.wave ? DE.Events.mutation(state) : null; const noise = 1 + Math.min(0.6, DE.Events.noise(state) * 0.012);
-    return Math.floor(C().WAVE_BASE_HP * Math.pow(C().WAVE_GROWTH, n - 1) * (1 + 0.08 * (state.floors.length - 1)) * weaken * (mut ? mut.hp : 1) * noise);
+    // after breaches the horde regroups: each consecutive breach weakens the next wave (min 60%)
+    const regroup = Math.max(0.6, Math.pow(0.85, state.defense.breachStreak || 0));
+    return Math.floor(C().WAVE_BASE_HP * Math.pow(C().WAVE_GROWTH, n - 1) * (1 + 0.08 * (state.floors.length - 1)) * weaken * (mut ? mut.hp : 1) * noise * regroup);
   }
   function isBossWave(n) { return n % DE.Data.BOSS_EVERY === 0; }
 
@@ -90,8 +101,8 @@ DE.Defense = (function () {
   /** Loot for beating a wave: scales with wave number, bonus on boss waves. */
   function waveReward(n, outcome) {
     if (outcome === 'breach') return {};
-    const m = (outcome === 'victory' ? 1 : 0.4) * (isBossWave(n) ? 4 : 1);
-    return { scrap: Math.floor(25 * Math.pow(n, 1.15) * m), research: Math.floor(4 * Math.pow(n, 1.1) * m) };
+    const m = (outcome === 'victory' ? 1 : 0.45) * (isBossWave(n) ? 4 : n % 5 === 0 ? 2 : 1);
+    return { scrap: Math.floor(40 * Math.pow(n, 1.2) * m), research: Math.floor(6 * Math.pow(n, 1.1) * m) };
   }
 
   /** Our firepower per second and flat trap damage. */
@@ -99,14 +110,14 @@ DE.Defense = (function () {
     const fx = DE.Effects.get(state);
     const guards = DE.Survivors.guards(state);
     const guardDps = guards.reduce((s, g) => s + DE.Survivors.guardPower(g, fx), 0);
-    const turretDps = state.defense.turrets * C().TURRET_DMG * fx.turretDmgMult * (state._rates ? state._rates.powerFactor : 1);
+    const turretDps = state.defense.turrets * turretDmg(state) * (state._rates ? state._rates.powerFactor : 1);
     const missileDps = (fx.missileDps || 0) * (state._rates ? state._rates.powerFactor : 1);
     const trapsUsed = Math.min(state.defense.traps, C().TRAPS_PER_WAVE);
     const trapDmg = trapsUsed * C().TRAP_DMG * fx.trapDmgMult;
     return { guardDps, turretDps, missileDps, trapDmg, trapsUsed, flat: fx.defenseFlat, total: (guardDps + turretDps + missileDps) * C().WAVE_DURATION + trapDmg + fx.defenseFlat, guards: guards.length };
   }
 
-  function waveInterval(state) { return C().WAVE_INTERVAL_SEC * DE.Effects.get(state).waveIntervalMult * Math.max(0.55, 1 - DE.Events.noise(state) * 0.008); }
+  function waveInterval(state) { return C().WAVE_INTERVAL_SEC * DE.Effects.get(state).waveIntervalMult * Math.max(0.7, 1 - DE.Events.noise(state) * 0.006); }
   /** Seconds of warning before a wave in which the horde is visible on the surface. */
   function warningSec(state) { return 45 + (DE.Effects.get(state).waveWarning || 0); }
 
@@ -149,8 +160,15 @@ DE.Defense = (function () {
         state.defense.shock = Math.max(state.defense.shock, 8);
       }
     }
+    // streaks: breaches make the next horde regroup weaker; victories in a row pay a growing bonus
+    if (result.outcome === 'breach') { state.defense.breachStreak = (state.defense.breachStreak || 0) + 1; state.defense.winStreak = 0; }
+    else { state.defense.breachStreak = 0; state.defense.winStreak = result.outcome === 'victory' ? (state.defense.winStreak || 0) + 1 : 0; }
+    result.streak = state.defense.winStreak;
     // rewards: salvage from the corpses
-    result.reward = waveReward(n, result.outcome); if (mut) { for (const r in result.reward) result.reward[r] = Math.floor(result.reward[r] * mut.loot); result.mutation = mut.name; }
+    result.reward = waveReward(n, result.outcome);
+    if (result.streak > 1) for (const r in result.reward) result.reward[r] = Math.floor(result.reward[r] * (1 + 0.1 * Math.min(5, result.streak - 1)));
+    // every 5th wave held: refugees who watched the fight ask to come in
+    if (n % 5 === 0 && !result.breach && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state)) { const sv = DE.Survivors.spawn(state); state.stats.recruited++; result.refugee = sv.name; } if (mut) { for (const r in result.reward) result.reward[r] = Math.floor(result.reward[r] * mut.loot); result.mutation = mut.name; }
     for (const r in result.reward) result.reward[r] = Math.floor(result.reward[r] * (1 + (fx.waveLoot || 0)));
     for (const r in result.reward) { state.resources[r] = Math.min(DE.Economy.storageCap(state, r), state.resources[r] + result.reward[r]); state.stats.produced[r] += result.reward[r]; state.stats.runScore += result.reward[r] * DE.Data.RESOURCES[r].value; }
     // guards gain experience
@@ -202,6 +220,6 @@ DE.Defense = (function () {
     return resolveWave(state, now);
   }
 
-  return { structureBlocked, wallMaxHp, wallUpgradeCost, repairCost, turretCost, trapCost, maxTurrets, upgradeWall, repairWall, buyTurret, buyTraps,
+  return { turretDmg, calibreCost, upgradeCalibre, structureBlocked, wallMaxHp, wallUpgradeCost, repairCost, turretCost, trapCost, maxTurrets, upgradeWall, repairWall, buyTurret, buyTraps,
     waveHp, waveComposition, compositionSummary, waveReward, isBossWave, defensePower, waveInterval, warningSec, resolveWave, tick, structureNext, upgradeStructure };
 })();

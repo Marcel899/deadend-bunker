@@ -92,12 +92,14 @@ DE.Game = (function () {
  DE.UI.refresh(); DE.UI.Bunker.revealFloor(e.depth);
  if (e.facility) DE.UI.modal({ title: DE.Icons.img('facility', 'ico-inline') + ' Discovery: ' + esc(e.facility.name), cls: 'discovery', html: `<p class="lore">${esc(e.facility.lore)}</p><p>Floor B${e.depth} now contains a unique room: <b>${DE.Icons.room(e.facility.room, 'ico-inline')} ${esc(DE.Data.ROOMS[e.facility.room].name)}</b> — ${esc(DE.Data.ROOMS[e.facility.room].desc)}</p>` });
  else DE.UI.toast('Floor B' + e.depth + ' is ready', 'ok');
+ if (e.find) { const f = e.find; const what = f.loot ? ' ' + U().costText(f.loot) : ''; DE.UI.toast((f.kind === 'survivor' ? DE.Icons.img('pop', 'ico-inline') : f.kind === 'notes' ? DE.Icons.img('research', 'ico-inline') : DE.Icons.img('chest', 'ico-inline')) + ' ' + esc(f.text) + what, 'ok', 6000); log('Digging B' + e.depth + ': ' + f.text); }
  break;
  case 'wave': {
  const r = e.result; DE.UI.Bunker.playWave(r);
  const loot = r.reward && Object.keys(r.reward).length ? ' Salvaged ' + U().costText(r.reward) + '.' : '';
  if (loot) setTimeout(() => DE.UI.Bunker.collectAt('#wall', r.reward), 1200);
- if (r.outcome === 'victory') { DE.UI.toast((r.boss ? 'BOSS wave ' : 'Wave ') + r.wave + (r.mutation ? ' (' + r.mutation + ')' : '') + ' repelled! ' + r.killed + ' zombies destroyed.' + loot, 'ok', 5000); log('Wave ' + r.wave + ' repelled.'); }
+ if (r.refugee) { DE.UI.toast(DE.Icons.img('pop', 'ico-inline') + ' ' + esc(r.refugee) + ' watched you hold the gate and asked to come in.', 'ok', 6000); log(r.refugee + ' joined after wave ' + r.wave + '.'); }
+ if (r.outcome === 'victory') { DE.UI.toast((r.boss ? 'BOSS wave ' : 'Wave ') + r.wave + (r.mutation ? ' (' + r.mutation + ')' : '') + ' repelled!' + (r.streak > 1 ? ' ' + r.streak + ' in a row (+' + Math.min(50, 10 * (r.streak - 1)) + '% loot).' : '') + loot, 'ok', 5000); log('Wave ' + r.wave + ' repelled.'); }
  else if (r.outcome === 'held') { DE.UI.toast('Wave ' + r.wave + ': the wall held but took ' + r.wallDamage + ' damage.' + loot + (r.injured.length ? ' Injured: ' + r.injured.join(', ') : ''), 'warn', 6000); log('Wave ' + r.wave + ': wall damaged (−' + r.wallDamage + ').'); }
  else {
  log('Wave ' + r.wave + ': BREACH! Resources lost.');

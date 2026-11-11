@@ -14,7 +14,7 @@ DE.CONFIG = {
   OFFLINE_MAX_STEPS: 400,        // simulation granularity for long absences
   OFFLINE_MAX_WAVES: 3,          // zombie waves resolved while away (rest are deferred)
   /* Bunker */
-  FLOOR_SLOTS: 12,            // base grid cells per floor (one cell = 100px); rooms are 2 or 4 cells wide
+  FLOOR_SLOTS: 16,            // base grid cells per floor (one cell = 100px); rooms are 2 or 4 cells wide
   MAX_COLS: 24,               // a floor can be dug out sideways up to this many cells
   WING_CELLS: 4,              // cells added per sideways excavation
   BASE_MAX_FLOOR: 3,
@@ -24,7 +24,7 @@ DE.CONFIG = {
   SURVIVOR_FOOD: 0.04,           // per survivor per second
   SURVIVOR_WATER: 0.04,
   UNMANNED_BASE: 0.25,
-  COST_GROWTH: 1.17,
+  COST_GROWTH: 1.15,
   /* Survivors */
   RECRUIT_BASE_COST: 60,
   RECRUIT_GROWTH: 1.22,
@@ -33,10 +33,10 @@ DE.CONFIG = {
   XP_GROWTH: 1.5,
   SURVIVOR_MAX_LEVEL: 20,
   /* Defense */
-  FIRST_WAVE_SEC: 240,
+  FIRST_WAVE_SEC: 300,
   WAVE_INTERVAL_SEC: 300,
   WAVE_BASE_HP: 90,
-  WAVE_GROWTH: 1.16,
+  WAVE_GROWTH: 1.12,
   WAVE_DURATION: 30,
   WALL_BASE_HP: 250,
   GUARD_BASE_DMG: 3,

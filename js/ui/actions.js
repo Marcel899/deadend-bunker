@@ -137,6 +137,7 @@ DE.Actions = (function () {
  done();
  };
  A.wallRepair = () => { const r = DE.Defense.repairWall(S()); if (!r.ok) return fail(r); UI().toast(r.partial ? 'Partial repair (not enough scrap)' : ' Wall repaired', 'ok'); done(); };
+ A.upgradeCalibre = (p, el) => { const cost = DE.Defense.calibreCost(S()); const r = DE.Defense.upgradeCalibre(S()); if (!r.ok) return fail(r); UI().purchased(el, cost, 'Turret calibre ' + r.level); done(); };
  A.buyTurret = (p, el) => { const cost = DE.Defense.turretCost(S()); const r = DE.Defense.buyTurret(S()); if (!r.ok) return fail(r); UI().purchased(el, cost, 'Turret installed'); done(); };
  A.buyTraps = (p) => { const r = DE.Defense.buyTraps(S(), +p.n); if (!r.ok) return fail(r); done(); };
 

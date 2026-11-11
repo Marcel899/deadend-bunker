@@ -899,3 +899,4 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 
 .menu-scene.tall .ow-svg { top: auto !important; bottom: 0 !important; height: var(--sh) !important;
   -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 16%) !important; mask-image: linear-gradient(180deg, transparent 0, #000 16%) !important; }
+.dk-stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin: 6px 0 8px; } .dk-stats span { display: flex; flex-direction: column; align-items: center; padding: 4px; border-radius: 10px; background: rgba(0, 0, 0, .28); } .dk-stats small { font-size: 9px; font-weight: 900; text-transform: uppercase; color: #a9a3b6; } .dk-stats b { font-family: var(--display); font-weight: 400; font-size: 16px; color: #fff; }

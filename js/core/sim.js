@@ -12,7 +12,7 @@ DE.Sim = (function () {
     const res = DE.Research.tick(state, now);
     if (res) state._events.push({ type: 'research', node: res });
     const dig = DE.Excavation.tick(state, now);
-    if (dig) state._events.push({ type: 'excavated', depth: dig.depth, facility: dig.facility });
+    if (dig) state._events.push({ type: 'excavated', depth: dig.depth, facility: dig.facility, find: dig.find });
     DE.Expeditions.tick(state, now);
     // research / excavation may have changed effects
     if (!state._fx) state._fx = DE.Effects.compute(state);

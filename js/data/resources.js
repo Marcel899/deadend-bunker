@@ -13,4 +13,4 @@ DE.Data.RESOURCES = {
 };
 DE.Data.RESOURCE_ORDER = ['food', 'water', 'electricity', 'scrap', 'concrete', 'fuel', 'research'];
 
-DE.Data.START_RESOURCES = { food: 250, water: 250, electricity: 80, scrap: 220, concrete: 0, fuel: 150, research: 0 };
+DE.Data.START_RESOURCES = { food: 300, water: 300, electricity: 100, scrap: 320, concrete: 0, fuel: 180, research: 0 };

@@ -47,7 +47,7 @@ DE.Data = DE.Data || {};
     workshop: t1({ id: 'workshop', name: 'Workshop', icon: '🔧', category: 'production', size: 2,
       desc: 'Benches, vices and a grinder. Strips salvage into usable scrap metal and crafts basic tools.',
       upgradeDesc: 'Raises scrap output',
-      cost: { scrap: 70 }, buildTime: 30, workers: 3, profession: 'mechanic', powerUse: 0.2, produces: { scrap: 0.5 } }),
+      cost: { scrap: 70 }, buildTime: 30, workers: 3, profession: 'mechanic', powerUse: 0.2, produces: { scrap: 0.7 } }),
     medbay: t1({ id: 'medbay', name: 'Medical Bay', icon: '🏥', category: 'support', size: 2,
       desc: 'Two beds and a cabinet of whatever is left. Injured survivors rest here while a medic treats them.',
       upgradeDesc: '+5 morale, faster healing per level',

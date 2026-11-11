@@ -25,7 +25,7 @@ DE.State = (function () {
       excavation: null,                // { depth, endsAt, duration }
       defense: {
         wall: { level: 1, hp: 0 },      // hp filled in after effects are known
-        turrets: 0, traps: 0,
+        turrets: 0, traps: 0, turretLevel: 0, breachStreak: 0, winStreak: 0,
         nextWaveAt: now + C().FIRST_WAVE_SEC * 1000,
         wave: 1, log: [], shock: 0, lastResult: null, nextMut: null,
       },
@@ -58,18 +58,18 @@ DE.State = (function () {
     s.stats.maxDepth = startFloors;
 
     // starting rooms on floor 1
-    const starters = [['quarters', 0], ['farm', 4], ['water', 6], ['generator', 8]];
+    const starters = [['quarters', 0], ['farm', 4], ['water', 6], ['generator', 8], ['workshop', 10]];
     starters.forEach(([type, slot]) => DE.Bunker.placeRoom(s, type, 1, slot, 1, now));
 
     // starting survivors
-    // three starters, one per essential room; legacy "Old Friends" adds more
+    // four starters, one per essential room; legacy "Old Friends" adds more
     const jobs = ['farmer', 'mechanic', 'engineer', 'scavenger', 'soldier', 'scientist', 'cook', 'medic', 'farmer', 'mechanic'];
-    const n = 3 + lfx.startSurvivors;
+    const n = 4 + lfx.startSurvivors;
     for (let i = 0; i < n; i++) DE.Survivors.spawn(s, jobs[i % jobs.length]);
-    // auto-assign the first three to matching rooms
+    // auto-assign the starters to matching rooms
     const byType = {};
     for (const id in s.rooms) byType[s.rooms[id].type] = id;
-    const assignments = { farmer: 'farm', mechanic: 'water', engineer: 'generator' };
+    const assignments = { farmer: 'farm', mechanic: 'water', engineer: 'generator', scavenger: 'workshop' };
     for (const id in s.survivors) {
       const sv = s.survivors[id];
       const rt = assignments[sv.profession];

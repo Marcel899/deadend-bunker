@@ -53,6 +53,16 @@ DE.Excavation = (function () {
     return U().weightedPick(candidates);
   }
 
+  /** Something turned up while digging: a supply cache, a survivor trapped in an old shelter, or
+   * research notes. Bigger finds deeper down. */
+  function rollFind(state, depth) {
+    const scale = Math.pow(1.55, depth - 2), r = Math.random();
+    const give = (loot) => { for (const k in loot) { state.resources[k] = Math.min(DE.Economy.storageCap(state, k), state.resources[k] + loot[k]); } return loot; };
+    if (r < .45) return { kind: 'cache', text: 'An old supply cache in the rubble.', loot: give(depth >= 3 ? { scrap: Math.round(140 * scale), concrete: Math.round(30 * scale) } : { scrap: Math.round(160 * scale) }) };
+    if (r < .62 && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state)) { const sv = DE.Survivors.spawn(state); state.stats.recruited++; return { kind: 'survivor', text: sv.name + ' was trapped in a collapsed shelter — and is grateful.', name: sv.name, id: sv.id }; }
+    if (r < .8) return { kind: 'notes', text: 'Water-stained research notes in a sealed tube.', loot: give({ research: Math.round(45 * scale) }) };
+    return null;
+  }
   function tick(state, now) {
     const ex = state.excavation;
     if (!ex || now < ex.endsAt) return null;
@@ -66,9 +76,10 @@ DE.Excavation = (function () {
       DE.Bunker.placeRoom(state, fac.room, ex.depth, C().FLOOR_SLOTS - DE.Data.ROOMS[fac.room].size, 1, now);
       state.flags.floorsSinceFacility = 0;
     } else state.flags.floorsSinceFacility = (state.flags.floorsSinceFacility || 0) + 1;
+    const find = rollFind(state, ex.depth);
     state._fx = null;
     state._dirtyBunker = true;
-    return { depth: ex.depth, facility: fac };
+    return { depth: ex.depth, facility: fac, find };
   }
 
   return { nextDepth, maxDepth, cost, time, canStart, start, tick };
