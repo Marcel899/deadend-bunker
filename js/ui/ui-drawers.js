@@ -76,28 +76,77 @@ DE.UI.Drawers = (function () {
 
 
  /* ================= ECONOMY DASHBOARD ================= */
+ /* Production dashboard: alerts first, then one tile per resource (net rate, in/out, stock meter,
+  * forecast), the power grid and crew upkeep, the multipliers in play, and every producing room
+  * grouped by what it makes, each with an efficiency meter that names what holds it back. */
+ const PD_STATUS = { crit: 'warning', warn: 'alert', ok: null };
+ function pdTile(s, r, id) {
+ const d = R()[id], stock = s.resources[id], cap = DE.Economy.storageCap(s, id), net = r.net[id], inn = r.production[id], out = r.consumption[id];
+ let eta = 'Stable', st = 'ok', badge = '';
+ const T = (sec) => sec >= 3600 || sec < 600 ? U().fmtTime(sec) : Math.round(sec / 60) + 'm';   // "46m", "4m 12s", "1h 09m"
+ if (net < -1e-6) { const t = stock / -net; eta = 'Empty in ' + T(t); if (t < 300) { st = 'crit'; badge = stock <= .01 ? 'Empty!' : 'Running out'; } }
+ else if (net > 1e-6 && isFinite(cap)) { if (stock >= cap - 1) { eta = 'Storage full'; st = 'warn'; badge = 'Full'; } else eta = 'Full in ' + T((cap - stock) / net); }
+ else if (net > 1e-6) eta = 'Growing';
+ if (stock <= .01 && out > 0) { st = 'crit'; badge = 'Empty!'; }
+ const pct = isFinite(cap) ? Math.min(100, stock / cap * 100) : 0;
+ const tip = `${d.name}: ${U().fmt(stock)}${isFinite(cap) ? ' of ' + U().fmt(cap) : ''}\nIncome +${U().fmt(inn, 2)}/s, use −${U().fmt(out, 2)}/s\n${eta}`;
+ return `<div class="pd-tile ${st}" style="--rc:${d.color}" title="${esc(tip)}">
+ <div class="pd-th">${DE.Icons.res(id, 'pd-ico')}<span>${d.name}</span>${badge ? `<em class="pd-badge ${st}">${DE.Icons.img(PD_STATUS[st], 'ico-inline')}${badge}</em>` : ''}</div>
+ <div class="pd-net ${net < -1e-6 ? 'down' : net > 1e-6 ? 'up' : ''}">${net < -1e-6 ? '▼' : net > 1e-6 ? '▲' : '•'} ${U().fmt(Math.abs(net), Math.abs(net) < 10 ? 2 : undefined)}<small>/s</small></div>
+ <div class="pd-io"><span>+${U().fmt(inn, 2)} in</span><span>−${U().fmt(out, 2)} out</span></div>
+ ${isFinite(cap) ? `<div class="pd-meter"><i style="width:${pct.toFixed(1)}%"></i></div>` : '<div class="pd-meter none"></div>'}
+ <div class="pd-stock"><span><b>${U().fmt(stock)}</b>${isFinite(cap) ? ' / ' + U().fmt(cap) : ''}</span><span class="pd-eta">${eta}</span></div></div>`;
+ }
+ function pdMeter(pct, sev) { return `<span class="pd-bar ${sev}"><i style="width:${Math.max(0, Math.min(100, pct)).toFixed(1)}%"></i></span>`; }
  const economy = {
  title: (s) => `Production <small>morale ×${DE.Economy.moraleMult(s.morale).toFixed(2)} · power ${s._rates.powerFactor < 1 ? '<span class="neg">brownout ×' + s._rates.powerFactor.toFixed(2) + '</span>' : 'OK'}</small>`,
  render(s) {
- const r = s._rates;
- const rows = DE.Data.RESOURCE_ORDER.map(id => {
- const d = R()[id]; const stock = s.resources[id], cap = DE.Economy.storageCap(s, id), net = r.net[id];
- let eta = '—', warn = '';
- if (net < -1e-6) { eta = ' empty in ' + U().fmtTime(stock / -net); if (stock / -net < 300) warn = 'neg'; }
- else if (net > 1e-6 && isFinite(cap)) { eta = stock >= cap - 1 ? ' full' : ' full in ' + U().fmtTime((cap - stock) / net); if (stock >= cap - 1) warn = 'warn'; }
- if (stock <= 0.01 && r.consumption[id] > 0) warn = 'neg';
- return `<tr class="${warn}"><td>${DE.Icons.res(id, 'ico-inline')} ${d.name}</td><td>${U().fmt(stock)}${isFinite(cap) ? ' / ' + U().fmt(cap) : ''}</td><td class="pos">+${U().fmt(r.production[id], 2)}</td><td class="neg">−${U().fmt(r.consumption[id], 2)}</td><td><b class="${net < 0 ? 'neg' : 'pos'}">${U().fmtRate(net)}</b></td><td>${eta}</td></tr>`;
+ const r = s._rates, fx = DE.Effects.get(s);
+ // alerts: icon + text, most severe first
+ const alerts = [];
+ if (r.powerFactor < 1) alerts.push({ sev: 'crit', ic: 'power', t: `<b>Brownout</b> — demand ${U().fmt(r.powerUse, 2)}/s is above supply ${U().fmt(r.powerGen, 2)}/s, powered rooms run at ${Math.round(r.powerFactor * 100)}%. Build or staff a generator.` });
+ DE.Data.RESOURCE_ORDER.forEach(id => { if (s.resources[id] <= 0.01 && r.consumption[id] > 0) alerts.push({ sev: 'crit', ic: 'res.' + id, t: `<b>Out of ${R()[id].name}</b> — rooms that need it are starved.` }); });
+ ['food', 'water'].forEach(id => { if (r.net[id] < 0 && s.resources[id] > 0.01 && s.resources[id] / -r.net[id] < 600) alerts.push({ sev: 'warn', ic: 'res.' + id, t: `<b>${R()[id].name}</b> runs out in ${U().fmtTime(s.resources[id] / -r.net[id])}.` }); });
+ const idle = DE.Survivors.idle(s).length; if (idle) alerts.push({ sev: 'info', ic: 'pop', t: `<b>${idle} idle survivor${idle > 1 ? 's' : ''}</b> — put them to work for more output.` });
+ const alertHtml = alerts.length ? `<div class="pd-alerts">${alerts.map(a => `<div class="pd-alert ${a.sev}">${DE.Icons.img(a.ic, 'pd-aico')}<span>${a.t}</span></div>`).join('')}</div>` : `<div class="pd-alerts"><div class="pd-alert good">${DE.Icons.img('check', 'pd-aico')}<span><b>All systems running</b> — no shortages.</span></div></div>`;
+ const tiles = DE.Data.RESOURCE_ORDER.map(id => pdTile(s, r, id)).join('');
+ // power grid + crew upkeep + multipliers
+ const load = r.powerGen > 0 ? r.powerUse / r.powerGen : (r.powerUse > 0 ? 2 : 0);
+ const grid = `<div class="pd-card pd-grid"><h4>${DE.Icons.img('power', 'ico-inline')} Power grid</h4>
+ <div class="pd-kv"><span>Load</span>${pdMeter(load * 100, load > 1 ? 'crit' : load > .85 ? 'warn' : 'ok')}<b>${Math.round(load * 100)}%</b></div>
+ <p class="pd-sub">${U().fmt(r.powerGen, 2)}/s generated · ${U().fmt(r.powerUse, 2)}/s used${s.defense.turrets ? ' (turrets included)' : ''}</p></div>`;
+ const pop = DE.Bunker.population(s);
+ const crew = `<div class="pd-card"><h4>${DE.Icons.img('pop', 'ico-inline')} Crew upkeep <small>${pop} survivors</small></h4>
+ <div class="pd-kv"><span>${DE.Icons.res('food', 'ico-inline')} Eat</span><b>${U().fmt(r.survivorFood, 2)}/s</b></div>
+ <div class="pd-kv"><span>${DE.Icons.res('water', 'ico-inline')} Drink</span><b>${U().fmt(r.survivorWater, 2)}/s</b></div></div>`;
+ const season = DE.Season ? DE.Season.clock(s) : null, sm = DE.Season ? DE.Season.mods(s) : null;
+ const mm = DE.Economy.moraleMult(s.morale);
+ const mods = `<div class="pd-card"><h4>${DE.Icons.img('up', 'ico-inline')} Multipliers</h4>
+ <div class="pd-kv"><span>${DE.Icons.img('morale', 'ico-inline')} Morale ${Math.round(s.morale)}</span><b class="${mm >= 1 ? 'pos' : 'neg'}">×${mm.toFixed(2)}</b></div>
+ ${fx.globalMult ? `<div class="pd-kv"><span>${DE.Icons.img('research', 'ico-inline')} Research & legacy</span><b class="pos">+${Math.round(fx.globalMult * 100)}%</b></div>` : ''}
+ ${season ? `<div class="pd-kv"><span>${DE.Icons.img('timer', 'ico-inline')} ${season.seasonName}</span><b>${esc(sm.label)}</b></div>` : ''}</div>`;
+ // rooms grouped by product
+ const groups = {}; const support = [];
+ Object.values(s.rooms).filter(x => x.level > 0 && r.perRoom[x.id]).forEach(x => {
+   const i = r.perRoom[x.id], def = DE.Data.ROOMS[x.type], key = Object.keys(i.produces)[0];
+   (key ? (groups[key] = groups[key] || []) : support).push({ x, i, def });
+ });
+ const roomRow = ({ x, i, def }) => {
+   const eff = i.workerMult * i.power * i.starve;
+   const why = i.starve < 1 ? 'no input' : i.power < 1 ? 'brownout' : def.workers && x.workers.length < def.workers ? 'needs workers' : i.workerMult < .95 ? 'tired crew' : '';
+   const pips = def.workers ? `<span class="pd-pips" title="${x.workers.length}/${def.workers} workers">${Array.from({ length: def.workers }, (_, k) => `<i class="${k < x.workers.length ? 'on' : ''}"></i>`).join('')}</span>` : '<span class="pd-pips"></span>';
+   const out = Object.keys(i.produces).map(k => `<span class="pos">+${U().fmt(i.produces[k], 2)}${DE.Icons.res(k, 'ico-inline')}</span>`).join(' ');
+   const inp = Object.keys(i.consumes).map(k => `<span class="neg">−${U().fmt(i.consumes[k], 2)}${DE.Icons.res(k, 'ico-inline')}</span>`).join(' ') + (i.powerUse ? ` <span class="neg">−${U().fmt(i.powerUse, 2)}${DE.Icons.res('electricity', 'ico-inline')}</span>` : '');
+   const tip = `${def.name} · B${x.floor} level ${x.level}\nStaff ×${i.workerMult.toFixed(2)} · power ×${i.power.toFixed(2)}${i.starve < 1 ? ' · starved' : ''}${i.adjacency ? '\nNeighbour bonus +' + Math.round(i.adjacency * 100) + '%' : ''}${i.seasonal !== 1 ? '\nSeason ×' + i.seasonal.toFixed(2) : ''}\nClick to select`;
+   return `<div class="pd-room" data-action="selectRoom" data-id="${x.id}" title="${esc(tip)}">${DE.Icons.room(def.id, 'pd-rico')}<span class="pd-rn"><b>${esc(def.name)}</b><small>B${x.floor} · Lv ${x.level}</small></span>${pips}<span class="pd-eff">${pdMeter(eff * 100, eff >= .9 ? 'ok' : eff >= .6 ? 'warn' : 'crit')}<small>${Math.round(eff * 100)}%${why ? ' · ' + why : ''}</small></span><span class="pd-out">${out}${inp ? '<br>' + inp : ''}</span></div>`;
+ };
+ const groupHtml = DE.Data.RESOURCE_ORDER.filter(k => groups[k]).map(k => {
+   const total = groups[k].reduce((a, q) => a + (q.i.produces[k] || 0), 0);
+   return `<div class="pd-group"><div class="pd-gh">${DE.Icons.res(k, 'ico-inline')} ${R()[k].name}<span class="pos">+${U().fmt(total, 2)}/s</span></div>${groups[k].sort((a, b) => (b.i.produces[k] || 0) - (a.i.produces[k] || 0)).map(roomRow).join('')}</div>`;
  }).join('');
- const warnings = [];
- if (r.powerFactor < 1) warnings.push(` Brownout: demand ${U().fmt(r.powerUse, 2)}/s exceeds supply ${U().fmt(r.powerGen, 2)}/s. Powered rooms run at ${Math.round(r.powerFactor * 100)}%.`);
- DE.Data.RESOURCE_ORDER.forEach(id => { if (s.resources[id] <= 0.01 && r.consumption[id] > 0) warnings.push(`${DE.Icons.res(id, 'ico-inline')} Out of ${R()[id].name} — rooms that need it are starved.`); });
- if (r.net.food < 0 && s.resources.food / -r.net.food < 600) warnings.push(' Food runs out within 10 minutes.');
- if (r.net.water < 0 && s.resources.water / -r.net.water < 600) warnings.push(' Water runs out within 10 minutes.');
- const rooms = Object.values(s.rooms).filter(x => x.level > 0 && r.perRoom[x.id]).map(x => { const i = r.perRoom[x.id]; const def = DE.Data.ROOMS[x.type]; const out = Object.keys(i.produces).map(k => `<span class="pos">+${U().fmt(i.produces[k], 2)}${DE.Icons.res(k, 'ico-inline')}</span>`).join(''); const inp = Object.keys(i.consumes).map(k => `<span class="neg">−${U().fmt(i.consumes[k], 2)}${DE.Icons.res(k, 'ico-inline')}</span>`).join('') + (i.powerUse ? ` <span class="neg">−${U().fmt(i.powerUse, 2)}</span>` : ''); return { x, def, i, html: `<div class="row econ-row" data-action="selectRoom" data-id="${x.id}"><span>${DE.Icons.room(def.id, 'ico-inline')} ${esc(def.name)} <small class="muted">B${x.floor} Lv${x.level} · ${x.workers.length}/${def.workers} workers · eff ${Math.round(i.workerMult * i.power * i.starve * 100)}%</small></span><span>${out} ${inp}</span></div>` }; });
- return `<div class="card"><table class="econ"><thead><tr><th>Resource</th><th>Stock</th><th>Income</th><th>Use</th><th>Net</th><th>Forecast</th></tr></thead><tbody>${rows}</tbody></table>
- <div class="row small"><span>Survivors eat ${U().fmt(r.survivorFood, 2)} /s and drink ${U().fmt(r.survivorWater, 2)} /s · Power ${U().fmt(r.powerGen, 2)} generated / ${U().fmt(r.powerUse, 2)} used</span></div></div>
- ${warnings.length ? `<div class="card warn-card"><h4>Warnings</h4>${warnings.map(w => `<p>${w}</p>`).join('')}</div>` : '<div class="card"><p class="pos"> No shortages.</p></div>'}
- <div class="card"><h4>Per room <small class="muted">click to select</small></h4>${rooms.map(q => q.html).join('') || '<p class="muted">No active rooms.</p>'}</div>`;
+ const supportHtml = support.length ? `<div class="pd-group"><div class="pd-gh">${DE.Icons.img('home', 'ico-inline')} Support rooms</div>${support.map(roomRow).join('')}</div>` : '';
+ return `${alertHtml}<div class="pd-tiles">${tiles}${grid}</div><div class="pd-row">${crew}${mods}</div>
+ <div class="card pd-rooms"><h4>Rooms <small class="muted">grouped by what they make · click one to select it</small></h4>${groupHtml || '<p class="muted">No producing rooms yet.</p>'}${supportHtml}</div>`;
  },
  };
 
@@ -243,7 +292,7 @@ DE.UI.Drawers = (function () {
  html += section('bestiary', I('zombies', 'dk-big'), 'Bestiary', 'Know what is coming.', `${DE.Data.ZOMBIES.filter(z => z.minWave <= d.wave).length}/${DE.Data.ZOMBIES.length} sighted`, '', '',
    DE.Data.ZOMBIES.map(z => `<div class="dk-line ${z.minWave > d.wave ? 'locked-row' : ''}">${DE.Chars.zombie(z.id, { anim: 'idle', h: 40 })}<span><b>${esc(z.name)}</b><small>${z.boss ? 'every ' + DE.Data.BOSS_EVERY + 'th wave' : 'from wave ' + z.minWave + ' · ' + z.hp + ' HP'} · wall dmg ×${z.dmg} · ${esc(z.desc)}</small></span></div>`).join(''));
  if (d.log.length) html += section('log', I('battle', 'dk-big'), 'Battle log', 'The last waves at the gate.', (() => { const r = d.log[d.log.length - 1]; return 'Last: wave ' + r.wave + ' · ' + (r.outcome === 'victory' ? 'repelled' : r.outcome === 'held' ? 'wall held' : 'BREACH'); })(), d.log[d.log.length - 1].outcome === 'breach' ? 'neg' : 'pos', '',
-   d.log.slice().reverse().slice(0, 8).map(r => `<div class="dk-line log ${r.outcome}">${I(r.outcome === 'breach' ? 'warning' : 'check', 'dk-ico')}<span><b>Wave ${r.wave} · ${r.outcome === 'victory' ? 'Repelled' : r.outcome === 'held' ? 'Wall held (−' + r.wallDamage + ' HP)' : 'BREACH'}</b><small>${r.killed} killed${r.reward && Object.keys(r.reward).length ? ' · loot ' + U().costText(r.reward) : ''}${r.injured.length ? ' · injured: ' + r.injured.map(esc).join(', ') : ''}</small></span></div>`).join(''));
+   d.log.slice().reverse().slice(0, 8).map(r => `<div class="dk-line log ${r.outcome}">${I(r.outcome === 'breach' ? 'warning' : 'check', 'dk-ico')}<span><b>Wave ${r.wave} · ${r.outcome === 'victory' ? 'Repelled' : r.outcome === 'held' ? 'Wall held (−' + r.wallDamage + ' HP)' : 'BREACH'}</b><small>${r.killed} killed${r.reward && Object.keys(r.reward).length ? ' · loot ' + U().costText(r.reward) : ''}${(r.injured || []).length ? ' · injured: ' + r.injured.map(esc).join(', ') : ''}</small></span></div>`).join(''));
  return html;
  },
  };
@@ -272,25 +321,57 @@ DE.UI.Drawers = (function () {
  };
 
  /* ================= LEGACY ================= */
+ /* Legacy: a hero panel with the points you hold and what a Reconstruction would pay (with the two
+  * requirements as meters), where the points would come from, the permanent upgrades grouped by
+  * theme (each card: icon, level pips, what it gives now → next level, price) and the artifact
+  * collection. */
+ const LG_ICON = { contacts: 'pop', hands: 'up', stock: 'chest', friends: 'guards', tunnels: 'floors', science: 'research', archive: 'labbuilding', autonomy: 'timer', scars: 'shield', prints: 'hammer', digger: 'dig2', patience: 'noise' };
+ const LG_GROUPS = [['Production', ['hands', 'stock', 'archive', 'prints']], ['Crew & contacts', ['friends', 'contacts', 'autonomy']], ['Digging', ['tunnels', 'digger', 'science']], ['Defense', ['scars', 'patience']]];
+ function lgEffect(e, lvl) {
+ const v = e.value * lvl, pct = (x) => (x > 0 ? '+' : '−') + Math.round(Math.abs(x) * 100) + '%';
+ switch (e.type) {
+   case 'globalMult': return pct(v) + ' production'; case 'researchSpeed': return pct(v) + ' research speed';
+   case 'startResources': return '+' + U().fmt(v) + ' starting supplies'; case 'startSurvivors': return '+' + v + ' starting survivor' + (v === 1 ? '' : 's');
+   case 'startFloors': return '+' + v + ' floor' + (v === 1 ? '' : 's') + ' dug'; case 'startResearchTier': return 'research tier ' + v + ' done';
+   case 'startRep': return '+' + v + ' trader reputation'; case 'offlineCapHours': return '+' + v + 'h offline cap';
+   case 'wallHpMult': return pct(v) + ' wall HP'; case 'guardDmgMult': return pct(v) + ' guard damage';
+   case 'buildCostMult': return pct(v) + ' build cost'; case 'buildTimeMult': return pct(v) + ' build time';
+   case 'excavationCostMult': return pct(v) + ' dig cost'; case 'excavationTimeMult': return pct(v) + ' dig time';
+   case 'waveIntervalMult': return pct(v) + ' time between waves';
+   default: return '';
+ }
+ }
  const legacy = {
- title: (s) => `Reconstruction <small>${U().fmt(s.prestige.points)} Legacy Points</small>`,
+ title: (s) => `Legacy <small>${U().fmt(s.prestige.points)} Legacy Points · ${s.prestige.resets} reconstruction${s.prestige.resets === 1 ? '' : 's'}</small>`,
  render(s) {
- const gain = DE.Prestige.potentialPoints(s); const c = DE.Prestige.canReset(s); const b = DE.Prestige.breakdown(s);
- const f1 = (v) => v.toFixed(1);
- let html = `<div class="card"><h4>${DE.Icons.img('badge', 'ico-inline')} Artifacts <small class="muted">unique finds from expeditions and the rock — one survives Reconstruction</small></h4>${Object.keys(DE.Data.ARTIFACTS).map(id => { const a = DE.Data.ARTIFACTS[id]; const have = s.artifacts && s.artifacts[id]; return `<div class="row ${have ? '' : 'locked-row'}"><span>${DE.Icons.img(a.icon, 'ico-inline')} <b>${esc(a.name)}</b> <small class="muted">${have ? esc(a.desc) : 'Not found yet'}</small></span>${have ? '<b class="gold">OWNED</b>' : ''}</div>`; }).join('')}${s.prestige.relic ? `<small class="muted">Relic carried from the last run: ${esc(DE.Data.ARTIFACTS[s.prestige.relic].name)}</small>` : ''}</div>`;
- html += `<div class="card"><h4>Start over, stronger</h4><p>Reconstruction abandons this bunker and begins a new one. You keep <b>Legacy Points</b>, legacy upgrades and lifetime records; rooms, floors, survivors, research and resources are lost.</p>
- <div class="row"><span>Resources produced (score ${U().fmt(s.stats.runScore)}, depth bonus)</span><b>${f1(b.production)}</b></div>
- <div class="row"><span>Rooms constructed (${s.stats.roomsBuilt})</span><b>${f1(b.rooms)}</b></div>
- <div class="row"><span>Deepest floor (B${s.stats.maxDepth})</span><b>${f1(b.depth)}</b></div>
- <div class="row"><span>Survivors recruited (${s.stats.recruited})</span><b>${f1(b.survivors)}</b></div>
- <div class="row"><span>Research unlocked (${Object.keys(s.research.done).length})</span><b>${f1(b.research)}</b></div>
- <div class="row"><span>Waves defeated (${s.stats.wavesSurvived})</span><b>${f1(b.waves)}</b></div>
- <div class="row total"><span>Legacy Points on reset</span><b class="gold">+${gain}</b></div>
- <div class="row"><span>Resets so far</span><b>${s.prestige.resets}</b></div>
- <p class="muted">Requires floor B${DE.CONFIG.PRESTIGE_MIN_DEPTH} and at least ${DE.CONFIG.PRESTIGE_MIN_GAIN} LP.</p>
- <button class="btn danger ${c.ok ? '' : 'cant'}" data-action="prestige" ${c.ok ? '' : 'disabled'}>${DE.Icons.img('refresh', 'ico-btn')} Reconstruct for +${gain} LP</button>${c.ok ? '' : `<small class="neg">${c.reason}</small>`}</div>`;
- html += `<div class="card"><h4>Legacy upgrades <small class="muted">${U().fmt(s.prestige.points)} LP available</small></h4>${DE.Data.LEGACY_ORDER.map(id => { const d = DE.Data.LEGACY[id]; const lvl = s.prestige.upgrades[id] || 0; const cost = DE.Prestige.upgradeCost(id, lvl); const maxed = lvl >= d.max; const ok = !maxed && s.prestige.points >= cost; return `<div class="lg-row"><div class="lg-icon">${DE.Icons.img('nav.legacy')}</div><div class="lg-body"><b>${esc(d.name)}</b> <small class="muted">${lvl}/${d.max}</small><div class="muted">${esc(d.desc)}</div></div>${maxed ? '<span class="tag gold">MAX</span>' : `<button class="btn primary small ${ok ? '' : 'cant'}" data-action="buyLegacy" data-id="${id}" ${ok ? '' : 'disabled'}>${cost} LP</button>`}</div>`; }).join('')}</div>`;
- return html;
+ const gain = DE.Prestige.potentialPoints(s), c = DE.Prestige.canReset(s), b = DE.Prestige.breakdown(s), C = DE.CONFIG;
+ const depthPct = Math.min(100, s.stats.maxDepth / C.PRESTIGE_MIN_DEPTH * 100), gainPct = Math.min(100, gain / C.PRESTIGE_MIN_GAIN * 100);
+ const hero = `<div class="lg-hero ${c.ok ? 'ready' : ''}">
+ <div class="lg-hero-l">${DE.Icons.img('trophy', 'lg-trophy')}<div><small>Legacy Points</small><b class="lg-big">${U().fmt(s.prestige.points)}</b><small>${U().fmt(s.prestige.lifetime)} earned in total</small></div></div>
+ <div class="lg-hero-r"><h4>Reconstruction</h4><p>Abandon this bunker and start a new one, stronger. You keep Legacy Points, legacy upgrades, one artifact and your records; rooms, floors, survivors, research and resources are lost.</p>
+ <div class="lg-req"><span>${DE.Icons.img('floors', 'ico-inline')} Reach B${C.PRESTIGE_MIN_DEPTH}</span><span class="pd-bar ${depthPct >= 100 ? 'ok' : 'warn'}"><i style="width:${depthPct}%"></i></span><b>B${s.stats.maxDepth}</b></div>
+ <div class="lg-req"><span>${DE.Icons.img('star', 'ico-inline')} Earn ${C.PRESTIGE_MIN_GAIN}+ LP</span><span class="pd-bar ${gainPct >= 100 ? 'ok' : 'warn'}"><i style="width:${gainPct}%"></i></span><b>${gain}</b></div>
+ <button class="btn ${c.ok ? 'danger' : 'cant'} lg-go" data-action="prestige" ${c.ok ? '' : 'disabled'}>${DE.Icons.img('recycle', 'ico-btn')} Reconstruct for +${gain} LP</button>${c.ok ? '' : `<small class="lg-why">${esc(c.reason)}</small>`}</div></div>`;
+ // where the points come from (meter list, one hue)
+ const src = [['production', 'chart', 'Resources produced', 'score ' + U().fmt(s.stats.runScore)], ['depth', 'floors', 'Deepest floor', 'B' + s.stats.maxDepth], ['research', 'research', 'Research done', Object.keys(s.research.done).length], ['rooms', 'rooms', 'Rooms built', s.stats.roomsBuilt], ['survivors', 'pop', 'Survivors recruited', s.stats.recruited], ['waves', 'wave', 'Waves defeated', s.stats.wavesSurvived]];
+ const maxPart = Math.max(0.0001, ...src.map(x => b[x[0]]));
+ const earn = `<div class="card lg-earn"><h4>This run would earn <b class="gold">+${gain} LP</b> <small class="muted">fractions add up; the total is rounded down</small></h4>${src.map(([k, ic, name, stat]) => `<div class="lg-src">${DE.Icons.img(ic, 'ico-inline')}<span class="lg-sn">${name}<small>${stat}</small></span><span class="pd-bar gold"><i style="width:${(b[k] / maxPart * 100).toFixed(1)}%"></i></span><b>+${b[k].toFixed(1)}</b></div>`).join('')}</div>`;
+ // permanent upgrades
+ const card = (id) => {
+   const d = DE.Data.LEGACY[id], lvl = s.prestige.upgrades[id] || 0, cost = DE.Prestige.upgradeCost(id, lvl), maxed = lvl >= d.max, ok = !maxed && s.prestige.points >= cost;
+   const now = lvl ? d.effects.map(e => lgEffect(e, lvl)).filter(Boolean).join(', ') : 'Not learned yet';
+   const next = maxed ? '' : d.effects.map(e => lgEffect(e, lvl + 1)).filter(Boolean).join(', ');
+   const pips = d.max <= 12 ? `<span class="lg-pips">${Array.from({ length: d.max }, (_, k) => `<i class="${k < lvl ? 'on' : ''}"></i>`).join('')}</span>` : `<span class="lg-lvbar"><i style="width:${lvl / d.max * 100}%"></i></span>`;
+   return `<div class="lg-card ${maxed ? 'maxed' : ''} ${lvl ? 'owned' : ''}"><div class="lg-ci">${DE.Icons.img(LG_ICON[id] || 'trophy')}</div>
+   <div class="lg-cb"><div class="lg-ct"><b>${esc(d.name)}</b><small>${lvl}/${d.max}</small></div>${pips}<p>${esc(d.desc)}</p>
+   <div class="lg-now"><span>Now</span>${esc(now)}</div>${next ? `<div class="lg-next"><span>Next</span>${esc(next)}</div>` : ''}</div>
+   ${maxed ? '<span class="tag gold lg-max">MAX</span>' : `<button class="btn ${ok ? 'primary' : 'cant'} small lg-buy" data-action="buyLegacy" data-id="${id}" ${ok ? '' : 'disabled'}>${DE.Icons.img('star', 'ico-btn')}${cost} LP</button>`}</div>`;
+ };
+ const ups = `<div class="card"><h4>Legacy upgrades <small class="muted">permanent — they carry into every future bunker</small></h4>${LG_GROUPS.map(([name, ids]) => `<div class="lg-gh">${name}</div><div class="lg-grid">${ids.filter(id => DE.Data.LEGACY[id]).map(card).join('')}</div>`).join('')}</div>`;
+ // artifacts
+ const ids = Object.keys(DE.Data.ARTIFACTS), found = ids.filter(id => s.artifacts && s.artifacts[id]).length;
+ const arts = `<div class="card"><h4>${DE.Icons.img('artifacts', 'ico-inline')} Artifacts <small class="muted">${found}/${ids.length} found · from expeditions and the rock · one survives a Reconstruction</small></h4><div class="lg-arts">${ids.map(id => { const a = DE.Data.ARTIFACTS[id], have = s.artifacts && s.artifacts[id], relic = s.prestige.relic === id; return `<div class="lg-art ${have ? 'have' : ''}" title="${esc(have ? a.name + ' — ' + a.desc : 'Unknown artifact — keep exploring')}">${DE.Icons.img(a.icon, 'lg-aico')}<b>${have ? esc(a.name) : '???'}</b><small>${have ? esc(a.desc) : 'Not found yet'}</small>${relic ? '<em>Relic</em>' : ''}</div>`; }).join('')}</div></div>`;
+ return hero + earn + ups + arts;
  },
  };
 

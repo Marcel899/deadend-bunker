@@ -31,6 +31,8 @@ DE.Icons = (function () {
     'location': I + 'mappin.png', 'wall': I + 'brick.png', 'turret': I + 'turret.png', 'trap': I + 'spikes.png', 'guard': I + 'shield.png',
     'logo': 'assets/ui/logo.png', 'entrance': 'assets/ui/bunker-entrance.png',
   };
+  // every file in assets/icons is also reachable by its plain name ("medal", "badge", "flask"…)
+  ['alert', 'backpack', 'badge', 'barrel', 'barrier', 'biohazard', 'bolt', 'brick', 'bunker', 'calendar', 'can', 'chart', 'check', 'chest', 'clock', 'coin', 'coins', 'construction', 'cross', 'crown', 'diamond', 'dish', 'drop', 'eye', 'eyeoff', 'factory', 'fire', 'flask', 'garage', 'gear', 'gift', 'group', 'hammer', 'heart', 'helmet', 'home', 'hospital', 'info', 'ingot', 'jerrycan', 'labbuilding', 'lock', 'mail', 'map', 'mappin', 'medal', 'medkit', 'move', 'move4', 'people', 'pickaxe', 'play', 'plus', 'power', 'radiation', 'refresh', 'save', 'scroll', 'search', 'shield', 'shovel', 'signal', 'skull', 'snow', 'spikes', 'star', 'trash', 'trophy', 'truck', 'turret', 'up', 'van', 'warning', 'watchtower', 'water', 'wrench', 'zombie'].forEach(n => { if (!MAP[n]) MAP[n] = I + n + '.png'; });
   /* A profession's portrait is the people icon tinted per job (CSS filter). */
   const PROF_HUE = { farmer: 60, mechanic: 20, engineer: 0, scientist: 180, soldier: 300, medic: 330, cook: 40, scavenger: 90 };
   /* Zombie variants: hue shift + scale on the one sprite. */
