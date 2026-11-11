@@ -95,6 +95,15 @@
 @keyframes rg-eat { 0%, 100% { transform: rotate(-40deg); } 45% { transform: rotate(-120deg); } 60% { transform: rotate(-118deg); } }
 @keyframes rg-chew { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(6deg) translateY(1px); } 65% { transform: rotate(4deg); } }
 
+/* ---- guard: braced aiming stance (rifle up, scanning) ---- */
+.rig.a-guard .j-armF { transform: rotate(-78deg); animation: rg-scanarm 3.2s ease-in-out infinite; }
+.rig.a-guard .j-armB { transform: rotate(-66deg); }
+.rig.a-guard .j-body { transform: rotate(-4deg); } .rig.a-guard .j-head { transform: rotate(-6deg); animation: rg-scanhead 3.2s ease-in-out infinite; }
+.rig.a-guard .j-legL { transform: rotate(-14deg); } .rig.a-guard .j-legR { transform: rotate(12deg); }
+.rig.a-guard .j-torso { animation: rg-breathe 2.8s ease-in-out infinite; }
+@keyframes rg-scanarm { 0%, 100% { transform: rotate(-78deg); } 50% { transform: rotate(-84deg); } }
+@keyframes rg-scanhead { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(-12deg); } }
+
 /* ---- per-type personality ---- */
 .rig-crawler .j-legL, .rig-crawler .j-legR { animation-duration: calc(var(--t) * 1.6) !important; }
 .rig-crawler.a-walk .j-body2 { animation: rg-crawl var(--t) ease-in-out infinite; }

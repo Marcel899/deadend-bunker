@@ -38,7 +38,17 @@ body.no-anim .ow-svg * { animation: none !important; }
 .ow-overlay { position: absolute; inset: 0; pointer-events: none; }
 .ow-overlay > * { pointer-events: auto; }
 .guards, .turrets { position: absolute; display: flex; align-items: flex-end; height: 8%; pointer-events: none; }
-.guards { height: 11%; top: 49%; } .guard { margin-right: -10px; } .guard .rig { height: 100% !important; width: auto !important; }
+.guards { height: 13%; top: 46.5%; left: 13%; width: 18%; gap: 2%; align-items: flex-end; } .guard { position: relative; flex: 0 0 auto; }
+.guard .rig { height: 100% !important; width: auto !important; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .6)); }
+.guard::after, .turret::after { content: ''; position: absolute; right: -6px; top: 36%; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, #fff7c0, #ffb13a 45%, transparent 70%); opacity: 0; pointer-events: none; }
+.guard.firing::after, .turret.firing::after { opacity: 1; animation: ow-flash .11s ease-out; }
+@keyframes ow-flash { from { transform: scale(.4); } to { transform: scale(1.6); } }
+.shots { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.tracer { position: absolute; height: 2px; transform-origin: 0 50%; background: linear-gradient(90deg, rgba(255, 240, 180, 0), #fff2a8 40%, #ffb13a); box-shadow: 0 0 4px #ffd34a; animation: ow-tracer .3s linear forwards; }
+.tracer.heavy { height: 3px; background: linear-gradient(90deg, rgba(255, 200, 120, 0), #ffd34a 40%, #ff6a3c); box-shadow: 0 0 6px #ff9a3c; }
+@keyframes ow-tracer { 0% { clip-path: inset(0 100% 0 0); opacity: 1; } 35% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 0 85%); opacity: 0; } }
+.horde .z.pinged .rig { filter: brightness(2.2) drop-shadow(0 3px 3px rgba(0, 0, 0, .55)); }
+.horde .z.pinged { transform: translateX(3px); }
 .party { position: absolute; left: 58%; top: 70%; height: 10%; width: 40%; pointer-events: none; overflow: hidden; }
 .party .pm { position: absolute; bottom: 0; left: 0; height: 100%; animation: ow-partywalk 9s linear infinite; }
 .party .pm .rig { height: 100% !important; width: auto !important; }
@@ -47,7 +57,9 @@ body.no-anim .ow-svg * { animation: none !important; }
 .guards small, .turrets small { font-size: 11px; align-self: center; color: #fff; text-shadow: var(--outline); }
 .guard, .turret { display: inline-block; height: 100%; margin-right: -4px; }
 .guard img.ico { width: auto; height: 100%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .6)); }
-.turrets { height: 7%; top: 53%; } .turret { height: 100%; margin-right: -2px; } .turret svg { height: 100%; width: auto; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .6)); transform: scaleX(-1); }
+.turrets { height: 7%; top: 53%; } .turret { height: 100%; margin-right: -2px; } .turret { position: relative; } .turret svg { height: 100%; width: auto; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .6)); transform: scaleX(-1); }
+.turret::after { right: auto; left: -8px; top: 30%; }
+.turret.firing svg { animation: ow-recoil .1s linear; }
 .turret .barrel { transform-box: fill-box; transform-origin: left center; animation: ow-scan 6s ease-in-out infinite alternate; }
 .surface.fight .turret .barrel { animation: ow-recoil .2s linear infinite; }
 .guards .guard { animation: bob 1.6s ease-in-out infinite; } .guards .guard:nth-child(2n) { animation-delay: .4s; }

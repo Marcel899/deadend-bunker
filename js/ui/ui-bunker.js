@@ -38,10 +38,14 @@ DE.UI.Bunker = (function () {
           <div class="entrance-sign">DEAD END</div>
           <div class="wave-info" id="wave-info" data-action="openDrawer" data-drawer="defense"></div>
           <div class="fight-fx" id="fight-fx"></div>
+          <div class="shots" id="shots"></div>
         </div>
       </div>
     </div>`;
   }
+
+  /** Geological layer for a depth: topsoil → clay → stone → bedrock. */
+  function strata(depth) { return depth <= 2 ? 'strata-soil' : depth <= 5 ? 'strata-clay' : depth <= 8 ? 'strata-stone' : 'strata-bedrock'; }
 
   function renderFloor(s, f) {
     const C = DE.CONFIG; let slots = '';
@@ -52,7 +56,7 @@ DE.UI.Bunker = (function () {
       slots += renderRoom(room);
     }
     const fac = f.facility ? DE.Data.FACILITIES.find(x => x.id === f.facility) : null;
-    return `<div class="floor ${fac ? 'has-facility' : ''}" data-depth="${f.depth}">
+    return `<div class="floor ${fac ? 'has-facility' : ''} ${strata(f.depth)}" data-depth="${f.depth}">
       <div class="shaft"><div class="cable"></div><div class="car"></div><div class="floor-num">B${f.depth}</div></div>
       <div class="slots">${slots}</div>
       ${fac ? `<div class="facility-tag" title="${esc(fac.lore)}">${Ic().img('facility', 'ico-inline')} ${esc(fac.name)}</div>` : ''}
@@ -73,8 +77,8 @@ DE.UI.Bunker = (function () {
 
   function renderDigZone(s) {
     const d = DE.Excavation.nextDepth(s);
-    if (d > DE.CONFIG.MAX_FLOORS) return `<div class="floor bedrock"><div class="shaft"></div><div class="bedrock-label">Bedrock. Nothing further down.</div></div>`;
-    return `<div class="floor dig" data-action="openDrawer" data-drawer="excavate" id="dig-floor"><div class="shaft"><div class="cable"></div></div><div class="dig-zone" id="dig-zone"></div></div>`;
+    if (d > DE.CONFIG.MAX_FLOORS) return `<div class="floor bedrock strata-bedrock"><div class="shaft"></div><div class="bedrock-label">Bedrock. Nothing further down.</div></div>`;
+    return `<div class="floor dig ${strata(d)}" data-action="openDrawer" data-drawer="excavate" id="dig-floor"><div class="shaft"><div class="cable"></div></div><div class="dig-zone" id="dig-zone"></div></div>`;
   }
 
   /* ---------- per-tick ---------- */
@@ -148,7 +152,7 @@ DE.UI.Bunker = (function () {
     const tEl = $('#turrets'); const tSig = 't' + d.turrets; if (tEl && tEl.dataset.sig !== tSig) { tEl.dataset.sig = tSig; tEl.innerHTML = Array.from({ length: Math.min(d.turrets, 5) }, (_, i) => `<span class="turret" style="animation-delay:${(-i * .9).toFixed(1)}s"><svg viewBox="0 0 40 34" aria-hidden="true"><rect x="6" y="24" width="28" height="8" rx="3" fill="#3a3f4a" stroke="#1c1020" stroke-width="3"/><rect x="12" y="12" width="16" height="14" rx="4" fill="#5a5f6a" stroke="#1c1020" stroke-width="3"/><g class="barrel"><rect x="20" y="14" width="20" height="6" rx="3" fill="#2f2d38" stroke="#1c1020" stroke-width="3"/></g><circle cx="16" cy="18" r="2.5" fill="#ff5a3c"/></svg></span>`).join('') + (d.turrets > 5 ? `<small>+${d.turrets - 5}</small>` : ''); }
     const guards = DE.Survivors.guards(s);
     const fightingNow = now < fightUntil; const gSig = guards.slice(0, 8).map(g => g.id + g.profession).join(',') + (fightingNow ? 'F' : '');
-    const gEl = $('#guards'); if (gEl && gEl.dataset.sig !== gSig) { gEl.dataset.sig = gSig; gEl.innerHTML = guards.slice(0, 8).map(g => `<span class="guard" title="${esc(g.name)}">${DE.Chars.crew(g.profession, { anim: fightingNow ? 'shoot' : 'idle', h: 54 })}</span>`).join('') + (guards.length > 8 ? '<small>+' + (guards.length - 8) + '</small>' : ''); }
+    const gEl = $('#guards'); if (gEl && gEl.dataset.sig !== gSig) { gEl.dataset.sig = gSig; gEl.innerHTML = guards.slice(0, 6).map((g, i) => `<span class="guard" style="--i:${i}" title="${esc(g.name)} · on guard">${DE.Chars.crew(g.profession, { anim: fightingNow ? 'shoot' : 'guard', h: 60, flip: true })}</span>`).join('') + (guards.length > 6 ? '<small>+' + (guards.length - 6) + '</small>' : ''); }
     updateParty(s);
     const secs = (d.nextWaveAt - now) / 1000;
     const power = DE.Defense.defensePower(s); const hp = DE.Defense.waveHp(s);
@@ -164,7 +168,32 @@ DE.UI.Bunker = (function () {
     surface.classList.toggle('incoming', incoming && !fighting);
     surface.classList.toggle('fight', fighting);
     if (incoming && !fighting && hordeWave !== d.wave) { hordeWave = d.wave; buildHorde(s); }
+    fire(s, now, incoming, fighting);
     if (!incoming && !fighting && hordeWave !== -1) { hordeWave = -1; setHtml($('#horde'), ''); }
+  }
+
+  /* ---- defenders shoot: tracers from turrets and guards to zombies on the surface ---- */
+  let nextShot = 0;
+  function fire(s, now, incoming, fighting) {
+    if (!(incoming || fighting) || now < nextShot || !s.settings.animations) return;
+    const scene = $('#scene'), shots = $('#shots'); if (!scene || !shots) return;
+    const zs = Array.from(document.querySelectorAll('#horde .z:not(.dead) .rig')); if (!zs.length) return;
+    const shooters = Array.from(document.querySelectorAll('#turrets .turret, #guards .guard')); if (!shooters.length) return;
+    nextShot = now + (fighting ? 90 : 260) + Math.random() * 120;
+    const base = scene.getBoundingClientRect();
+    const sh = shooters[(Math.random() * shooters.length) | 0]; const z = zs[(Math.random() * zs.length) | 0];
+    const a = sh.getBoundingClientRect(), b = z.getBoundingClientRect();
+    const x1 = a.left + a.width * .7 - base.left, y1 = a.top + a.height * .45 - base.top;
+    const x2 = b.left + b.width * .5 - base.left, y2 = b.top + b.height * .5 - base.top;
+    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) * 180 / Math.PI;
+    const t = document.createElement('i'); t.className = 'tracer ' + (sh.classList.contains('turret') ? 'heavy' : '');
+    t.style.cssText = `left:${x1}px;top:${y1}px;width:${len}px;transform:rotate(${ang}deg)`;
+    shots.appendChild(t); setTimeout(() => t.remove(), 320);
+    sh.classList.add('firing'); setTimeout(() => sh.classList.remove('firing'), 110);
+    // impact: the zombie flinches
+    const zEl = z.closest('.z');
+    setTimeout(() => { if (!zEl || !zEl.isConnected) return; zEl.classList.add('pinged'); setTimeout(() => zEl.classList.remove('pinged'), 160); }, 90);
+    while (shots.children.length > 14) shots.firstChild.remove();
   }
 
   function buildHorde(s) {
