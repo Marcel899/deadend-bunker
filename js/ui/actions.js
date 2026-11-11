@@ -13,6 +13,7 @@ DE.Actions = (function () {
 
  const A = {};
  A.noop = () => {};
+ A.defToggle = (p) => { const o = UI().ui.defOpen = UI().ui.defOpen || {}; o[p.key] = !o[p.key]; UI().renderDrawer(true); };
  A.closeModal = () => UI().closeModal();
  A.confirmYes = () => { const cb = UI()._confirmCb; UI()._confirmCb = null; UI().closeModal(); if (cb) cb(); };
 
