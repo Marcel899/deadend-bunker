@@ -27,6 +27,18 @@ DE.Needs = (function () {
     for (const id in state.rooms) { const r = state.rooms[id]; if (r.level > 0 && types.includes(r.type) && (!best || r.level > best.level)) best = r; }
     return best;
   }
+  /** A free berth for `sv` in one of the given room types: best room level first. Berths come
+   * from the bed furniture each room shows (DE.Data.bedsFor) and hold one survivor each. */
+  function freeBed(state, sv, types, kind) {
+    if (!DE.Data.bedsFor) return null;
+    const used = {};
+    for (const id in state.survivors) { const o = state.survivors[id]; if (o !== sv && o.act && o.act.kind === kind && o.act.room && o.act.bed != null) used[o.act.room + ':' + o.act.bed] = true; }
+    const rooms = Object.values(state.rooms).filter(r => r.level > 0 && !r.construction && types.includes(r.type)).sort((a, b) => b.level - a.level);
+    for (const r of rooms) { const beds = DE.Data.bedsFor(r.type, r.level); for (let i = 0; i < beds.length; i++) if (!used[r.id + ':' + i]) return { room: r.id, bed: i }; }
+    return null;
+  }
+  /** Is the berth this survivor holds still there (room not demolished / under construction)? */
+  function bedValid(state, a) { const r = a.room && state.rooms[a.room]; return !!(r && !r.construction && a.bed != null && a.bed < DE.Data.bedsFor(r.type, r.level).length); }
   const BED_ROOMS = ['quarters', 'dormitory', 'barracks', 'ark', 'cryo'];
   const EAT_ROOMS = ['cafeteria', 'kitchen', 'ark'];
   const HEAL_ROOMS = ['hospital', 'infirmary', 'medbay', 'quarantine', 'bioeng'];
@@ -61,13 +73,16 @@ DE.Needs = (function () {
       else sv.energy = Math.max(0, sv.energy - ENERGY_DRAIN * dt * (a.kind === 'rest' || a.kind === 'idle' ? 0.4 : 1));
       if (a.kind !== 'eat') sv.hunger = Math.min(100, sv.hunger + hungerRate * dt);
       // decide
-      let kind = a.kind, room = a.room;
-      if (kind === 'sleep' && sv.energy < 98) { /* keep sleeping */ }
+      let kind = a.kind, room = a.room, bed = a.bed == null ? null : a.bed;
+      if (kind === 'sleep' && sv.energy < 98 && bedValid(state, a)) { /* keep sleeping in the same berth */ }
       else if (kind === 'eat' && t < a.until) { /* keep eating */ }
-      else if (kind === 'heal' && sv.hp < 90) { /* keep resting in the ward */ }
+      else if (kind === 'heal' && sv.hp < 90 && state.rooms[a.room]) { /* keep resting in the ward */ }
       else {
-        if (sv.hp < 50 && findRoom(state, HEAL_ROOMS)) { kind = 'heal'; room = findRoom(state, HEAL_ROOMS).id; }
-        else if (sv.energy < 12) { kind = 'sleep'; const r = findRoom(state, BED_ROOMS); room = r ? r.id : null; }
+        bed = null;
+        const berth = sv.energy < 12 ? freeBed(state, sv, BED_ROOMS, 'sleep') : null;
+        if (sv.hp < 50 && findRoom(state, HEAL_ROOMS)) { kind = 'heal'; const b = freeBed(state, sv, HEAL_ROOMS, 'heal'); if (b) { room = b.room; bed = b.bed; } else room = findRoom(state, HEAL_ROOMS).id; }
+        // sleep only in an actual free bed; with no berth available they stay up (and stay tired)
+        else if (berth) { kind = 'sleep'; room = berth.room; bed = berth.bed; }
         else if (sv.hunger > 85 && foodOk) { kind = 'eat'; const r = findRoom(state, EAT_ROOMS); room = r ? r.id : null; a.until = t + eatTime; sv.hunger = 0; }
         else if (assign && assign.kind === 'room' && state.rooms[assign.id]) { kind = state.rooms[assign.id].construction ? 'build' : 'work'; room = assign.id; }
         else if (assign && assign.kind === 'guard') { kind = 'guard'; room = null; }
@@ -75,6 +90,7 @@ DE.Needs = (function () {
       }
       if (kind === 'eat' && a.kind !== 'eat') { a.until = t + eatTime; sv.hunger = 0; }
       a.kind = kind; a.room = room;
+      if ((kind === 'sleep' || kind === 'heal') && bed != null) a.bed = bed; else delete a.bed;
     }
   }
 
@@ -84,5 +100,5 @@ DE.Needs = (function () {
     return { work: 'Working', sleep: 'Sleeping', eat: 'Eating', rest: 'Resting', heal: 'In treatment', guard: 'On guard duty', away: 'On expedition', idle: 'Idle', build: 'Helping construction' }[k] || k;
   }
 
-  return { init, tick, needsMult, presence, describe, findRoom, BED_ROOMS, EAT_ROOMS, HEAL_ROOMS, REST_ROOMS };
+  return { init, tick, needsMult, presence, describe, findRoom, freeBed, BED_ROOMS, EAT_ROOMS, HEAL_ROOMS, REST_ROOMS };
 })();

@@ -142,7 +142,7 @@ DE.Save = (function () {
           level: U().clamp(N(v.level, 1), 1, C().SURVIVOR_MAX_LEVEL), xp: NN(v.xp, 0), hp: U().clamp(N(v.hp, 100), 0, 100),
           traits: Array.isArray(v.traits) ? v.traits.filter(t => DE.Data.TRAITS[t]) : [], assignment: null,
           energy: U().clamp(N(v.energy, 100), 0, 100), hunger: U().clamp(N(v.hunger, 0), 0, 100),
-          act: U().isObj(v.act) && typeof v.act.kind === 'string' ? { kind: v.act.kind.slice(0, 12), until: NN(v.act.until, 0), room: typeof v.act.room === 'string' ? v.act.room : null } : { kind: 'idle', until: 0, room: null }, bonds: {} };
+          act: U().isObj(v.act) && typeof v.act.kind === 'string' ? { kind: v.act.kind.slice(0, 12), until: NN(v.act.until, 0), room: typeof v.act.room === 'string' ? v.act.room : null, ...(Number.isInteger(v.act.bed) && v.act.bed >= 0 ? { bed: v.act.bed } : {}) } : { kind: 'idle', until: 0, room: null }, bonds: {} };
         if (U().isObj(v.bonds)) for (const o in v.bonds) if (typeof o === 'string') sv.bonds[o] = U().clamp(N(v.bonds[o], 0), 0, 100);
         if (U().isObj(v.assignment)) {
           const a = v.assignment;

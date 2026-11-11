@@ -82,3 +82,14 @@ DE.Data.LEGACY = {
     desc: 'Excavation cost and time -8% per level', effects: [{ type: 'excavationCostMult', value: -0.08 }, { type: 'excavationTimeMult', value: -0.08 }] },
 };
 DE.Data.LEGACY_ORDER = ['contacts', 'hands', 'stock', 'friends', 'tunnels', 'science', 'archive', 'autonomy', 'scars', 'prints', 'digger', 'patience'];
+
+/* Geology under the bunker, top to bottom. Every floor sits in one layer; harder layers take
+ * longer to dig and need better excavation equipment (the research that raises maxFloor).
+ * The cutaway (js/ui/geology.js) paints these as continuous bands behind the floors. */
+DE.Data.STRATA = [
+  { id: 'topsoil', name: 'Topsoil', from: 1, to: 2, hardness: 1, tool: 'Shovels & picks', research: null },
+  { id: 'dirt', name: 'Dark earth', from: 3, to: 5, hardness: 1.15, tool: 'Excavation I', research: 'excavation1' },
+  { id: 'stone', name: 'Dense stone', from: 6, to: 8, hardness: 1.4, tool: 'Heavy Machinery', research: 'machinery' },
+  { id: 'deeprock', name: 'Deep bedrock', from: 9, to: 99, hardness: 1.75, tool: 'Deep Excavation drills', research: 'excavation2' },
+];
+DE.Data.stratumAt = function (depth) { return DE.Data.STRATA.find(s => depth >= s.from && depth <= s.to) || DE.Data.STRATA[DE.Data.STRATA.length - 1]; };

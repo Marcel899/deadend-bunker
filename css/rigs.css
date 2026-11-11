@@ -130,3 +130,4 @@
 /* ---- sizes used around the UI ---- */
 .rig.portrait { height: 56px; }
 body.no-anim .rig *, body.no-anim .rig { animation: none !important; }
+.rig.a-sleep .item { display: none; }

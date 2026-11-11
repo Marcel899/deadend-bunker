@@ -3,7 +3,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 const FILES = [
-  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/events.js', 'js/data/icons.js',
+  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/events.js', 'js/data/scenes.js', 'js/data/icons.js',
   'js/core/util.js', 'js/core/effects.js', 'js/core/state.js', 'js/core/save.js', 'js/core/economy.js', 'js/core/bunker.js',
   'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
   'js/core/prestige.js', 'js/core/sim.js', 'js/core/offline.js',
@@ -305,6 +305,60 @@ t('import sanitizes impossible values', () => {
   assert(Object.values(r.state.survivors)[0].level === DE.CONFIG.SURVIVOR_MAX_LEVEL); assert(r.state.floors[0].slots[0] === null);
 });
 t('future version rejected', () => { assert(!DE.Save.parse('{"v":99,"state":{}}').ok); });
+
+console.log('Beds & sleep');
+t('beds come from the bed furniture a room actually shows', () => {
+  assert(DE.Data.bedsFor('quarters', 1).length === 4, 'two bunks = four berths');
+  assert(DE.Data.bedsFor('quarters', 10).length === 6, 'a third bunk at level 10');
+  assert(DE.Data.bedsFor('farm', 1).length === 0, 'no beds in a farm');
+});
+t('survivors sleep only in free beds, one per berth', () => {
+  const B = DE.State.create(null, now);
+  for (let i = 0; i < 4; i++) DE.Survivors.recruit(B);
+  Object.values(B.survivors).forEach(sv => { DE.Needs.init(sv); sv.energy = 5; sv.act = { kind: 'idle', until: 0, room: null }; });
+  DE.Needs.tick(B, 0.25, DE.Effects.compute(B));
+  const sleepers = Object.values(B.survivors).filter(sv => sv.act.kind === 'sleep');
+  const beds = DE.Data.bedsFor('quarters', 1).length;
+  assert(sleepers.length === Math.min(beds, Object.keys(B.survivors).length), 'sleepers ' + sleepers.length);
+  const keys = sleepers.map(sv => sv.act.room + ':' + sv.act.bed); assert(new Set(keys).size === keys.length, 'no shared berth');
+  assert(sleepers.every(sv => B.rooms[sv.act.room].type === 'quarters'), 'in a bed room');
+});
+t('nobody sleeps on the floor when there is no bed room', () => {
+  const B = DE.State.create(null, now);
+  for (const id in B.rooms) if (B.rooms[id].type === 'quarters') { const f = B.floors[0]; f.slots = f.slots.map(x => x === id ? null : x); delete B.rooms[id]; }
+  Object.values(B.survivors).forEach(sv => { DE.Needs.init(sv); sv.energy = 3; });
+  DE.Needs.tick(B, 0.25, DE.Effects.compute(B));
+  assert(Object.values(B.survivors).every(sv => sv.act.kind !== 'sleep'), 'no bed, no sleep');
+});
+
+console.log('Defense structures');
+t('start is weak: no towers, plank fence, no missile battery', () => {
+  const B = DE.State.create(null, now);
+  assert(B.overworld.fence === 0 && B.overworld.towers === 0 && B.overworld.missile === 0 && B.overworld.barricades === 0);
+  assert(DE.Defense.defensePower(B).missileDps === 0);
+});
+t('missile battery is an expensive endgame upgrade with prerequisites and real damage', () => {
+  const B = DE.State.create(null, now); B.resources.scrap = 1e7; B.resources.concrete = 1e7; B.resources.fuel = 1e6;
+  const r1 = DE.Defense.upgradeStructure(B, 'missile'); assert(!r1.ok && /Requires/.test(r1.reason), 'needs fence + towers first');
+  const cost = DE.Data.OVERWORLD.missile.levels[1].cost; assert(cost.scrap >= 20000, 'endgame price');
+  B.overworld.fence = 2; B.overworld.towers = 2;
+  const before = DE.Defense.defensePower(B).total;
+  assert(DE.Defense.upgradeStructure(B, 'missile').ok); B._fx = null;
+  const pw = DE.Defense.defensePower(B); assert(pw.missileDps > 0 && pw.total > before, 'adds firepower');
+});
+t('old saves without the new structures load with them at level 0', () => {
+  const B = DE.State.create(null, now); const raw = JSON.parse(DE.Save.serialize ? DE.Save.serialize(B) : JSON.stringify({ v: DE.CONFIG.SAVE_VERSION, state: B }));
+  const st = raw.state || raw; delete st.overworld.barricades; delete st.overworld.missile; st.overworld.fence = 2;
+  const r = DE.Save.parse(JSON.stringify(raw)); assert(r.ok, r.reason);
+  assert(r.state.overworld.barricades === 0 && r.state.overworld.missile === 0 && r.state.overworld.fence === 2);
+});
+
+console.log('Geology');
+t('every diggable depth belongs to a layer; deeper layers are harder', () => {
+  for (let d = 1; d <= DE.CONFIG.MAX_FLOORS; d++) assert(DE.Data.stratumAt(d), 'layer at ' + d);
+  const ids = DE.Data.STRATA.map(x => x.id); assert(ids.join() === 'topsoil,dirt,stone,deeprock');
+  for (let i = 1; i < DE.Data.STRATA.length; i++) assert(DE.Data.STRATA[i].hardness > DE.Data.STRATA[i - 1].hardness);
+});
 
 console.log('Prestige');
 t('reset requires depth and gain', () => {

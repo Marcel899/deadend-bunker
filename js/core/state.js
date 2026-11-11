@@ -36,7 +36,7 @@ DE.State = (function () {
       log: [],
       settings: { autosave: true, animations: true },
       flags: {},
-      overworld: { fence: 0, towers: 0, lights: 0, road: 0 },
+      overworld: { fence: 0, barricades: 0, towers: 0, lights: 0, road: 0, missile: 0 },
       events: [], artifacts: {}, rep: { traders: 0, militia: 0, growers: 0 }, bus: { level: 1 }, goals: { done: {} }, buffs: [], nextEventAt: 0,
     };
   }

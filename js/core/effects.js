@@ -16,7 +16,7 @@ DE.Effects = (function () {
       storageMult: 1,
       excavationCostMult: 1, excavationTimeMult: 1,
       maxFloor: C().BASE_MAX_FLOOR,
-      wallHpMult: 1, guardDmgMult: 1, turretDmgMult: 1, turretCap: 4,
+      wallHpMult: 1, guardDmgMult: 1, turretDmgMult: 1, turretCap: 4, missileDps: 0,
       turretsUnlocked: false, trapsUnlocked: false,
       workerEff: 1, xpMult: 1, housingPerLevel: 0, moraleBonus: 0,
       offlineCapHours: C().OFFLINE_CAP_HOURS,
@@ -75,6 +75,7 @@ DE.Effects = (function () {
       case 'expeditionSpeed': fx.expeditionSpeed += v; break;
       case 'expeditionSafety': fx.expeditionSafety += v; break;
       case 'turretCap': fx.turretCap += v; break;
+      case 'missileDps': fx.missileDps += v; break;
       case 'noiseMult': fx.noiseMult += v; break;
       case 'lootBonusAdd': fx.lootBonus += v; break;
       default: break;

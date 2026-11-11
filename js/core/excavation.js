@@ -15,13 +15,19 @@ DE.Excavation = (function () {
     return out;
   }
   function time(state, depth) {
-    return Math.max(10, 60 * Math.pow(1.35, depth - 2) * DE.Effects.get(state).excavationTimeMult);
+    // harder rock takes longer to break through
+    const hard = DE.Data.stratumAt ? DE.Data.stratumAt(depth).hardness : 1;
+    return Math.max(10, 60 * Math.pow(1.35, depth - 2) * hard * DE.Effects.get(state).excavationTimeMult);
   }
 
   function canStart(state) {
     const d = nextDepth(state);
     if (state.excavation) return { ok: false, reason: 'Already digging' };
-    if (d > maxDepth(state)) return { ok: false, reason: d > C().MAX_FLOORS ? 'Bedrock reached' : 'Requires excavation research' };
+    if (d > maxDepth(state)) {
+      if (d > C().MAX_FLOORS) return { ok: false, reason: 'Bedrock reached' };
+      const layer = DE.Data.stratumAt ? DE.Data.stratumAt(d) : null;
+      return { ok: false, reason: layer ? layer.name + ' needs better equipment (research the next excavation tech)' : 'Requires excavation research' };
+    }
     if (!U().canAfford(state.resources, cost(state, d))) return { ok: false, reason: 'Not enough resources' };
     return { ok: true };
   }

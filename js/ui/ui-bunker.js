@@ -7,17 +7,17 @@ DE.UI.Bunker = (function () {
   const esc = (s) => DE.Util.escapeHtml(s);
   const $ = (sel) => document.querySelector(sel);
   const Ic = () => DE.Icons;
-  let hordeWave = -1, fightUntil = 0;
+  let fightUntil = 0;
 
   function render() {
     const s = DE.UI.state(); const root = document.getElementById('bunker');
     // the surface scene persists across re-renders so its animations (horde, party) keep running
-    if (!root.querySelector('#surface')) { root.innerHTML = renderSurface(s) + '<div id="floors"></div>'; hordeWave = -1; partySig = ''; }
+    if (!root.querySelector('#surface')) { root.innerHTML = renderSurface(s) + '<div id="floors"></div>';  }
     let html = '';
     s.floors.forEach(f => html += renderFloor(s, f));
     html += renderDigZone(s);
     root.querySelector('#floors').innerHTML = html;
-    DE.UI.Actors.relayout(); DE.UI.Elevator.relayout();
+    DE.UI.Actors.relayout(); DE.UI.Elevator.relayout(); DE.UI.Geology.relayout();
     update();
   }
 
@@ -25,11 +25,7 @@ DE.UI.Bunker = (function () {
     return `<div class="surface" id="surface">
       <div class="scene" id="scene">
         ${DE.UI.Overworld.svg()}
-        <div class="horde" id="horde"></div>
         <div class="ow-overlay">
-          <div class="guards" id="guards"></div>
-          <div class="party" id="party"></div>
-          <div class="turrets" id="turrets"></div>
           <div class="hatch" data-action="selectNone" title="Bunker overview"></div>
           <div class="wall" id="wall" data-action="openDrawer" data-drawer="defense" title="Wall — open Defense">
             <div class="wall-label">WALL <b id="wall-lvl"></b></div>
@@ -37,15 +33,13 @@ DE.UI.Bunker = (function () {
           </div>
           <div class="entrance-sign">DEAD END</div>
           <div class="wave-info" id="wave-info" data-action="openDrawer" data-drawer="defense"></div>
-          <div class="fight-fx" id="fight-fx"></div>
-          <div class="shots" id="shots"></div>
         </div>
       </div>
     </div>`;
   }
 
   /** Geological layer for a depth: topsoil → clay → stone → bedrock. */
-  function strata(depth) { return depth <= 2 ? 'strata-soil' : depth <= 5 ? 'strata-clay' : depth <= 8 ? 'strata-stone' : 'strata-bedrock'; }
+  function strata(depth) { return 'strata-' + DE.Data.stratumAt(depth).id; }
 
   function renderFloor(s, f) {
     const cols = f.slots.length; let cells = '';
@@ -138,6 +132,7 @@ DE.UI.Bunker = (function () {
     updateSurface(s, now);
     updateDig(s, now);
     updateWings(s, now);
+    DE.UI.Geology.render();
     DE.UI.Elevator.update(now);
     DE.UI.Actors.update(now);
   }
@@ -164,11 +159,6 @@ DE.UI.Bunker = (function () {
     const d = s.defense; const maxHp = DE.Defense.wallMaxHp(s);
     setText($('#wall-lvl'), 'Lv ' + d.wall.level);
     const hpEl = $('#wall-hp'); if (hpEl) { hpEl.style.width = Math.max(0, 100 * d.wall.hp / maxHp) + '%'; hpEl.className = d.wall.hp / maxHp < 0.3 ? 'low' : ''; }
-    const tEl = $('#turrets'); const tSig = 't' + d.turrets; if (tEl && tEl.dataset.sig !== tSig) { tEl.dataset.sig = tSig; tEl.innerHTML = Array.from({ length: Math.min(d.turrets, 5) }, (_, i) => `<span class="turret" style="animation-delay:${(-i * .9).toFixed(1)}s"><svg viewBox="0 0 40 34" aria-hidden="true"><rect x="6" y="24" width="28" height="8" rx="3" fill="#3a3f4a" stroke="#1c1020" stroke-width="3"/><rect x="12" y="12" width="16" height="14" rx="4" fill="#5a5f6a" stroke="#1c1020" stroke-width="3"/><g class="barrel"><rect x="20" y="14" width="20" height="6" rx="3" fill="#2f2d38" stroke="#1c1020" stroke-width="3"/></g><circle cx="16" cy="18" r="2.5" fill="#ff5a3c"/></svg></span>`).join('') + (d.turrets > 5 ? `<small>+${d.turrets - 5}</small>` : ''); }
-    const guards = DE.Survivors.guards(s);
-    const fightingNow = now < fightUntil; const gSig = guards.slice(0, 8).map(g => g.id + g.profession).join(',') + (fightingNow ? 'F' : '');
-    const gEl = $('#guards'); if (gEl && gEl.dataset.sig !== gSig) { gEl.dataset.sig = gSig; gEl.innerHTML = guards.slice(0, 6).map((g, i) => `<span class="guard" style="--i:${i}" title="${esc(g.name)} · on guard">${DE.Chars.crew(g.profession, { anim: fightingNow ? 'shoot' : 'guard', h: 60, flip: true })}</span>`).join('') + (guards.length > 6 ? '<small>+' + (guards.length - 6) + '</small>' : ''); }
-    updateParty(s);
     const secs = (d.nextWaveAt - now) / 1000;
     const power = DE.Defense.defensePower(s); const hp = DE.Defense.waveHp(s);
     const verdict = power.total >= hp ? 'ok' : power.total >= hp * 0.6 ? 'warn' : 'danger';
@@ -179,75 +169,26 @@ DE.UI.Bunker = (function () {
     }
     const surface = $('#surface'); if (!surface) return;
     const wrap = document.getElementById('bunker-wrap'); if (wrap) { const w = wrap.clientWidth + 'px'; if (surface.style.width !== w) surface.style.width = w; }
-    const scene = $('#scene'); if (scene && s.overworld) for (const k in s.overworld) { const v = String(s.overworld[k] || 0); if (scene.dataset[k] !== v) scene.dataset[k] = v; }
+    // structure levels drive which overworld artwork is visible (css/overworld.css)
+    const scene = $('#scene');
+    if (scene) {
+      const lv = Object.assign({}, s.overworld || {}, { walltier: d.wall.level >= 6 ? 2 : d.wall.level >= 3 ? 1 : 0 });
+      for (const k in DE.Data.OVERWORLD) if (lv[k] == null) lv[k] = 0;
+      for (const k in lv) { const v = String(lv[k] || 0); if (scene.dataset[k] !== v) scene.dataset[k] = v; }
+    }
     const incoming = secs < DE.Defense.warningSec(s); const fighting = now < fightUntil;
     surface.classList.toggle('incoming', incoming && !fighting);
     surface.classList.toggle('fight', fighting);
-    if (incoming && !fighting && hordeWave !== d.wave) { hordeWave = d.wave; buildHorde(s); }
-    fire(s, now, incoming, fighting);
-    if (!incoming && !fighting && hordeWave !== -1) { hordeWave = -1; setHtml($('#horde'), ''); }
+    DE.UI.Battlefield.sync(s, { incoming, fighting });
   }
 
-  /* ---- defenders shoot: tracers from turrets and guards to zombies on the surface ---- */
-  let nextShot = 0;
-  function fire(s, now, incoming, fighting) {
-    if (!(incoming || fighting) || now < nextShot || !s.settings.animations) return;
-    const scene = $('#scene'), shots = $('#shots'); if (!scene || !shots) return;
-    const zs = Array.from(document.querySelectorAll('#horde .z:not(.dead) .rig')); if (!zs.length) return;
-    const shooters = Array.from(document.querySelectorAll('#turrets .turret, #guards .guard')); if (!shooters.length) return;
-    nextShot = now + (fighting ? 90 : 260) + Math.random() * 120;
-    const base = scene.getBoundingClientRect();
-    const sh = shooters[(Math.random() * shooters.length) | 0]; const z = zs[(Math.random() * zs.length) | 0];
-    const a = sh.getBoundingClientRect(), b = z.getBoundingClientRect();
-    const x1 = a.left + a.width * .7 - base.left, y1 = a.top + a.height * .45 - base.top;
-    const x2 = b.left + b.width * .5 - base.left, y2 = b.top + b.height * .5 - base.top;
-    const dx = x2 - x1, dy = y2 - y1, len = Math.hypot(dx, dy), ang = Math.atan2(dy, dx) * 180 / Math.PI;
-    const t = document.createElement('i'); t.className = 'tracer ' + (sh.classList.contains('turret') ? 'heavy' : '');
-    t.style.cssText = `left:${x1}px;top:${y1}px;width:${len}px;transform:rotate(${ang}deg)`;
-    shots.appendChild(t); setTimeout(() => t.remove(), 320);
-    sh.classList.add('firing'); setTimeout(() => sh.classList.remove('firing'), 110);
-    // impact: the zombie flinches
-    const zEl = z.closest('.z');
-    setTimeout(() => { if (!zEl || !zEl.isConnected) return; zEl.classList.add('pinged'); setTimeout(() => zEl.classList.remove('pinged'), 160); }, 90);
-    while (shots.children.length > 14) shots.firstChild.remove();
-  }
-
-  function buildHorde(s) {
-    const comp = DE.Defense.waveComposition(DE.Defense.waveHp(s), s.defense.wave).slice(0, 24);
-    const h = $('#horde'); if (!h) return;
-    h.innerHTML = comp.map((z) => { const big = z.boss || z.id === 'brute' || z.id === 'mutant'; const dur = (z.id === 'runner' ? 9 : z.id === 'leaper' ? 12 : big ? 30 : 20) + Math.random() * 8;
-      return `<span class="z ${z.id}" style="--lane:${(Math.random() * 12) | 0}px;--start:${(30 + Math.random() * 60).toFixed(0)}vw;animation-duration:${dur.toFixed(1)}s;animation-delay:${(Math.random() * 6).toFixed(1)}s">${DE.Chars.zombie(z.id, { anim: z.id === 'runner' ? 'run' : 'walk', h: big ? 78 : 50, flip: true })}</span>`; }).join('');
-    h.querySelectorAll('.z').forEach(el => el.addEventListener('animationend', (e) => { if (e.target !== el) return; const r = el.querySelector('.rig'); if (r && !el.classList.contains('dead')) setAnim(r, 'attack'); }));
-  }
-
-  /** Survivors away on expeditions walk along the fence on the surface. */
-  let partySig = '';
-  function updateParty(s) {
-    const p = $('#party'); if (!p) return;
-    const members = []; s.expeditions.active.forEach(e => e.survivors.forEach(id => { const sv = s.survivors[id]; if (sv) members.push(sv); }));
-    const sig = members.map(m => m.id + m.profession).join(',');
-    if (sig === partySig) return; partySig = sig;
-    p.innerHTML = members.slice(0, 6).map((m, i) => `<span class="pm" style="animation-delay:${(-i * 1.1).toFixed(1)}s" title="${esc(m.name)} · on expedition">${DE.Chars.crew(m.profession, { anim: 'walk', h: 46 })}</span>`).join('');
-  }
-
-  /** Called when a wave resolves: brief battle animation. */
+  /** Called when a wave resolves: the battlefield plays out the result (see battlefield.js). */
   function playWave(result) {
     fightUntil = Date.now() + 4200;
-    // zombies react: hits during the fight, then deaths (or a breach push) at the end
-    Array.from(document.querySelectorAll('#horde .z')).forEach((el, i) => { const r = el.querySelector('.rig'); if (!r) return;
-      setTimeout(() => { if (el.isConnected) { const was = (r.className.baseVal.match(/a-\w+/) || ['a-attack'])[0].slice(2); setAnim(r, 'hit'); setTimeout(() => el.isConnected && setAnim(r, was), 380); } }, 200 + Math.random() * 1400);
-      const dies = !result.breach || Math.random() < 0.6;
-      if (dies) setTimeout(() => { if (el.isConnected) { el.classList.add('dead'); setAnim(r, 'die'); } }, 1800 + i * 90);
-      else setTimeout(() => { if (el.isConnected) el.classList.add('through'); }, 2000); });
-    const fx = $('#fight-fx'); if (!fx) return;
-    fx.innerHTML = '';
-    for (let i = 0; i < 14; i++) {
-      const sp = document.createElement('span'); sp.className = 'spark s' + (i % 3);
-      sp.style.left = (30 + Math.random() * 60) + '%'; sp.style.animationDelay = (Math.random() * 2) + 's'; fx.appendChild(sp);
-    }
-    setTimeout(() => { if (fx) fx.innerHTML = ''; }, 2800);
-    const surface = $('#surface'); if (surface) { surface.classList.add(result.breach ? 'breached' : 'won'); setTimeout(() => surface.classList.remove("breached", "won"), 4200); }
+    DE.UI.Battlefield.fight(result);
+    const surface = $('#surface'); if (surface) { surface.classList.add(result.breach ? 'breached' : 'won'); setTimeout(() => surface.classList.remove('breached', 'won'), 4200); }
   }
+
 
   function flashRoom(id, cls) {
     const el = document.getElementById('room-' + id); if (!el) return;

@@ -2,8 +2,10 @@
  * that composes a cutaway room from a layout in js/data/scenes.js. Every prop is vector art in
  * the game's outlined cartoon style; animated parts carry p-* classes driven by css/rooms.css.
  *
- * Scene space: 200 units per slot wide, 180 tall. Ceiling beam 0..12, back wall 12..150,
- * floor line y=150 (props sit on it), floor plate 150..180 where survivors walk.
+ * Scene space: 100 units per grid cell wide (one unit = one CSS pixel), 180 tall plus a 20-unit
+ * ceiling slab above y=0, so the 200px-tall room renders at a uniform 1:1 scale (no stretching).
+ * Ceiling beam 0..12, back wall 12..150, floor line y=150 (props sit on it), floor plate 150..180
+ * where survivors walk. Every prop is drawn with its bottom-centre at (x, y).
  * Every prop is drawn with its bottom-centre at (x, y). */
 var DE = globalThis.DE = globalThis.DE || {};
 DE.UI = DE.UI || {};
@@ -13,6 +15,12 @@ DE.Scenes = (function () {
   const S = `stroke="${INK}" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"`;
   const S2 = `stroke="${INK}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"`;
   const FLOOR = 150;
+  const CELL = 100, TOP = 20;   // scene units per grid cell; ceiling slab above y=0
+  /* Free-standing furniture and machines always stand on the floor line, whatever y a layout
+   * gives them (wall-mounted props — signs, screens, shelves, pipes — keep their y). */
+  const GROUNDED = { bunk: 1, bed: 1, medbed: 1, cryopod: 1, benchseat: 1, bike: 1, cage: 1, carlift: 1, crystal: 1, forge: 1, freezer: 1, generator: 1, locker: 1, missile: 1,
+    plant: 1, planter: 1, pod: 1, press: 1, railing: 1, robotarm: 1, sofa: 1, tank: 1, traytower: 1, treadmill: 1, tree: 1, truck: 1, watertank: 1, conveyor: 1, filtercol: 1,
+    table: 1, desk: 1, seismo: 1, punchbag: 1, workbench: 1, labbench: 1, reactor: 1, fusioncore: 1, counter: 1, arcade: 1, ammobox: 1, barrel: 1, crate: 1, weaponrack: 1, serverrack: 1 };
   const g = (cls, inner, x, y, extra) => `<g class="${cls || ''}" transform="translate(${x} ${y})${extra ? ' ' + extra : ''}">${inner}</g>`;
   const rect = (x, y, w, h, fill, r, s) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r || 0}" fill="${fill}" ${s === false ? '' : s || S}/>`;
   const circ = (x, y, r, fill, s) => `<circle cx="${x}" cy="${y}" r="${r}" fill="${fill}" ${s === false ? '' : s || S2}/>`;
@@ -191,17 +199,18 @@ DE.Scenes = (function () {
 
   /** Background for a room: ceiling beam, wall panels, pipes, floor plate, hanging lamps. */
   function base(def, theme, size, level, construction) {
-    const W = 200 * size, t = THEMES[theme] || THEMES.default;
-    let s = `<rect x="0" y="0" width="${W}" height="${FLOOR}" fill="${t.wall}"/><rect x="0" y="0" width="${W}" height="${FLOOR}" fill="url(#sc-panel)"/>
+    const W = CELL * size, t = THEMES[theme] || THEMES.default;
+    let s = `<rect x="0" y="${-TOP}" width="${W}" height="${TOP}" fill="${t.trim}"/><rect x="0" y="${-TOP}" width="${W}" height="${TOP}" fill="#000" opacity=".35"/><rect x="0" y="0" width="${W}" height="${FLOOR}" fill="${t.wall}"/><rect x="0" y="0" width="${W}" height="${FLOOR}" fill="url(#sc-panel)"/>
       <rect x="0" y="${FLOOR * .62}" width="${W}" height="${FLOOR * .38}" fill="${t.wall2}" opacity=".85"/>
       <rect x="0" y="0" width="${W}" height="14" fill="${t.trim}"/><rect x="0" y="12" width="${W}" height="4" fill="#000" opacity=".3"/>
       <rect x="0" y="${FLOOR}" width="${W}" height="${180 - FLOOR}" fill="${t.floor}"/><rect x="0" y="${FLOOR}" width="${W}" height="${180 - FLOOR}" fill="url(#sc-grate)"/>
       <rect x="0" y="${FLOOR - 3}" width="${W}" height="5" fill="${INK}"/><rect x="0" y="${FLOOR + 2}" width="${W}" height="2" fill="#fff" opacity=".12"/>
-      <rect x="0" y="0" width="4" height="180" fill="${INK}"/><rect x="${W - 4}" y="0" width="4" height="180" fill="${INK}"/>`;
+      <rect x="0" y="${-TOP}" width="4" height="${180 + TOP}" fill="${INK}"/><rect x="${W - 4}" y="${-TOP}" width="4" height="${180 + TOP}" fill="${INK}"/>`;
     // lamps: one per slot, better lamps at higher tiers
     const tier = tierOf(level);
-    s += `<rect x="0" y="0" width="${W}" height="180" fill="url(#sc-ambient)"/>`;
-    for (let i = 0; i < size; i++) s += g('', P.lamp({ drop: tier >= 3 ? 6 : 10, color: t.lamp }), 100 + i * 200, 14);
+    s += `<rect x="0" y="${-TOP}" width="${W}" height="${180 + TOP}" fill="url(#sc-ambient)"/>`;
+    const lamps = Math.max(1, Math.round(size / 2));
+    for (let i = 0; i < lamps; i++) s += g('', P.lamp({ drop: tier >= 3 ? 6 : 10, color: t.lamp }), W * (i + 0.5) / lamps, 14);
     if (tier >= 2) s += g('', P.neon({ w: 60, color: t.lamp }), W - 50, 30);
     if (tier >= 4) s += g('', P.neon({ w: 60, color: t.lamp }), 50, 30);
     return s;
@@ -211,15 +220,15 @@ DE.Scenes = (function () {
   /** Full scene markup for a room. */
   function render(room, def, state) {
     const layout = DE.Data.SCENES[def.id] || DE.Data.SCENES._default;
-    const size = def.size, W = 200 * size, level = room.level, tier = tierOf(level);
-    let s = `<svg class="scene" viewBox="0 0 ${W} 180" preserveAspectRatio="none" aria-hidden="true">${defs()}${base(def, layout.theme, size, level, room.construction)}`;
-    const place = (list) => (list || []).forEach(p => { const [name, x, y, o] = p; const fn = P[name]; if (!fn) return; const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier; s += g('prop p-' + name, fn(opts), x, y == null ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : ''); });
+    const size = def.size, W = CELL * size, level = room.level, tier = tierOf(level);
+    let s = `<svg class="scene" viewBox="0 ${-TOP} ${W} ${180 + TOP}" preserveAspectRatio="none" aria-hidden="true">${defs()}${base(def, layout.theme, size, level, room.construction)}`;
+    const place = (list) => (list || []).forEach(p => { const [name, x, y, o] = p; const fn = P[name]; if (!fn) return; const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier; s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : ''); });
     place(layout.props);
     if (tier >= 2) place(layout.lv10);
     if (tier >= 3) place(layout.lv25);
     if (tier >= 4) place(layout.lv50);
     if (room.construction) s += g('construction', P.scaffold({ w: W - 30, h: 110 }), W / 2, FLOOR);
-    s += `<rect x="0" y="0" width="${W}" height="180" fill="url(#sc-vig)" class="vig"/></svg>`;
+    s += `<rect x="0" y="${-TOP}" width="${W}" height="${180 + TOP}" fill="url(#sc-vig)" class="vig"/></svg>`;
     return s;
   }
 
@@ -227,9 +236,9 @@ DE.Scenes = (function () {
   function stations(def, kind) {
     const layout = DE.Data.SCENES[def.id] || DE.Data.SCENES._default; const st = layout.stations || {};
     let list = st[kind];
-    if (!list) { if (kind === 'work') list = st.work; if (!list) { const n = Math.max(1, def.workers || 2); list = []; for (let i = 0; i < n; i++) list.push(30 + (200 * def.size - 60) * (i + 0.5) / n); } }
+    if (!list) { if (kind === 'work') list = st.work; if (!list) { const n = Math.max(1, def.workers || 2); list = []; for (let i = 0; i < n; i++) list.push(30 + (CELL * def.size - 60) * (i + 0.5) / n); } }
     return list;
   }
 
-  return { P, render, stations, tierOf, THEMES, FLOOR };
+  return { P, render, stations, tierOf, defs, THEMES, FLOOR, CELL, TOP };
 })();

@@ -28,8 +28,6 @@
 @keyframes ow-flicker { 0%, 100% { opacity: .9; } 30% { opacity: .65; } 55% { opacity: 1; } 70% { opacity: .75; } }
 .ow-doorglow { animation: ow-flicker 4s ease-in-out infinite; } .ow-doorlamp { animation: ow-lampflash 4s ease-in-out infinite; }
 @keyframes ow-lampflash { 0%, 100% { opacity: 1; } 40% { opacity: .8; } 46% { opacity: 1; } 52% { opacity: .7; } }
-.ow-gun { transform-box: fill-box; transform-origin: 100% 60%; animation: ow-scan 11s ease-in-out infinite alternate; }
-@keyframes ow-scan { from { transform: rotate(-4deg); } to { transform: rotate(6deg); } }
 .ow-blades { animation: ow-grass 3s ease-in-out infinite alternate; transform-origin: 50% 100%; }
 @keyframes ow-grass { to { transform: skewX(4deg); } }
 body.no-anim .ow-svg * { animation: none !important; }
@@ -37,32 +35,7 @@ body.no-anim .ow-svg * { animation: none !important; }
 /* --- game overlays (coords in % of the 1664x600 box) --- */
 .ow-overlay { position: absolute; inset: 0; pointer-events: none; }
 .ow-overlay > * { pointer-events: auto; }
-.guards, .turrets { position: absolute; display: flex; align-items: flex-end; height: 8%; pointer-events: none; }
-.guards { height: 13%; top: 46.5%; left: 13%; width: 18%; gap: 2%; align-items: flex-end; } .guard { position: relative; flex: 0 0 auto; }
-.guard .rig { height: 100% !important; width: auto !important; filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .6)); }
-.guard::after, .turret::after { content: ''; position: absolute; right: -6px; top: 36%; width: 14px; height: 14px; border-radius: 50%; background: radial-gradient(circle, #fff7c0, #ffb13a 45%, transparent 70%); opacity: 0; pointer-events: none; }
-.guard.firing::after, .turret.firing::after { opacity: 1; animation: ow-flash .11s ease-out; }
 @keyframes ow-flash { from { transform: scale(.4); } to { transform: scale(1.6); } }
-.shots { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
-.tracer { position: absolute; height: 2px; transform-origin: 0 50%; background: linear-gradient(90deg, rgba(255, 240, 180, 0), #fff2a8 40%, #ffb13a); box-shadow: 0 0 4px #ffd34a; animation: ow-tracer .3s linear forwards; }
-.tracer.heavy { height: 3px; background: linear-gradient(90deg, rgba(255, 200, 120, 0), #ffd34a 40%, #ff6a3c); box-shadow: 0 0 6px #ff9a3c; }
-@keyframes ow-tracer { 0% { clip-path: inset(0 100% 0 0); opacity: 1; } 35% { clip-path: inset(0 0 0 0); } 100% { clip-path: inset(0 0 0 85%); opacity: 0; } }
-.horde .z.pinged .rig { filter: brightness(2.2) drop-shadow(0 3px 3px rgba(0, 0, 0, .55)); }
-.horde .z.pinged { transform: translateX(3px); }
-.party { position: absolute; left: 58%; top: 70%; height: 10%; width: 40%; pointer-events: none; overflow: hidden; }
-.party .pm { position: absolute; bottom: 0; left: 0; height: 100%; animation: ow-partywalk 9s linear infinite; }
-.party .pm .rig { height: 100% !important; width: auto !important; }
-@keyframes ow-partywalk { from { transform: translateX(-20%); } to { transform: translateX(420%); } }
-.guards { left: 12.6%; top: 52%; width: 10%; } .turrets { right: 58%; top: 52%; width: 10%; justify-content: flex-end; }
-.guards small, .turrets small { font-size: 11px; align-self: center; color: #fff; text-shadow: var(--outline); }
-.guard, .turret { display: inline-block; height: 100%; margin-right: -4px; }
-.guard img.ico { width: auto; height: 100%; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .6)); }
-.turrets { height: 7%; top: 53%; } .turret { height: 100%; margin-right: -2px; } .turret { position: relative; } .turret svg { height: 100%; width: auto; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, .6)); transform: scaleX(-1); }
-.turret::after { right: auto; left: -8px; top: 30%; }
-.turret.firing svg { animation: ow-recoil .1s linear; }
-.turret .barrel { transform-box: fill-box; transform-origin: left center; animation: ow-scan 6s ease-in-out infinite alternate; }
-.surface.fight .turret .barrel { animation: ow-recoil .2s linear infinite; }
-.guards .guard { animation: bob 1.6s ease-in-out infinite; } .guards .guard:nth-child(2n) { animation-delay: .4s; }
 @keyframes bob { 50% { transform: translateY(-3px); } }
 .hatch { position: absolute; left: 20.7%; top: 71%; width: 12.6%; height: 15%; cursor: pointer; border-radius: 6px; transition: box-shadow .2s; }
 .hatch:hover { box-shadow: 0 0 0 3px var(--gold), 0 0 18px rgba(255, 197, 49, .6); }
@@ -76,37 +49,56 @@ body.no-anim .ow-svg * { animation: none !important; }
 .wave-info.ok { border-color: var(--green2); } .wave-info.warn { border-color: var(--gold2); } .wave-info.danger { border-color: var(--red2); color: #ffb3b6; animation: blink 1.2s infinite; }
 
 /* --- horde: walks along the grass line from the right --- */
-.horde { position: absolute; left: 0; right: 0; bottom: 17.5%; height: 12%; pointer-events: none; }
-.horde .z { position: absolute; left: 43%; bottom: var(--lane, 0px); opacity: 0; transform: translateX(var(--start, 40vw)); animation: approach linear forwards; }
-.horde .z .rig { filter: drop-shadow(0 3px 3px rgba(0, 0, 0, .55)); }
-.surface.incoming .horde .z, .surface.fight .horde .z { opacity: 1; }
-@keyframes approach { from { transform: translateX(var(--start, 40vw)); } to { transform: translateX(0); } }
-.horde .z.through { animation: breachpush 1.2s ease-in forwards; } @keyframes breachpush { to { transform: translateX(-30%); opacity: 0; } }
-.horde .z.dead { animation: none; }
 .surface.fight .ow-bunker { animation: wallshake .15s infinite; } @keyframes wallshake { 50% { transform: translateX(2px); } }
-.surface.fight .ow-gun { animation: ow-recoil .18s linear infinite; } @keyframes ow-recoil { 50% { transform: translateX(6px); } }
 .surface.incoming .ow-redlight, .surface.incoming .ow-redglow { animation-duration: .5s; }
 .surface.won .ow-svg { animation: flashgreen 1s; } .surface.breached .ow-svg { animation: flashred 1s 3; }
 @keyframes flashgreen { 30% { filter: brightness(1.3) hue-rotate(30deg); } } @keyframes flashred { 50% { filter: brightness(1.2) hue-rotate(-40deg) saturate(2); } }
-.fight-fx { position: absolute; left: 8%; right: 52%; bottom: 20%; height: 40%; pointer-events: none; }
-.fight-fx .spark { position: absolute; bottom: 0; width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle, #fff7c0, var(--gold) 50%, transparent 72%); animation: spark 1.2s ease-out forwards; }
-.fight-fx .spark.s1 { background: radial-gradient(circle, #fff, var(--red) 50%, transparent 72%); } .fight-fx .spark.s2 { background: radial-gradient(circle, #fff, var(--orange) 50%, transparent 72%); width: 26px; height: 26px; }
-@keyframes spark { from { opacity: 1; transform: translateY(0) scale(.6); } to { opacity: 0; transform: translateY(-50px) scale(1.6); } }
 
 @media (max-width: 980px) {
   .wall-label { font-size: 10px; } .wave-info { font-size: 11px; padding: 4px 8px; } .entrance-sign { font-size: 11px; }
 }
 
-/* ---- upgradeable structures: hidden until #scene carries the matching data-level ---- */
-.ow-svg .up { display: none; }
-#scene[data-fence="2"] .up-fence-2, #scene[data-fence="3"] .up-fence-2, #scene[data-fence="3"] .up-fence-3 { display: inline; }
-#scene[data-fence="2"] .post-wood, #scene[data-fence="3"] .post-wood { display: none; }
-#scene[data-towers="1"] .up-towers-1, #scene[data-towers="2"] .up-towers-1, #scene[data-towers="2"] .up-towers-2 { display: inline; }
-#scene[data-lights="1"] .up-lights-1, #scene[data-lights="2"] .up-lights-1, #scene[data-lights="2"] .up-lights-2 { display: inline; }
-#scene[data-road="1"] .up-road-1, #scene[data-road="2"] .up-road-1, #scene[data-road="2"] .up-road-2 { display: inline; }
-#scene[data-road="2"] .up-road-1 { display: none; }
-#scene:not([data-towers="1"]):not([data-towers="2"]) .ow-sentry, #scene:not([data-towers="1"]):not([data-towers="2"]) .ow-lampglow { display: none; }
-#scene:not([data-towers="1"]):not([data-towers="2"]) .ow-lantern { opacity: .35; }
+/* ---- upgradeable structures (generated rules): .lv parts are hidden unless #scene carries a
+   matching level. ge-K-n: level >= n · eq-K-n: level == n · rng-K-a-b: a <= level <= b ---- */
+.ow-svg .lv { display: none; }
+#scene[data-fence="0"] .eq-fence-0 { display: inline; }
+#scene[data-fence="1"] .eq-fence-1 { display: inline; }
+#scene[data-fence="1"] .ge-fence-1, #scene[data-fence="2"] .ge-fence-1, #scene[data-fence="3"] .ge-fence-1 { display: inline; }
+#scene[data-fence="2"] .eq-fence-2 { display: inline; }
+#scene[data-fence="2"] .ge-fence-2, #scene[data-fence="3"] .ge-fence-2 { display: inline; }
+#scene[data-fence="3"] .eq-fence-3 { display: inline; }
+#scene[data-fence="3"] .ge-fence-3 { display: inline; }
+#scene[data-barricades="0"] .eq-barricades-0 { display: inline; }
+#scene[data-barricades="1"] .eq-barricades-1 { display: inline; }
+#scene[data-barricades="1"] .ge-barricades-1, #scene[data-barricades="2"] .ge-barricades-1 { display: inline; }
+#scene[data-barricades="2"] .eq-barricades-2 { display: inline; }
+#scene[data-barricades="2"] .ge-barricades-2 { display: inline; }
+#scene[data-towers="0"] .eq-towers-0 { display: inline; }
+#scene[data-towers="1"] .eq-towers-1 { display: inline; }
+#scene[data-towers="1"] .ge-towers-1, #scene[data-towers="2"] .ge-towers-1 { display: inline; }
+#scene[data-towers="2"] .eq-towers-2 { display: inline; }
+#scene[data-towers="2"] .ge-towers-2 { display: inline; }
+#scene[data-lights="0"] .eq-lights-0 { display: inline; }
+#scene[data-lights="1"] .eq-lights-1 { display: inline; }
+#scene[data-lights="1"] .ge-lights-1, #scene[data-lights="2"] .ge-lights-1 { display: inline; }
+#scene[data-lights="2"] .eq-lights-2 { display: inline; }
+#scene[data-lights="2"] .ge-lights-2 { display: inline; }
+#scene[data-road="0"] .eq-road-0 { display: inline; }
+#scene[data-road="1"] .eq-road-1 { display: inline; }
+#scene[data-road="1"] .ge-road-1, #scene[data-road="2"] .ge-road-1 { display: inline; }
+#scene[data-road="2"] .eq-road-2 { display: inline; }
+#scene[data-road="2"] .ge-road-2 { display: inline; }
+#scene[data-missile="0"] .eq-missile-0 { display: inline; }
+#scene[data-missile="1"] .eq-missile-1 { display: inline; }
+#scene[data-missile="1"] .ge-missile-1, #scene[data-missile="2"] .ge-missile-1 { display: inline; }
+#scene[data-missile="2"] .eq-missile-2 { display: inline; }
+#scene[data-missile="2"] .ge-missile-2 { display: inline; }
+#scene[data-walltier="0"] .eq-walltier-0 { display: inline; }
+#scene[data-walltier="1"] .eq-walltier-1 { display: inline; }
+#scene[data-walltier="1"] .ge-walltier-1, #scene[data-walltier="2"] .ge-walltier-1 { display: inline; }
+#scene[data-walltier="2"] .eq-walltier-2 { display: inline; }
+#scene[data-walltier="2"] .ge-walltier-2 { display: inline; }
+#scene[data-fence="1"] .rng-fence-1-2, #scene[data-fence="2"] .rng-fence-1-2 { display: inline; }
 .ow-searchlight { animation: ow-sweep 7s ease-in-out infinite alternate; }
 .ow-tower-r + .up-towers-2 .ow-searchlight:last-of-type, .ow-searchlight:nth-of-type(2) { animation-delay: -3.5s; }
 @keyframes ow-sweep { from { transform: rotate(-14deg); } to { transform: rotate(14deg); } }
@@ -128,3 +120,37 @@ body.no-anim .ow-svg * { animation: none !important; }
 .ow-doorglow, .ow-lampglow { mix-blend-mode: screen; }
 .ow-shadows { animation: ow-haze 12s ease-in-out infinite alternate; }
 .ow-cloud use { overflow: visible; }
+
+/* ============ BATTLEFIELD (js/ui/battlefield.js) ============
+   One layer in the overworld's own 1664x600 coordinate space, scaled like the SVG, so units stand
+   exactly on the grass / roof lines. */
+.bf { position: absolute; inset: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.ow-overlay { z-index: 2; }
+.bf-world { position: absolute; left: 0; top: 0; width: 1664px; height: 600px; transform-origin: 0 0; }
+.bf-world > .hatch, .bf-world > .wall { pointer-events: auto; }
+.bf-world .wall-label { font-size: 17px; } .bf-world .entrance-sign { font-size: 17px; z-index: 35; } .bf-world .wall-hp { height: 12px; }
+.bf-fx { position: absolute; left: 0; top: 0; overflow: visible; z-index: 40; pointer-events: none; }
+.bf-unit { position: absolute; left: 0; top: 0; will-change: transform; pointer-events: none; }
+.bf-unit .rig { display: block; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }
+.bf-turret { z-index: 12; } .bf-turret.ground { z-index: 31; } .bf-launcher { z-index: 11; }
+.bf-turret svg, .bf-launcher svg { display: block; overflow: visible; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }
+.bf-guard { z-index: 30; } .bf-party { z-index: 14; }
+.bf-z.pinged .rig { filter: brightness(1.7) saturate(.6); }
+.bf-z.dead { opacity: 0; transition: opacity 1s ease .5s; } .bf-z.gone { opacity: 0; transition: opacity .5s; }
+.bf-eye { animation: ow-blinkred 1.4s steps(1) infinite; }
+.bf-tracer { stroke: #fff2a8; stroke-width: 2; stroke-linecap: round; animation: bf-fade .16s linear forwards; }
+.bf-tracer.heavy { stroke: #ffd34a; stroke-width: 3.2; }
+.bf-spark { fill: #fff4a8; animation: bf-fade .2s ease-out forwards; }
+@keyframes bf-fade { from { opacity: 1; } to { opacity: 0; } }
+.bf-smoke { fill: #e4dad2; opacity: .75; transform-box: fill-box; transform-origin: center; animation: bf-smoke .9s ease-out forwards; }
+.bf-smoke.big { fill: #8f8480; animation-duration: 1.4s; }
+@keyframes bf-smoke { to { opacity: 0; transform: translateY(-8px) scale(2.6); } }
+.bf-flame { animation: bf-flame .08s steps(2) infinite; } @keyframes bf-flame { 50% { transform: scaleX(1.5); } }
+.bf-boom-ball, .bf-boom-core, .bf-boom-flash { transform-box: fill-box; transform-origin: center; }
+.bf-boom-ball { animation: bf-ball .55s ease-out forwards; } .bf-boom-core { animation: bf-ball .35s ease-out forwards; }
+.bf-boom-flash { animation: bf-fade .5s ease-out forwards; } .bf-boom-scorch { animation: bf-fade 1.1s ease-in forwards; }
+@keyframes bf-ball { 0% { transform: scale(.2); opacity: 1; } 60% { transform: scale(1.35); opacity: 1; } 100% { transform: scale(1.7); opacity: 0; } }
+.bf-debris { animation: bf-debris .9s cubic-bezier(.2, .7, .4, 1) forwards; }
+@keyframes bf-debris { to { transform: translate(var(--dx), var(--dy)) rotate(260deg); opacity: 0; } }
+.bf.shake .bf-world > * { animation: bf-shake .2s linear; } @keyframes bf-shake { 25% { translate: 2px 1px; } 75% { translate: -2px -1px; } }
+.ow-info small.bad { display: block; color: #ff8a7a; }

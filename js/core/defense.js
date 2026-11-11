@@ -100,9 +100,10 @@ DE.Defense = (function () {
     const guards = DE.Survivors.guards(state);
     const guardDps = guards.reduce((s, g) => s + DE.Survivors.guardPower(g, fx), 0);
     const turretDps = state.defense.turrets * C().TURRET_DMG * fx.turretDmgMult * (state._rates ? state._rates.powerFactor : 1);
+    const missileDps = (fx.missileDps || 0) * (state._rates ? state._rates.powerFactor : 1);
     const trapsUsed = Math.min(state.defense.traps, C().TRAPS_PER_WAVE);
     const trapDmg = trapsUsed * C().TRAP_DMG * fx.trapDmgMult;
-    return { guardDps, turretDps, trapDmg, trapsUsed, flat: fx.defenseFlat, total: (guardDps + turretDps) * C().WAVE_DURATION + trapDmg + fx.defenseFlat, guards: guards.length };
+    return { guardDps, turretDps, missileDps, trapDmg, trapsUsed, flat: fx.defenseFlat, total: (guardDps + turretDps + missileDps) * C().WAVE_DURATION + trapDmg + fx.defenseFlat, guards: guards.length };
   }
 
   function waveInterval(state) { return C().WAVE_INTERVAL_SEC * DE.Effects.get(state).waveIntervalMult * Math.max(0.55, 1 - DE.Events.noise(state) * 0.008); }
@@ -164,7 +165,14 @@ DE.Defense = (function () {
     return result;
   }
 
-  /** Overworld structure upgrades (fence, towers, lights, road). */
+  /** Unmet prerequisites of the next level of a structure, as readable text (or null). */
+  function structureBlocked(state, key) {
+    const def = DE.Data.OVERWORLD[key]; if (!def || !def.requires) return null;
+    const miss = [];
+    for (const k in def.requires) { const have = (state.overworld && state.overworld[k]) || 0; if (have < def.requires[k]) miss.push(DE.Data.OVERWORLD[k].name + ': ' + DE.Data.OVERWORLD[k].levels[def.requires[k]].name); }
+    return miss.length ? 'Requires ' + miss.join(', ') : null;
+  }
+  /** Overworld structure upgrades (fence, barricades, towers, lights, road, missile). */
   function structureNext(state, key) {
     const def = DE.Data.OVERWORLD[key]; if (!def) return null;
     const lvl = (state.overworld && state.overworld[key]) || 0;
@@ -173,9 +181,10 @@ DE.Defense = (function () {
   function upgradeStructure(state, key) {
     const next = structureNext(state, key);
     if (!next) return { ok: false, reason: 'Fully upgraded' };
+    const blocked = structureBlocked(state, key); if (blocked) return { ok: false, reason: blocked };
     if (!U().canAfford(state.resources, next.cost)) return { ok: false, reason: 'Not enough resources' };
     U().pay(state.resources, next.cost);
-    state.overworld = state.overworld || { fence: 0, towers: 0, lights: 0, road: 0 };
+    state.overworld = state.overworld || {};
     state.overworld[key] = (state.overworld[key] || 0) + 1;
     state._fx = null;
     return { ok: true, level: state.overworld[key], cost: next.cost };
@@ -193,6 +202,6 @@ DE.Defense = (function () {
     return resolveWave(state, now);
   }
 
-  return { wallMaxHp, wallUpgradeCost, repairCost, turretCost, trapCost, maxTurrets, upgradeWall, repairWall, buyTurret, buyTraps,
+  return { structureBlocked, wallMaxHp, wallUpgradeCost, repairCost, turretCost, trapCost, maxTurrets, upgradeWall, repairWall, buyTurret, buyTraps,
     waveHp, waveComposition, compositionSummary, waveReward, isBossWave, defensePower, waveInterval, warningSec, resolveWave, tick, structureNext, upgradeStructure };
 })();

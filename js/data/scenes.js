@@ -339,3 +339,21 @@ DE.Data.SCENES = {
   cache: { theme: 'danger', props: [['crate', 50, null, { n: 3, color: '#4a5a3a' }], ['weaponrack', 120, null, { n: 4 }], ['ammobox', 180, null, { n: 4 }], ['sign', 100, 60, { text: 'MILITARY', color: '#4a5a3a' }], ['turretmodel', 20, 100]], lv10: [['locker', 190, 100, { n: 1 }]], lv25: [['cage', 100, 100, { w: 80, h: 40 }]], lv50: [['missile', 185, 100, { h: 60 }]], stations: { work: [100], rest: [60] } },
   dormitory: { theme: 'warm', props: [['bunk', 50], ['bunk', 110], ['bunk', 170, null, { v: 2 }], ['locker', 20, 100, { n: 1 }], ['clock', 100, 60], ['poster', 150, 56, { kind: 'map' }]], lv10: [['plant', 20, null, { h: 28 }]], lv25: [['sofa', 100, 100, { color: '#3a5a8a' }]], lv50: [['neon', 100, 34, { w: 120, color: '#ffb070' }]], stations: { sleep: [40, 70, 100, 130, 160, 190], rest: [100] } },
 };
+
+/** Sleeping berths in a room, derived from the bed furniture its scene actually shows at that
+ * level (bunks give two berths, beds/medical beds one, cryopods one upright). Positions are in
+ * scene units: x along the room, y = height of the mattress above the floor line (negative = up).
+ * The simulation allocates these one survivor per berth; the actors lie down exactly on them. */
+DE.Data.bedsFor = function (type, level) {
+  const L = DE.Data.SCENES[type]; if (!L) return [];
+  const tier = level >= 50 ? 4 : level >= 25 ? 3 : level >= 10 ? 2 : 1;
+  const list = (L.props || []).concat(tier >= 2 ? L.lv10 || [] : [], tier >= 3 ? L.lv25 || [] : [], tier >= 4 ? L.lv50 || [] : []);
+  const beds = [];
+  list.forEach(([name, x]) => {
+    if (name === 'bunk') beds.push({ x, y: -38, kind: 'bunk' }, { x, y: -68, kind: 'bunk' });
+    else if (name === 'bed') beds.push({ x, y: -22, kind: 'bed' });
+    else if (name === 'medbed') beds.push({ x, y: -22, kind: 'medbed' });
+    else if (name === 'cryopod') beds.push({ x, y: -14, kind: 'pod', upright: true });
+  });
+  return beds.sort((a, b) => a.x - b.x || b.y - a.y);
+};

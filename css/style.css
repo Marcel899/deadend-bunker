@@ -357,3 +357,5 @@ body.no-anim * { animation: none !important; transition: none !important; }
 .bus-card { border-color: #2f5f80; }
 .stats-grid { grid-template-columns: 1fr 1fr 1fr; }
 .panel-head h3 { display: flex; align-items: center; gap: 6px; }
+.ow-row .ico-struct-row { width: 44px; height: 44px; flex: 0 0 44px; } .ow-row .ow-info { flex: 1; }
+img.ico-room, img.ico-struct { image-rendering: auto; border-radius: 22%; }

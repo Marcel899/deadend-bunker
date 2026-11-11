@@ -53,6 +53,14 @@ js/core/
 js/ui/
   ui-core.js          DOM helpers, delegation, toasts, modals, drawers, top bar
   ui-bunker.js        cutaway rendering and per-tick updates
+  overworld.js        layered SVG surface scene; upgrade tiers shown via #scene data-levels
+  battlefield.js      guards, turrets, missile battery, horde and shots in overworld coordinates
+  geology.js          one continuous underground cutaway (topsoil → dark earth → stone → deep rock)
+  elevator.js         the single lift: one shaft, one cabin, ride tickets (board → ride → exit)
+  actors.js           survivors walking, riding the lift, working, sleeping in allocated beds
+  scenes.js           room prop library + renderer (100 units per cell, 1:1 scale)
+  room-icons.js       generated build icons for every room and surface structure
+  chars.js            rigged characters; held items drawn in the hand's frame
   ui-side.js          side panel: overview / room / build menu
   ui-drawers.js       survivors, research, excavate, defense, expeditions, legacy, settings
   actions.js          every data-action handler

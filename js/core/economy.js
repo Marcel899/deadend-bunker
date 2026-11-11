@@ -70,7 +70,7 @@ DE.Economy = (function () {
     });
 
     // turrets draw power
-    const turretPower = state.defense.turrets * C().TURRET_POWER;
+    const turretPower = state.defense.turrets * C().TURRET_POWER + ((state.overworld && state.overworld.missile) || 0) * 1;
     powerUse += turretPower;
 
     // brownout: when the battery is empty and demand exceeds supply, powered rooms slow down

@@ -211,25 +211,35 @@ DE.Chars = (function () {
     if (c.kind === 'zombie') s += `<path d="M-16 ${len} l-3 3" ${thin('#5b7a3f', 3)}/>`;
     return s;
   }
+  /* Held items are drawn in the HAND's frame: origin = centre of the palm, +y points along the
+   * forearm away from the shoulder (the direction the item extends / a gun fires) and +x is the
+   * thumb side, which faces up when the arm is raised to aim. So a weapon always points where the
+   * arm points — hanging at low-ready when idle, level when aiming — and every pose stays aligned. */
   function item(t, len) {
-    const y = len;
+    const at = (body) => `<g transform="translate(0 ${len})">${body}</g>`;
+    const metal = '#3a3540', metal2 = '#6e717b', wood = '#6b4226';
     switch (t) {
-      case 'rifle': return `<g transform="translate(0 ${y}) rotate(-12)"><rect x="-44" y="-5" width="84" height="10" rx="3" fill="#3a3540" ${sw3}/><rect x="-62" y="-4" width="22" height="7" rx="2" fill="#2a2530" ${sw3}/><path d="M-10 5 l-4 16 h10 l2 -16 z" fill="#5a3a24" ${sw3}/><path d="M18 5 v14 h8 v-14" fill="#3a3540" ${sw3}/><rect x="30" y="-4" width="16" height="8" rx="2" fill="#5a3a24" ${sw3}/><path d="M-40 -3 h30" ${thin('#6e717b', 2)}/><rect x="-8" y="-9" width="10" height="4" fill="#2a2530" ${sw2}/><path d="M-56 -2 h12" ${thin('#6e717b', 1.5)}/></g>`;
-      case 'shotgun': return `<g transform="translate(0 ${y}) rotate(-10)"><rect x="-50" y="-5" width="92" height="9" rx="3" fill="#4a4652" ${sw3}/><rect x="-10" y="-3" width="30" height="10" rx="3" fill="#6b4226" ${sw3}/><path d="M20 4 l10 16 h8 l-6 -18 z" fill="#6b4226" ${sw3}/><path d="M-46 -3 h34" ${thin('#8a8e98', 2)}/><path d="M-4 2 h18" ${thin('#8a5a3a', 2)}/></g>`;
-      case 'pistol': return `<g transform="translate(0 ${y - 2})"><rect x="-6" y="-8" width="32" height="10" rx="3" fill="#3a3540" ${sw3}/><rect x="-6" y="0" width="10" height="14" rx="2" fill="#2a2530" ${sw3}/><path d="M-2 -6 h22" ${thin('#6e717b', 1.5)}/><path d="M-3 4 h4" ${thin('#8a6a3a', 2)}/></g>`;
-      case 'wrench': return `<g transform="translate(0 ${y}) rotate(20)"><rect x="-5" y="-30" width="10" height="56" rx="3" fill="#8a8c96" ${sw3}/><path d="M-12 -30 q12 -14 24 0 l-6 10 h-12 z" fill="#8a8c96" ${sw3}/><path d="M-10 28 q10 10 20 0 l-5 -8 h-10 z" fill="#8a8c96" ${sw3}/><path d="M-2 -24 v44" ${thin('#c9ccd4', 2)} opacity=".7"/><path d="M-4 -34 l4 -2" ${thin('#5a5f6a', 2)}/></g>`;
-      case 'medkit': return `<g transform="translate(0 ${y + 4})"><rect x="-18" y="2" width="36" height="28" rx="4" fill="#d8303a" ${sw}/><path d="M-6 0 q6 -8 12 0" fill="none" ${sw3}/><rect x="-5" y="10" width="10" height="12" fill="#fff"/><rect x="-9" y="13" width="18" height="6" fill="#fff"/><path d="M-16 6 h32" ${thin('#ff8a7a', 2)} opacity=".7"/><path d="M-18 16 h36" ${thin('#8f1e2e', 2)} opacity=".6"/></g>`;
-      case 'pan': return `<g transform="translate(0 ${y}) rotate(-30)"><rect x="-4" y="-2" width="8" height="40" rx="3" fill="#2a2630" ${sw3}/><ellipse cx="0" cy="54" rx="26" ry="14" fill="#2f2b36" ${sw}/><ellipse cx="0" cy="50" rx="18" ry="8" fill="#6b6775" stroke="none"/><ellipse cx="-6" cy="48" rx="8" ry="3" fill="#8a8e98" opacity=".7"/></g>`;
-      case 'flashlight': return `<g transform="translate(0 ${y}) rotate(40)"><rect x="-6" y="-4" width="12" height="30" rx="3" fill="#3a3540" ${sw3}/><path d="M-10 26 h20 l-4 12 h-12 z" fill="#5a5666" ${sw3}/><ellipse class="beam" cx="0" cy="40" rx="12" ry="5" fill="#fff4a8" ${sw3}/><path class="beam" d="M-10 44 l-14 60 h48 l-14 -60 z" fill="#fff4a8" opacity=".25" stroke="none"/><path d="M-3 0 v20" ${thin('#8a8e98', 2)}/><rect x="-4" y="6" width="8" height="4" fill="#d8303a"/></g>`;
+      case 'rifle': return at(`<path d="M2 -30 h12 l-2 22 h-10 z" fill="${wood}" ${sw3}/><rect x="3" y="-10" width="13" height="30" rx="2" fill="${metal}" ${sw3}/><rect x="6" y="18" width="7" height="44" rx="2" fill="${metal}" ${sw3}/><rect x="4" y="22" width="11" height="16" rx="2" fill="${wood}" ${sw3}/><path d="M-9 2 h12 v9 h-12 z" fill="#2a2530" ${sw3}/><rect x="15" y="-4" width="5" height="12" rx="1" fill="#2a2530" ${sw2}/><path d="M9 22 v38" ${thin(metal2, 1.5)}/><rect x="5" y="60" width="9" height="5" fill="#1c1020"/>`);
+      case 'shotgun': return at(`<path d="M2 -32 h12 l-1 24 h-10 z" fill="${wood}" ${sw3}/><rect x="3" y="-10" width="12" height="22" rx="2" fill="#4a4652" ${sw3}/><rect x="6" y="10" width="7" height="58" rx="2" fill="#4a4652" ${sw3}/><rect x="1" y="22" width="9" height="18" rx="3" fill="${wood}" ${sw3}/><path d="M9 14 v52" ${thin('#8a8e98', 1.5)}/>`);
+      case 'pistol': return at(`<rect x="-4" y="-6" width="9" height="12" rx="2" fill="#2a2530" ${sw3}/><rect x="3" y="-8" width="10" height="30" rx="2" fill="${metal}" ${sw3}/><path d="M8 -4 v22" ${thin(metal2, 1.5)}/><rect x="5" y="22" width="6" height="3" fill="#1c1020"/>`);
+      case 'wrench': return at(`<rect x="-4" y="-8" width="9" height="50" rx="3" fill="#8a8c96" ${sw3}/><path d="M-11 40 h23 v10 l-6 6 v-8 h-11 v8 l-6 -6 z" fill="#8a8c96" ${sw3}/><path d="M-1 -4 v40" ${thin('#c9ccd4', 2)} opacity=".7"/><rect x="-5" y="-6" width="11" height="12" rx="3" fill="#c93a3a" ${sw2}/>`);
+      case 'crowbar': return at(`<path d="M0 -14 V46 q0 12 12 12 h4" fill="none" stroke="${INK}" stroke-width="9" stroke-linecap="round"/><path d="M0 -14 V46 q0 12 12 12 h4" fill="none" stroke="#c93a3a" stroke-width="4.5" stroke-linecap="round"/><path d="M0 -14 l-5 -6" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M0 -14 l-5 -6" stroke="#8a8c96" stroke-width="3" stroke-linecap="round"/>`);
+      case 'pitchfork': return at(`<rect x="-3" y="-44" width="7" height="96" rx="3" fill="#9a6238" ${sw3}/><path d="M-12 52 h25 v6 h-25 z" fill="#8a8c96" ${sw3}/><path d="M-10 58 v18 M0 58 v20 M10 58 v18" stroke="${INK}" stroke-width="5" stroke-linecap="round"/><path d="M-10 58 v18 M0 58 v20 M10 58 v18" stroke="#c9ccd4" stroke-width="2.4" stroke-linecap="round"/>`);
+      case 'medkit': return at(`<path d="M-6 2 q6 -9 12 0" fill="none" ${sw3}/><rect x="-18" y="4" width="36" height="28" rx="4" fill="#d8303a" ${sw}/><rect x="-5" y="11" width="10" height="14" fill="#fff"/><rect x="-10" y="15" width="20" height="6" fill="#fff"/><path d="M-15 8 h30" ${thin('#ff8a7a', 2)} opacity=".7"/>`);
+      case 'pan': return at(`<rect x="-4" y="-6" width="8" height="40" rx="3" fill="#2a2630" ${sw3}/><ellipse cx="0" cy="52" rx="16" ry="22" fill="#2f2b36" ${sw}/><ellipse cx="2" cy="52" rx="10" ry="15" fill="#6b6775" stroke="none"/><ellipse cx="5" cy="46" rx="3" ry="7" fill="#8a8e98" opacity=".7"/>`);
+      case 'flashlight': return at(`<rect x="-6" y="-8" width="12" height="30" rx="3" fill="#3a3540" ${sw3}/><path d="M-10 22 h20 l-4 12 h-12 z" fill="#5a5666" ${sw3}/><ellipse class="beam" cx="0" cy="36" rx="12" ry="5" fill="#fff4a8" ${sw3}/><path class="beam" d="M-10 40 l-14 60 h48 l-14 -60 z" fill="#fff4a8" opacity=".25" stroke="none"/><rect x="-4" y="2" width="8" height="4" fill="#d8303a"/>`);
+      case 'clipboard': return at(`<rect x="-14" y="-2" width="30" height="38" rx="3" fill="#a87a4a" ${sw3}/><rect x="-10" y="4" width="22" height="28" fill="#f6f4ee" stroke="none"/><rect x="-4" y="-5" width="10" height="7" rx="2" fill="#8a8c96" ${sw2}/><path d="M-6 12 h14 M-6 18 h14 M-6 24 h9" ${thin('#5a6a8a', 2)}/>`);
       default: return '';
     }
   }
+  const GUNS = { rifle: 1, shotgun: 1, pistol: 1 };
 
   /* ---------- assemble a rig ---------- */
   function rig(id, o) {
     o = o || {}; const c = ALL[id]; if (!c) return '';
     const p = Object.assign({ hips: [0, -52], neck: [0, -104], shoulders: [[-24, -98], [24, -98]], hipOff: 11, legLen: 50, armLen: 46, lean: 0, armF: 0, armB: 0, legL: 0, legR: 0, headTilt: 0 }, c.pose || {});
-    const item = c.item || null;
+    // o.item overrides the profession's default (e.g. guards on duty always carry a firearm)
+    const item = o.item !== undefined ? o.item : (c.item || null);
     const legLen = p.legLen, armLen = p.armLen;
     const dx = p.neck[0] - p.hips[0], dy = p.neck[1] - p.hips[1];
     const tL = Math.hypot(dx, dy); const tRot = Math.atan2(dx, -dy) * 180 / Math.PI;
@@ -266,22 +276,24 @@ DE.Chars = (function () {
   };
   ZOMBIES.boss = Object.assign({}, ZOMBIES.mutant, { name: 'Colossus', headW: 42, headH: 44, shoulderW: 50, hipW: 38, pose: { hips: [0, -64], neck: [0, -128], shoulders: [[-46, -118], [46, -118]], hipOff: 20, legLen: 60, armLen: 76, armF: -55, armB: 55, lean: 6 }, filter: 'hue-rotate(-40deg) saturate(1.4) contrast(1.15)', vars: { '--t': '2.6s', '--la': '14deg', '--aa': '14deg', '--bob': '6px' } });
   const CREW = {
-    scavenger: C({ name: 'Scavenger', hair: { style: 'messy', color: '#5a3a22' }, brows: 'stern', shirt: '#d9c7a6', jacket: { color: '#6b4a2e', lapel: '#4a3220', pocket: true }, sleeve: '#6b4a2e', pants: '#2f2f3a', boots: '#6b4a2e', backpack: true, wristband: '#3a2a2a', item: 'rifle', pose: { armF: -28, armB: 18 }, vars: { '--t': '1s', '--la': '24deg', '--aa': '22deg', '--bob': '2px' } }),
-    hunter:    C({ name: 'Hunter', hair: { style: 'ponytail', color: '#f2d060' }, mouth: 'smirk', cheeks: true, shirt: '#f4efe6', jacket: { color: '#c93a3a', lapel: '#9a2a2a', len: 30 }, sleeve: '#c93a3a', gloves: '#3a2a2a', pants: '#2b3350', boots: '#6b4a2e', bandolier: true, item: 'pistol', pose: { armF: -70, armB: 10 }, vars: { '--t': '.9s', '--la': '26deg', '--aa': '18deg', '--bob': '2px' } }),
+    scavenger: C({ name: 'Scavenger', hair: { style: 'messy', color: '#5a3a22' }, brows: 'stern', shirt: '#d9c7a6', jacket: { color: '#6b4a2e', lapel: '#4a3220', pocket: true }, sleeve: '#6b4a2e', pants: '#2f2f3a', boots: '#6b4a2e', backpack: true, wristband: '#3a2a2a', item: 'crowbar', pose: { armF: -28, armB: 18 }, vars: { '--t': '1s', '--la': '24deg', '--aa': '22deg', '--bob': '2px' } }),
+    hunter:    C({ name: 'Hunter', hair: { style: 'ponytail', color: '#f2d060' }, mouth: 'smirk', cheeks: true, shirt: '#f4efe6', jacket: { color: '#c93a3a', lapel: '#9a2a2a', len: 30 }, sleeve: '#c93a3a', gloves: '#3a2a2a', pants: '#2b3350', boots: '#6b4a2e', bandolier: true, item: 'rifle', pose: { armF: -28, armB: 10 }, vars: { '--t': '.9s', '--la': '26deg', '--aa': '18deg', '--bob': '2px' } }),
     engineer:  C({ name: 'Engineer', skin: SKIN.tan, hair: { style: 'short', color: '#6b3a1e' }, beard: { style: 'full', color: '#6b3a1e' }, brows: 'stern', mouth: 'grim', hat: { type: 'hardhat', color: '#f3c21a' }, shirt: '#2f7fd0', vest: '#f08a2a', sleeve: '#2f7fd0', pants: '#3a5a9a', boots: '#6b4a2e', toolbelt: true, kneepads: true, item: 'wrench', pose: { armF: -30, armB: 12 }, vars: { '--t': '1.1s', '--la': '20deg', '--aa': '16deg', '--bob': '2px' } }),
     medic:     C({ name: 'Medic', hair: { style: 'bun', color: '#4a2a1a' }, eyes: 'glasses', cheeks: true, dirt: false, shirt: '#9ad3ef', jacket: { color: '#f6f4ee', lapel: '#d9d6cf', len: 56, pocket: true }, sleeve: '#f6f4ee', cross: true, stethoscope: true, pants: '#4a4a58', boots: '#3a2a2a', item: 'medkit', pose: { armF: 6, armB: -6 }, vars: { '--t': '1.1s', '--la': '20deg', '--aa': '10deg', '--bob': '2px' } }),
     soldier:   C({ name: 'Soldier', skin: SKIN.tan, mouth: 'stubble', brows: 'stern', hat: { type: 'helmet', color: '#4f6a3a', color2: '#3e5530' }, shirt: '#55683c', sleeve: '#55683c', gloves: '#2a2a2a', pants: '#4a5c36', boots: '#2a2a2a', bandolier: true, kneepads: true, item: 'rifle', pose: { armF: -28, armB: 18 }, vars: { '--t': '.95s', '--la': '24deg', '--aa': '20deg', '--bob': '2px' } }),
-    farmer:    C({ name: 'Farmer', hair: { style: 'white', color: '#e6e6ea' }, beard: { style: 'long', color: '#e6e6ea' }, brows: 'stern', mouth: 'grim', shirt: '#7c8390', jacket: { color: '#7a5a3a', lapel: '#5a4028', len: 62, pocket: true }, sleeve: '#7a5a3a', pants: '#2f2f3a', boots: '#3a2a2a', bandolier: true, item: 'shotgun', pose: { armF: -24, armB: 14 }, vars: { '--t': '1.4s', '--la': '16deg', '--aa': '12deg', '--bob': '2px' } }),
+    farmer:    C({ name: 'Farmer', hair: { style: 'white', color: '#e6e6ea' }, beard: { style: 'long', color: '#e6e6ea' }, brows: 'stern', mouth: 'grim', shirt: '#7c8390', jacket: { color: '#7a5a3a', lapel: '#5a4028', len: 62, pocket: true }, sleeve: '#7a5a3a', pants: '#2f2f3a', boots: '#3a2a2a', bandolier: false, item: 'pitchfork', pose: { armF: -24, armB: 14 }, vars: { '--t': '1.4s', '--la': '16deg', '--aa': '12deg', '--bob': '2px' } }),
     mechanic:  C({ name: 'Mechanic', hair: { style: 'short', color: '#5a3a22' }, hat: { type: 'goggles' }, cheeks: true, shirt: '#d9731f', sleeve: '#d9731f', gloves: '#3a2a2a', pants: '#b85f18', boots: '#3a2a2a', toolbelt: true, item: 'wrench', pose: { armF: 10, armB: -10 }, vars: { '--t': '1s', '--la': '22deg', '--aa': '18deg', '--bob': '3px' } }),
     cook:      C({ name: 'Cook', hair: { style: 'short', color: '#5a3a22' }, hat: { type: 'chef' }, dirt: false, shirt: '#f6f4ee', sleeve: '#f6f4ee', apron: '#6b4a2e', pants: '#2f2f3a', boots: '#3a2a2a', item: 'pan', pose: { armF: 24, armB: -8 }, vars: { '--t': '1.2s', '--la': '18deg', '--aa': '14deg', '--bob': '2px' } }),
     guard:     C({ name: 'Guard', eyes: 'sunglasses', mouth: 'grim', hat: { type: 'police', color: '#2b3350' }, dirt: false, shirt: '#2b3350', sleeve: '#2b3350', gloves: '#1a1a22', pants: '#222a44', boots: '#1a1a22', badge: true, item: 'rifle', pose: { armF: -28, armB: 18 }, vars: { '--t': '1.05s', '--la': '20deg', '--aa': '16deg', '--bob': '2px' } }),
     scout:     C({ name: 'Scout', hair: { style: 'messy', color: '#5a3a22' }, cheeks: true, hat: { type: 'cap', color: '#d8303a', color2: '#f6f4ee' }, shirt: '#f6f4ee', jacket: { color: '#d8303a', lapel: '#a02028', len: 50, pocket: true }, sleeve: '#d8303a', pants: '#3a5a9a', boots: '#6b4a2e', sneakers: true, backpack: true, item: 'flashlight', pose: { armF: -40, armB: 20 }, vars: { '--t': '.8s', '--la': '28deg', '--aa': '22deg', '--bob': '3px' } }),
   };
-  CREW.scientist = Object.assign({}, CREW.medic, { name: 'Scientist', cross: false, stethoscope: false, item: null, shirt: '#8fe3d8', hair: { style: 'bun', color: '#2a1a14' }, filter: 'hue-rotate(-12deg)', pose: { armF: -20, armB: 10 } });
+  CREW.scientist = Object.assign({}, CREW.medic, { name: 'Scientist', cross: false, stethoscope: false, item: 'clipboard', shirt: '#8fe3d8', hair: { style: 'bun', color: '#2a1a14' }, filter: 'hue-rotate(-12deg)', pose: { armF: -20, armB: 10 } });
   const ALL = Object.assign({}, ZOMBIES, CREW);
 
   function zombie(id, o) { return rig(ZOMBIES[id] ? id : 'walker', o); }
   function crew(prof, o) { return rig(CREW[prof] ? prof : 'scavenger', o); }
 
-  return { rig, zombie, crew, ZOMBIES, CREW, ALL };
+  /** Weapon a survivor carries on guard duty: their own firearm, else a rifle. */
+  function dutyWeapon(prof) { const c = CREW[prof]; return c && GUNS[c.item] ? c.item : 'rifle'; }
+  return { rig, zombie, crew, dutyWeapon, ZOMBIES, CREW, ALL };
 })();
