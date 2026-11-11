@@ -216,3 +216,58 @@ body.no-anim .dc-weather { display: none !important; }
 /* bunker shudders when clawed */
 #scene .ow-bunker.struck { animation: bf-struck .22s linear 1; }
 @keyframes bf-struck { 30% { transform: translateX(1.5px); } 70% { transform: translateX(-1.5px); } }
+
+/* the start screen shows the same upgradeable / seasonal overworld art */
+.menu-scene[data-fence="0"] .eq-fence-0 { display: inline; }
+.menu-scene[data-fence="1"] .eq-fence-1 { display: inline; }
+.menu-scene[data-fence="1"] .ge-fence-1, .menu-scene[data-fence="2"] .ge-fence-1, .menu-scene[data-fence="3"] .ge-fence-1 { display: inline; }
+.menu-scene[data-fence="2"] .eq-fence-2 { display: inline; }
+.menu-scene[data-fence="2"] .ge-fence-2, .menu-scene[data-fence="3"] .ge-fence-2 { display: inline; }
+.menu-scene[data-fence="3"] .eq-fence-3 { display: inline; }
+.menu-scene[data-fence="3"] .ge-fence-3 { display: inline; }
+.menu-scene[data-barricades="0"] .eq-barricades-0 { display: inline; }
+.menu-scene[data-barricades="1"] .eq-barricades-1 { display: inline; }
+.menu-scene[data-barricades="1"] .ge-barricades-1, .menu-scene[data-barricades="2"] .ge-barricades-1 { display: inline; }
+.menu-scene[data-barricades="2"] .eq-barricades-2 { display: inline; }
+.menu-scene[data-barricades="2"] .ge-barricades-2 { display: inline; }
+.menu-scene[data-towers="0"] .eq-towers-0 { display: inline; }
+.menu-scene[data-towers="1"] .eq-towers-1 { display: inline; }
+.menu-scene[data-towers="1"] .ge-towers-1, .menu-scene[data-towers="2"] .ge-towers-1 { display: inline; }
+.menu-scene[data-towers="2"] .eq-towers-2 { display: inline; }
+.menu-scene[data-towers="2"] .ge-towers-2 { display: inline; }
+.menu-scene[data-lights="0"] .eq-lights-0 { display: inline; }
+.menu-scene[data-lights="1"] .eq-lights-1 { display: inline; }
+.menu-scene[data-lights="1"] .ge-lights-1, .menu-scene[data-lights="2"] .ge-lights-1 { display: inline; }
+.menu-scene[data-lights="2"] .eq-lights-2 { display: inline; }
+.menu-scene[data-lights="2"] .ge-lights-2 { display: inline; }
+.menu-scene[data-road="0"] .eq-road-0 { display: inline; }
+.menu-scene[data-road="1"] .eq-road-1 { display: inline; }
+.menu-scene[data-road="1"] .ge-road-1, .menu-scene[data-road="2"] .ge-road-1 { display: inline; }
+.menu-scene[data-road="2"] .eq-road-2 { display: inline; }
+.menu-scene[data-road="2"] .ge-road-2 { display: inline; }
+.menu-scene[data-missile="0"] .eq-missile-0 { display: inline; }
+.menu-scene[data-missile="1"] .eq-missile-1 { display: inline; }
+.menu-scene[data-missile="1"] .ge-missile-1, .menu-scene[data-missile="2"] .ge-missile-1 { display: inline; }
+.menu-scene[data-missile="2"] .eq-missile-2 { display: inline; }
+.menu-scene[data-missile="2"] .ge-missile-2 { display: inline; }
+.menu-scene[data-walltier="0"] .eq-walltier-0 { display: inline; }
+.menu-scene[data-walltier="1"] .eq-walltier-1 { display: inline; }
+.menu-scene[data-walltier="1"] .ge-walltier-1, .menu-scene[data-walltier="2"] .ge-walltier-1 { display: inline; }
+.menu-scene[data-walltier="2"] .eq-walltier-2 { display: inline; }
+.menu-scene[data-walltier="2"] .ge-walltier-2 { display: inline; }
+.menu-scene[data-fence="1"] .rng-fence-1-2, .menu-scene[data-fence="2"] .rng-fence-1-2 { display: inline; }
+.menu-scene[data-season="winter"] .season-winter, .menu-scene[data-season="autumn"] .season-autumn, .menu-scene[data-season="spring"] .season-spring { display: inline; }
+.menu-scene[data-season="spring"] :is(.ow-blades, .ow-foliage, .ow-trees, .ow-hills2) { filter: saturate(1.25) hue-rotate(8deg); }
+.menu-scene[data-season="summer"] :is(.ow-blades, .ow-foliage, .ow-trees, .ow-hills2) { filter: saturate(1.1) brightness(1.04); }
+.menu-scene[data-season="autumn"] :is(.ow-blades, .ow-foliage, .ow-trees, .ow-hills2, .ow-bushfg) { filter: hue-rotate(-38deg) saturate(1.25) brightness(1.02); }
+.menu-scene[data-season="winter"] :is(.ow-foliage, .ow-trees, .ow-hills2) { filter: saturate(.3) brightness(1.08); }
+.menu-scene[data-season="winter"] .ow-blades { opacity: .35; }
+.menu-scene[data-tod="day"] :is(.ow-mtns, .ow-ruins-far) { filter: hue-rotate(-50deg) saturate(.55) brightness(1.18); }
+.menu-scene[data-tod="day"] :is(.ow-ruins-near, .ow-latticetower, .ow-ferris, .ow-gasstation) { filter: hue-rotate(-45deg) saturate(.6) brightness(1.08); }
+.menu-scene[data-tod="day"] .ow-ruins-glow, .menu-scene[data-tod="day"] .ow-flare { opacity: 0 !important; }
+.menu-scene[data-season="winter"] .dc-weather, .menu-scene[data-season="autumn"] .dc-weather, .menu-scene[data-season="spring"] .dc-weather { display: block; }
+.menu-scene[data-season="autumn"] .dc-weather i { border-radius: 60% 0; background: #d0702a; width: calc(var(--s) * 2); }
+.menu-scene[data-season="autumn"] .dc-weather i:nth-child(3n) { background: #e0a030; } .menu-scene[data-season="autumn"] .dc-weather i:nth-child(2n) { display: none; }
+.menu-scene[data-season="spring"] .dc-weather i { width: 2px; height: 22px; border-radius: 2px; background: linear-gradient(180deg, rgba(200, 225, 255, 0), rgba(200, 225, 255, .8)); opacity: 1; animation-name: dc-rain; animation-duration: .7s !important; }
+.menu-scene[data-season="spring"] .dc-weather i:nth-child(3n) { display: none; }
+.menu-scene[data-tod="day"] .ow-searchlight { opacity: 0; } .ow-searchlight { transition: opacity 2s; }

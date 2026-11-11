@@ -23,6 +23,12 @@ DE.Actions = (function () {
  if (DE.Save.hasSave()) UI().confirmModal('Start a new bunker?', '<p>Your existing save will be <b>deleted</b>. Export it first from the in-game menu if you want to keep it.</p>', () => DE.Game.newGame(), 'Delete & start new');
  else DE.Game.newGame();
  };
+ A.menuSettings = () => DE.UI.Menu.settings();
+ A.menuCredits = () => DE.UI.Menu.credits();
+ A.menuSaves = () => DE.UI.Menu.saves();
+ A.menuToggleAudio = (p) => { DE.Audio.set(p.key, !DE.Audio.prefs()[p.key]); DE.UI.Menu.settings(); };
+ A.menuExport = () => { const st = DE.Save.load(); const ta = document.getElementById('export-area'); if (st && ta) { ta.hidden = false; ta.value = DE.Save.exportString(st); ta.select(); } };
+ A.menuDeleteSave = () => UI().confirmModal('Delete the save?', '<p>Your bunker will be gone for good. Export it first if you want to keep it.</p>', () => { DE.Save.clear(); UI().showScreen('menu'); UI().toast('Save deleted', 'warn'); }, 'Delete');
  A.menuImport = () => {
  UI().modal({ title: 'Import save', html: '<p class="muted">Paste an exported save string. It is validated and never executed.</p><textarea id="import-area" class="save-area" placeholder="DEU1:..."></textarea>',
  buttons: [{ label: 'Import', action: 'importSave', cls: 'primary' }, { label: 'Cancel', action: 'closeModal' }] });
