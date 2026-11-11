@@ -58,6 +58,10 @@ NAMES = {
   'furniture2': {16: 'benchshelf', 19: 'desk', 29: 'workbench2', 31: 'supplyshelf', 32: 'gamingchair', 33: 'wardrobe', 34: 'coatrack', 35: 'firstaid', 37: 'ivstand', 38: 'vitals2', 39: 'labbench', 40: 'fumehood',
                  41: 'centrifuge', 42: 'microscope', 43: 'reactor', 44: 'console', 45: 'powercell', 46: 'growtank', 47: 'server2', 48: 'terminal', 49: 'medkit_green', 51: 'gascylinders', 52: 'pipes', 53: 'furnace',
                  54: 'vent', 55: 'hatch', 56: 'sink', 57: 'bathroom', 58: 'vending', 59: 'gymbench', 60: 'dumbbells', 61: 'treadmill'},
+  'furniture3': {0: 'f3_pipevalve', 1: 'f3_pipe', 2: 'f3_sign', 3: 'f3_monitorwall', 4: 'f3_neon', 5: 'f3_stripe', 6: 'f3_mapscreen', 7: 'f3_wire', 8: 'f3_cablebox', 9: 'f3_flag', 10: 'f3_dartboard', 11: 'f3_lamp',
+                 12: 'f3_robotarm', 13: 'f3_conveyor', 14: 'f3_turret', 15: 'f3_press', 16: 'f3_filter', 17: 'f3_toolboard', 18: 'f3_missile', 19: 'f3_anvil', 20: 'f3_carlift', 21: 'f3_lathe', 22: 'f3_truck', 23: 'f3_fusion',
+                 24: 'f3_minecart', 25: 'f3_seismo', 26: 'f3_hologram', 27: 'f3_dna', 28: 'f3_testtubes', 29: 'f3_glass', 30: 'f3_pod', 31: 'f3_cryopod', 32: 'f3_plant', 33: 'f3_rock', 34: 'f3_traytower', 35: 'f3_water',
+                 36: 'f3_crystal', 37: 'f3_planter', 38: 'f3_sprinkler', 39: 'f3_tree', 40: 'f3_lava', 41: 'f3_ore', 42: 'f3_railing', 43: 'f3_bench', 44: 'f3_cage', 45: 'f3_dish', 46: 'f3_drone', 47: 'f3_punchbag', 48: 'f3_arcade', 49: 'f3_dronepad'},
   'weapons1': {0: 'sword', 1: 'dagger', 2: 'axe', 3: 'bow', 4: 'arrow', 5: 'spear', 6: 'pistol', 7: 'rifle', 8: 'shotgun', 9: 'grenade', 10: 'bomb', 11: 'flamethrower', 12: 'raygun'},
   'weapons2': {0: 'pistol2', 1: 'revolver', 2: 'smg', 3: 'ak', 4: 'carbine', 5: 'sniper', 6: 'shotgun2', 7: 'bullpup', 8: 'scar', 9: 'lmg', 10: 'rpg',
                11: 'knife', 12: 'bowieknife', 13: 'stiletto', 14: 'karambit', 15: 'karambit2', 16: 'sickle', 17: 'katana', 18: 'cleaver', 19: 'blade', 20: 'flail',
@@ -67,7 +71,7 @@ NAMES = {
                54: 'extinguisher', 55: 'jerrycan', 56: 'jerrycan2', 57: 'toolbox', 58: 'medkit2', 59: 'toolbox2', 60: 'chainsaw2', 61: 'drill', 62: 'circularsaw', 63: 'rope', 64: 'hook', 65: 'pulley', 66: 'lantern'},
 }
 # UI icon sheets: written to assets/icons/<name>.png (the HUD / navigation icon set)
-ICONS = {'icons1': {0: 'snow', 1: 'water', 2: 'truck', 3: 'move', 4: 'refresh'}}
+ICONS = {'icons1': {0: 'snow', 1: 'water', 2: 'truck', 3: 'move', 4: 'refresh'}, 'power': {0: 'power'}}
 
 PREVIEW = '--preview' in sys.argv
 MAX = 256   # longest side in px: crisp at 2x for the sizes the game draws them
@@ -75,7 +79,7 @@ MAX = 256   # longest side in px: crisp at 2x for the sizes the game draws them
 if __name__ == '__main__':
     meta = {}
     os.makedirs(OUT, exist_ok=True)
-    for sheet in ['furniture1', 'furniture2', 'weapons1', 'weapons2']:
+    for sheet in ['furniture1', 'furniture2', 'furniture3', 'weapons1', 'weapons2']:
         ordered = cut(sheet)
         print(sheet, len(ordered))
         for k, name in NAMES.get(sheet, {}).items():

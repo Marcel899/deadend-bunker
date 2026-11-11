@@ -337,7 +337,7 @@ DE.Data.SCENES = {
   orevein: { theme: 'rock', props: [['ore', 60], ['ore', 140], ['minecart', 100], ['rock', 180, null, { w: 20 }], ['toolboard', 40, 100, { w: 50 }], ['lamp', 100, 14, { drop: 20, color: '#ffb070' }], ['railing', 100, 150, { w: 10 }]], lv10: [['conveyor', 150, 100, { w: 80 }]], lv25: [['crystal', 180, 100]], lv50: [['robotarm', 170, null, { color: '#c9a24a' }]], stations: { work: [60, 140], rest: [100] } },
   server: { theme: 'dark', props: [['serverrack', 60, null, { n: 3 }], ['desk', 150, null, { w: 50, screens: 2, col: '#4aa0e0' }], ['chair', 125], ['wire', 100, 20, { w: 180 }], ['vent', 180, 40], ['neon', 100, 36, { w: 140, color: '#4aa0e0' }]], lv10: [['serverrack', 190, null, { n: 1 }]], lv25: [['hologram', 190, 100]], lv50: [['monitorwall', 100, 80, { cols: 2, rows: 1, stand: false }]], stations: { work: [125, 60], rest: [180] } },
   cache: { theme: 'danger', props: [['crate', 50, null, { n: 3, color: '#4a5a3a' }], ['weaponrack', 120, null, { n: 4 }], ['ammobox', 180, null, { n: 4 }], ['sign', 100, 60, { text: 'MILITARY', color: '#4a5a3a' }], ['turretmodel', 20, 100]], lv10: [['locker', 190, 100, { n: 1 }]], lv25: [['cage', 100, 100, { w: 80, h: 40 }]], lv50: [['missile', 185, 100, { h: 60 }]], stations: { work: [100], rest: [60] } },
-  dormitory: { theme: 'warm', props: [['bunk', 50], ['bunk', 110], ['bunk', 170, null, { v: 2 }], ['locker', 20, 100, { n: 1 }], ['clock', 100, 60], ['poster', 150, 56, { kind: 'map' }]], lv10: [['plant', 20, null, { h: 28 }]], lv25: [['sofa', 100, 100, { color: '#3a5a8a' }]], lv50: [['neon', 100, 34, { w: 120, color: '#ffb070' }]], stations: { sleep: [40, 70, 100, 130, 160, 190], rest: [100] } },
+  dormitory: { theme: 'warm', props: [['bunk', 52], ['bunk', 148, null, { v: 2 }], ['clock', 100, 40], ['poster', 150, 56, { kind: 'map' }]], lv10: [['plant', 100, null, { h: 28 }]], lv25: [], lv50: [['neon', 100, 34, { w: 120, color: '#ffb070' }]], stations: { sleep: [40, 70, 100, 130, 160, 190], rest: [100] } },
 };
 
 /** Sleeping berths in a room, derived from the bed furniture its scene actually shows at that
@@ -351,7 +351,7 @@ DE.Data.SCENES = {
 DE.Data.SPRITE_PROPS = {
   bunk: { s: 'bunkbed', h: 76, berths: [-24, -65] }, bed: { s: 'bed', h: 36, berths: [-27] }, medbed: { s: 'hospitalbed', h: 44, berths: [-34] },
   locker: { s: 'locker', h: 70 }, sofa: { s: 'sofa', h: 32 }, clock: { s: 'clock', h: 22, wall: true }, poster: { s: 'painting', h: 26, wall: true },
-  generator: { s: 'generator', h: 44 }, shelf: { s: 'storagerack', h: 66 }, barrel: { s: 'barrel', h: 34 }, table: { s: 'table', h: 28 }, chair: { s: 'chair', h: 34 },
+  generator: { s: 'generator', h: 44 }, shelf: { s: 'storagerack', h: 66 }, barrel: { s: 'barrel', h: 34 }, table: { s: 'table', h: 34 }, chair: { s: 'chair', h: 34 },
   fridge: { s: 'fridge', h: 64 }, stove: { s: 'kitchen', h: 62 }, counter: { s: 'counter', h: 36 }, crate: { s: 'boxes', h: 40 }, weaponrack: { s: 'gunrack', h: 68 },
   radio: { s: 'radiodesk', h: 50 }, watertank: { s: 'watertank', h: 62 }, desk: { s: 'desk', h: 44 }, workbench: { s: 'workbench', h: 52 }, bike: { s: 'bike', h: 34 },
   cabinet: { s: 'medcabinet', h: 66 }, ivstand: { s: 'ivstand', h: 62 }, serverrack: { s: 'serverrack', h: 72 }, labbench: { s: 'labbench', h: 52 },
@@ -359,6 +359,18 @@ DE.Data.SPRITE_PROPS = {
   hatchdoor: { s: 'hatch', h: 64 }, weights: { s: 'dumbbells', h: 34 }, gymbench: { s: 'gymbench', h: 26 }, treadmill: { s: 'treadmill', h: 46 },
   forge: { s: 'furnace', h: 52 }, sack: { s: 'boxes', h: 30 }, ammobox: { s: 'satchel', h: 22 }, monitor: { s: 'computer', h: 40 }, freezer: { s: 'vending', h: 66 },
   tank: { s: 'growtank', h: 64 }, reactor: { s: 'reactor', h: 86 }, centrifuge: { s: 'centrifuge', h: 30 },
+  // third sheet: industrial, science, nature and wall props
+  sign: { s: 'f3_sign', h: 24, wall: true }, monitorwall: { s: 'f3_monitorwall', h: 40, wall: true }, neon: { s: 'f3_neon', h: 10, wall: true },
+  warningstripe: { s: 'f3_stripe', h: 8, wall: true }, mapscreen: { s: 'f3_mapscreen', h: 34, wall: true }, bigmap: { s: 'f3_mapscreen', h: 48, wall: true }, 
+  cablebox: { s: 'f3_cablebox', h: 30, wall: true }, flag: { s: 'f3_flag', h: 50 }, dartboard: { s: 'f3_dartboard', h: 22, wall: true }, lamp: { s: 'f3_lamp', h: 22, wall: true },
+  robotarm: { s: 'f3_robotarm', h: 56 }, conveyor: { s: 'f3_conveyor', h: 22 }, turretmodel: { s: 'f3_turret', h: 40 }, press: { s: 'f3_press', h: 66 }, filtercol: { s: 'f3_filter', h: 58 },
+  toolboard: { s: 'f3_toolboard', h: 44, wall: true }, missile: { s: 'f3_missile', h: 96 }, anvil: { s: 'f3_anvil', h: 28 }, carlift: { s: 'f3_carlift', h: 60 }, lathe: { s: 'f3_lathe', h: 38 },
+  truck: { s: 'f3_truck', h: 56 }, fusioncore: { s: 'f3_fusion', h: 80 }, minecart: { s: 'f3_minecart', h: 34 }, seismo: { s: 'f3_seismo', h: 40 }, hologram: { s: 'f3_hologram', h: 46 },
+  dnascreen: { s: 'f3_dna', h: 40, wall: true }, testtubes: { s: 'f3_testtubes', h: 22 }, glasswall: { s: 'f3_glass', h: 70 }, pod: { s: 'f3_pod', h: 76 }, cryopod: { s: 'f3_cryopod', h: 78 },
+  plant: { s: 'f3_plant', h: 30 }, rock: { s: 'f3_rock', h: 30 }, traytower: { s: 'f3_traytower', h: 76 }, water: { s: 'f3_water', h: 56 }, crystal: { s: 'f3_crystal', h: 34 },
+  planter: { s: 'f3_planter', h: 34 }, sprinkler: { s: 'f3_sprinkler', h: 40 }, tree: { s: 'f3_tree', h: 90 }, lava: { s: 'f3_lava', h: 34 }, ore: { s: 'f3_ore', h: 34 },
+  railing: { s: 'f3_railing', h: 30 }, benchseat: { s: 'chair', h: 32, pair: 42 }, cage: { s: 'f3_cage', h: 48 }, dish: { s: 'f3_dish', h: 44 }, drone: { s: 'f3_drone', h: 18, wall: true },
+  punchbag: { s: 'f3_punchbag', h: 64 }, arcade: { s: 'f3_arcade', h: 62 }, dronepad: { s: 'f3_dronepad', h: 20 },
 };
 
 DE.Data.bedsFor = function (type, level) {

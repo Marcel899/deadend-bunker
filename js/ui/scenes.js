@@ -19,7 +19,7 @@ DE.Scenes = (function () {
   /* Free-standing furniture and machines always stand on the floor line, whatever y a layout
    * gives them (wall-mounted props — signs, screens, shelves, pipes — keep their y). */
   const GROUNDED = { bunk: 1, bed: 1, medbed: 1, cryopod: 1, benchseat: 1, bike: 1, cage: 1, carlift: 1, crystal: 1, forge: 1, freezer: 1, generator: 1, locker: 1, missile: 1,
-    plant: 1, planter: 1, pod: 1, press: 1, railing: 1, robotarm: 1, sofa: 1, tank: 1, traytower: 1, treadmill: 1, tree: 1, truck: 1, watertank: 1, conveyor: 1, filtercol: 1,
+    plant: 1, planter: 1, pod: 1, press: 1, railing: 1, robotarm: 1, sofa: 1, tank: 1, traytower: 1, treadmill: 1, tree: 1, truck: 1, watertank: 1, conveyor: 1, filtercol: 1, anvil: 1, lathe: 1, turretmodel: 1, seismo: 1, hologram: 1, testtubes: 0, glasswall: 1, flag: 1, cage: 1, dish: 1, dronepad: 1, minecart: 1, ore: 1, rock: 1, crystal: 1, water: 1, sprinkler: 1, lava: 1, fusioncore: 1, pod: 1, missile: 1,
     table: 1, desk: 1, seismo: 1, punchbag: 1, workbench: 1, labbench: 1, reactor: 1, fusioncore: 1, counter: 1, arcade: 1, ammobox: 1, barrel: 1, crate: 1, weaponrack: 1, serverrack: 1 };
   const g = (cls, inner, x, y, extra) => `<g class="${cls || ''}" transform="translate(${x} ${y})${extra ? ' ' + extra : ''}">${inner}</g>`;
   const rect = (x, y, w, h, fill, r, s) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${r || 0}" fill="${fill}" ${s === false ? '' : s || S}/>`;
@@ -223,7 +223,11 @@ DE.Scenes = (function () {
     const size = def.size, W = CELL * size, level = room.level, tier = tierOf(level);
     let s = `<svg class="scene" viewBox="0 ${-TOP} ${W} ${180 + TOP}" preserveAspectRatio="none" aria-hidden="true">${defs()}${base(def, layout.theme, size, level, room.construction)}`;
     const place = (list) => (list || []).forEach(p => { const [name, x, y, o] = p;
-      const spr = sprite(name, o); if (spr) { const sp = DE.Data.SPRITE_PROPS[name]; s += g('prop sprite p-' + name, spr, x, sp.wall && y != null ? y : FLOOR); return; }
+      const spr = sprite(name, o); if (spr) {
+        const sp = DE.Data.SPRITE_PROPS[name], px = DE.Data.SPRITES[sp.s];
+        // keep the whole sprite inside the room; wall items without a height hang at eye level
+        const hw = sp.h * ((o && o.scale) || 1) * px[0] / px[1] / 2, cx = Math.max(hw + 6, Math.min(W - hw - 6, x));
+        s += g('prop sprite sp-' + name, spr, cx, sp.wall ? (y != null ? y : FLOOR - 62) : FLOOR); return; }
       const fn = P[name]; if (!fn) return; const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier; s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : ''); });
     place(layout.props);
     if (tier >= 2) place(layout.lv10);
@@ -238,9 +242,10 @@ DE.Scenes = (function () {
    * aspect ratio preserved, `n` copies side by side, a soft contact shadow under floor items. */
   function sprite(name, o) {
     const sp = DE.Data.SPRITE_PROPS && DE.Data.SPRITE_PROPS[name], px = sp && DE.Data.SPRITES && DE.Data.SPRITES[sp.s]; if (!px) return null;
-    const h = sp.h * ((o && o.scale) || 1), w = h * px[0] / px[1], n = Math.max(1, Math.min(4, (o && o.n && name !== 'weaponrack' && name !== 'serverrack') ? Math.ceil(o.n / 2) : 1));
+    const h = sp.h * ((o && o.scale) || 1), stretch = (name === 'pipe' || name === 'warningstripe' || name === 'neon' || name === 'conveyor') && o && o.w, w = stretch ? o.w : h * px[0] / px[1], n = Math.max(1, Math.min(4, (o && o.n && name !== 'weaponrack' && name !== 'serverrack') ? Math.ceil(o.n / 2) : 1));
     let out = '';
-    for (let i = 0; i < n; i++) { const cx = (i - (n - 1) / 2) * (w * .92); out += (sp.wall ? '' : `<ellipse cx="${cx.toFixed(1)}" cy="0" rx="${(w * .48).toFixed(1)}" ry="3.5" fill="#000" opacity=".35"/>`) + `<image href="assets/sprites/${sp.s}.png" x="${(cx - w / 2).toFixed(1)}" y="${(-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="xMidYMax meet"/>`; }
+    const xs = sp.pair ? [-sp.pair, sp.pair] : Array.from({ length: n }, (_, i) => (i - (n - 1) / 2) * (w * .92));
+    for (let i = 0; i < xs.length; i++) { const cx = xs[i], fl = sp.pair && i === 1; out += (sp.wall ? '' : `<ellipse cx="${cx.toFixed(1)}" cy="0" rx="${(w * .48).toFixed(1)}" ry="3.5" fill="#000" opacity=".35"/>`) + `<g transform="translate(${cx.toFixed(1)} 0)${fl ? ' scale(-1 1)' : ''}"><image href="assets/sprites/${sp.s}.png" x="${(-w / 2).toFixed(1)}" y="${(-h).toFixed(1)}" width="${w.toFixed(1)}" height="${h.toFixed(1)}" preserveAspectRatio="${stretch ? 'none' : 'xMidYMax meet'}"/></g>`; }
     return out;
   }
 

@@ -51,8 +51,8 @@ DE.UI = (function () {
  const R = DE.Data.RESOURCES;
  $('#resbar').innerHTML = DE.Data.RESOURCE_ORDER.map(r => `<div class="res" data-res="${r}" title="${R[r].name}" style="--rc:${R[r].color}" data-action="openDrawer" data-drawer="economy">
  <span class="res-icon">${DE.Icons.res(r)}</span>
- <span class="res-body"><small class="res-name">${R[r].name}</small><b class="res-amt">0</b><i class="res-rate">+0/s</i></span>
- <div class="res-cap"><i></i></div>
+ <span class="res-body"><span class="res-line"><b class="res-amt">0</b><small class="res-max"></small></span><span class="res-cap"><i></i></span></span>
+ <i class="res-rate">+0/s</i>
  </div>`).join('');
  $('#chips').innerHTML = `<div class="chip" id="chip-pop" data-action="openDrawer" data-drawer="survivors" title="Population / housing">${DE.Icons.img('pop')}<b>0/0</b></div>
  <div class="chip" id="chip-morale" title="Morale">${DE.Icons.img('morale')}<b>60</b></div>
@@ -71,8 +71,9 @@ DE.UI = (function () {
  rateEl.textContent = U().fmtRate(net);
  rateEl.className = 'res-rate ' + (net < -1e-6 ? 'neg' : net > 1e-6 ? 'pos' : '');
  const capEl = el.querySelector('.res-cap i');
- if (isFinite(cap)) { capEl.style.width = Math.min(100, amt / cap * 100) + '%'; capEl.parentElement.style.display = ''; capEl.parentElement.className = 'res-cap' + (amt >= cap * 0.98 ? ' full' : ''); }
- else capEl.parentElement.style.display = 'none';
+ const maxEl = el.querySelector('.res-max');
+ if (isFinite(cap)) { capEl.style.width = Math.min(100, amt / cap * 100) + '%'; capEl.parentElement.style.display = ''; capEl.parentElement.className = 'res-cap' + (amt >= cap * 0.98 ? ' full' : ''); maxEl.textContent = '/ ' + U().fmt(cap); }
+ else { capEl.parentElement.style.display = 'none'; maxEl.textContent = ''; }
  el.classList.toggle('empty', amt <= 0.01 && net < 0);
  const eta = net < -1e-6 ? '\nEmpty in ' + U().fmtTime(amt / -net) : (net > 1e-6 && isFinite(cap) && amt < cap) ? '\nFull in ' + U().fmtTime((cap - amt) / net) : '';
  el.title = DE.Data.RESOURCES[r].name + (isFinite(cap) ? ' · cap ' + U().fmt(cap) : '') + '\n+' + U().fmt(rates.production[r], 2) + '/s  −' + U().fmt(rates.consumption[r], 2) + '/s' + eta + '\nClick for the production dashboard';
