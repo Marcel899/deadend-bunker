@@ -108,7 +108,7 @@ DE.Scenes = (function () {
   P.fusioncore = (o) => { const r = o.r || 34; return rect(-r - 10, -14, r * 2 + 20, 14, '#2f2d38', 3) + rect(-6, -r - 50, 12, r + 36, '#5a5f6a', 2) + `<g class="p-glow"><g class="p-spin-slow"><ellipse cx="0" cy="${-r - 14}" rx="${r}" ry="${r * .5}" fill="none" stroke="#7fe3ff" stroke-width="5"/><ellipse cx="0" cy="${-r - 14}" rx="${r * .5}" ry="${r}" fill="none" stroke="#bff5ff" stroke-width="4"/></g><circle class="p-core" cx="0" cy="${-r - 14}" r="${r * .4}" fill="#fff7c0"/><circle cx="0" cy="${-r - 14}" r="${r * .7}" fill="#7fe3ff" opacity=".25"/></g>` + rect(-r - 6, -r * 2 - 36, 10, 40, '#5a5f6a', 2) + rect(r - 4, -r * 2 - 36, 10, 40, '#5a5f6a', 2); };
   P.tank = (o) => { const w = o.w || 30, h = o.h || 60, c = o.color || '#7fe3ff'; return rect(-w / 2 - 3, -8, w + 6, 8, '#3a3f4a', 2) + `<g class="p-glow">${rect(-w / 2, -h, w, h - 8, c, 6)}<rect x="${-w / 2 + 3}" y="${-h + 4}" width="${w - 6}" height="${h - 16}" rx="4" fill="#fff" opacity=".2"/><g class="p-bubbles">${circ(-w / 4, -h / 2, 2, '#fff', false)}${circ(w / 4, -h / 2 - 12, 1.5, '#fff', false)}${circ(0, -h / 2 + 10, 1.2, '#fff', false)}</g></g>` + rect(-w / 2 - 3, -h - 6, w + 6, 8, '#3a3f4a', 2) + path(`M${-w / 2 - 6} -14 h-8 v10`, 'none', `stroke="#8a8e98" stroke-width="4"`); };
   P.watertank = (o) => { const w = o.w || 46, h = o.h || 64; return rect(-w / 2, -h, w, h, o.color || '#3a7fb8', 8) + path(`M${-w / 2} ${-h * .7} h${w} M${-w / 2} ${-h * .35} h${w}`, 'none', S2) + hl(-w / 2 + 5, -h + 6, 6, h - 14) + rect(-10, -h * .55, 20, 12, '#f3f6fa', 2, S2) + `<path class="p-needle" d="M0 ${-h * .55 + 10} l4 -7" stroke="#d8303a" stroke-width="2"/>` + path(`M${w / 2} -20 h10 v20`, 'none', `stroke="#8a8e98" stroke-width="4"`) + circ(w / 2 + 10, -14, 4, '#d8303a'); };
-  P.pipe = (o) => { const w = o.w || 120, y = o.y == null ? -120 : o.y; let s = `<g class="p-vibrate-slow">${rect(-w / 2, y - 4, w, 8, o.color || '#8a8e98', 4)}<path d="M${-w / 2 + 6} ${y - 2} h${w - 12}" stroke="#fff" stroke-width="1.5" opacity=".35"/>`;
+  P.pipe = (o) => { const w = o.w || 120, y = o.y == null ? -120 : o.y; let s = `<g class="p-pipe">${rect(-w / 2, y - 4, w, 8, o.color || '#8a8e98', 4)}<path d="M${-w / 2 + 6} ${y - 2} h${w - 12}" stroke="#fff" stroke-width="1.5" opacity=".35"/>`;
     for (let i = 1; i < Math.floor(w / 40); i++) s += rect(-w / 2 + i * 40 - 3, y - 7, 6, 14, '#5a5f6a', 1, S2);
     if (o.valve) s += circ(-w / 2 + 30, y - 10, 6, '#d8303a') + path(`M${-w / 2 + 30} ${y - 4} v4`, 'none', S2);
     return s + '</g>'; };
@@ -222,17 +222,27 @@ DE.Scenes = (function () {
     const layout = DE.Data.SCENES[def.id] || DE.Data.SCENES._default;
     const size = def.size, W = CELL * size, level = room.level, tier = tierOf(level);
     let s = `<svg class="scene" viewBox="0 ${-TOP} ${W} ${180 + TOP}" preserveAspectRatio="none" aria-hidden="true">${defs()}${base(def, layout.theme, size, level, room.construction)}`;
+    // floor footprint already taken by sprite furniture: new floor sprites that would mostly overlap
+    // an existing one are skipped, so higher room levels never pile furniture on top of furniture
+    const taken = [];
+    const fits = (a, b) => { for (const [l, r] of taken) { const ov = Math.min(b, r) - Math.max(a, l); if (ov > .35 * Math.min(b - a, r - l)) return false; } return true; };
     const place = (list) => (list || []).forEach(p => { const [name, x, y, o] = p;
       const spr = sprite(name, o); if (spr) {
         const sp = DE.Data.SPRITE_PROPS[name], px = DE.Data.SPRITES[sp.s];
         // keep the whole sprite inside the room; wall items without a height hang at eye level
-        const hw = sp.h * ((o && o.scale) || 1) * px[0] / px[1] / 2, cx = Math.max(hw + 6, Math.min(W - hw - 6, x));
-        s += g('prop sprite sp-' + name, spr, cx, sp.wall ? (y != null ? y : FLOOR - 62) : FLOOR); return; }
+        const hw = sp.h * ((o && o.scale) || 1) * px[0] / px[1] / 2 + (sp.pair || 0), cx = Math.max(hw + 6, Math.min(W - hw - 6, x));
+        let py = FLOOR;
+        if (sp.wall) py = y != null ? y : FLOOR - 62;
+        else if (sp.surface && y != null && y < FLOOR) py = y;                    // sits on a bench / desk top
+        else if (sp.pair) { /* chairs flank a table: allowed to overlap it */ }
+        else if (!sp.berths) { if (!fits(cx - hw, cx + hw)) return; taken.push([cx - hw, cx + hw]); }
+        else taken.push([cx - hw, cx + hw]);
+        s += g('prop sprite sp-' + name, spr, cx, py); return; }
       const fn = P[name]; if (!fn) return; const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier; s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] ? FLOOR : y, opts.scale ? `scale(${opts.scale})` : ''); });
-    place(layout.props);
-    if (tier >= 2) place(layout.lv10);
-    if (tier >= 3) place(layout.lv25);
-    if (tier >= 4) place(layout.lv50);
+    // beds first so they always get their space
+    const all = [layout.props, tier >= 2 && layout.lv10, tier >= 3 && layout.lv25, tier >= 4 && layout.lv50].filter(Boolean).flat();
+    place(all.filter(p => (DE.Data.SPRITE_PROPS[p[0]] || {}).berths));
+    place(all.filter(p => !(DE.Data.SPRITE_PROPS[p[0]] || {}).berths));
     if (room.construction) s += g('construction', P.scaffold({ w: W - 30, h: 110 }), W / 2, FLOOR);
     s += `<rect x="0" y="${-TOP}" width="${W}" height="${180 + TOP}" fill="url(#sc-vig)" class="vig"/></svg>`;
     return s;

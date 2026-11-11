@@ -60,7 +60,7 @@ DE.UI.Menu = (function () {
     const OW = DE.UI.Overworld, svg0 = sc.querySelector('.ow-svg'), off = svg0.getBoundingClientRect().left - sc.getBoundingClientRect().left, cw = sc.clientWidth - off, ch = sc.clientHeight;
     // the scene fills ~3/4 of the height (or the full width, if that is larger); a matching sky
     // gradient continues above it, and the right side is cropped rather than the bunker
-    const k = Math.max(cw / OW.W, .62 * ch / OW.H), svg = sc.querySelector('.ow-svg');
+    const k = Math.max(cw / OW.W, .8 * ch / OW.H), svg = sc.querySelector('.ow-svg');
     svg.setAttribute('preserveAspectRatio', 'xMinYMax slice'); svg.style.top = 'auto'; svg.style.height = Math.min(ch, OW.H * k) + 'px';
     world.style.transform = `translate(${off}px, ${ch - OW.H * k}px) scale(${k})`;
     units.forEach(place);

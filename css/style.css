@@ -352,9 +352,9 @@ img.ico-room, img.ico-struct { image-rendering: auto; border-radius: 22%; }
 /* ============ START SCREEN ============ */
 #menu-screen { overflow: hidden; background: #1a1220; }
 .menu-bg { position: absolute; inset: 0; background: #4e1f6e; }
-.menu-scene { position: absolute; inset: 0; --off: clamp(0px, calc(6vw + 260px), 40vw); background: linear-gradient(180deg, #160c26 0%, #3a1a58 35%, #6a2a6e 62%, #3a2016 80%, #1e140e 100%); }
+.menu-scene { position: absolute; inset: 0; --off: clamp(0px, calc(6vw + 200px), 30vw); background: linear-gradient(180deg, #160c26 0%, #3a1a58 35%, #6a2a6e 62%, #3a2016 80%, #1e140e 100%); }
 .menu-scene .ow-svg { position: absolute; left: var(--off); right: 0; bottom: 0; width: calc(100% - var(--off)); overflow: hidden;
-  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 22%), linear-gradient(90deg, transparent 0, #000 14%); -webkit-mask-composite: source-in; mask-image: linear-gradient(180deg, transparent 0, #000 22%), linear-gradient(90deg, transparent 0, #000 14%); mask-composite: intersect; }
+  -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 8%), linear-gradient(90deg, transparent 0, #000 12%); -webkit-mask-composite: source-in; mask-image: linear-gradient(180deg, transparent 0, #000 8%), linear-gradient(90deg, transparent 0, #000 12%); mask-composite: intersect; }
 .menu-scene .ow-svg .eq-fence-0, .menu-scene .ow-svg .eq-walltier-0 { display: inline; }
 .menu-world { position: absolute; left: 0; top: 0; width: 1664px; height: 600px; transform-origin: 0 0; pointer-events: none; }
 .menu-unit { position: absolute; left: 0; top: 0; will-change: transform; }

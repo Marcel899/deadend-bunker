@@ -181,7 +181,9 @@ body.no-anim .ow-svg * { animation: none !important; }
 #scene[data-season="winter"] .dc-weather, #scene[data-season="autumn"] .dc-weather, #scene[data-season="spring"] .dc-weather { display: block; }
 #scene[data-season="autumn"] .dc-weather i { border-radius: 60% 0; background: #d0702a; width: calc(var(--s) * 2); }
 #scene[data-season="autumn"] .dc-weather i:nth-child(3n) { background: #e0a030; } #scene[data-season="autumn"] .dc-weather i:nth-child(2n) { display: none; }
-#scene[data-season="spring"] .dc-weather i { width: 1.5px; height: 14px; border-radius: 1px; background: #cfe2ff; opacity: .55; animation-duration: .8s !important; }
+/* rain: slanted streaks that fall straight along their slant (no spinning) */
+#scene[data-season="spring"] .dc-weather i { width: 2px; height: 22px; border-radius: 2px; background: linear-gradient(180deg, rgba(200, 225, 255, 0), rgba(200, 225, 255, .8)); opacity: 1; animation-name: dc-rain; animation-duration: .7s !important; }
+@keyframes dc-rain { from { transform: translate(0, -30px) rotate(12deg); } to { transform: translate(-130px, 620px) rotate(12deg); } }
 #scene[data-season="spring"] .dc-weather i:nth-child(3n) { display: none; }
 @keyframes dc-fall { from { transform: translate(0, 0) rotate(0); } to { transform: translate(var(--dx), 640px) rotate(540deg); } }
 body.no-anim .dc-weather { display: none !important; }
