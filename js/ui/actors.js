@@ -72,7 +72,7 @@ DE.UI.Actors = (function () {
     const base = layer.getBoundingClientRect(); const r = el.getBoundingClientRect();
     const size = (DE.Data.ROOMS[(DE.UI.state().rooms[roomId] || {}).type] || { size: 1 }).size;
     const kx = r.width / (DE.Scenes.CELL * size), ky = r.height / (180 + DE.Scenes.TOP);
-    const lying = bed.upright ? 0 : 22;
+    const lying = bed.upright ? 0 : 38;   // a lying figure extends left of its feet: centre it on the mattress
     return { x: r.left - base.left + (bed.x * kx) + lying, y: r.top - base.top + (DE.Scenes.TOP + DE.Scenes.FLOOR + bed.y) * ky, floor: +el.closest('.floor').dataset.depth };
   }
   function shaftPoint(depth) {

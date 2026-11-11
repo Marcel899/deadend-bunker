@@ -22,6 +22,9 @@ DE.UI = (function () {
 
  function init() {
  document.addEventListener('click', onClick);
+ // subtle hover tick on interactive elements (mouse only; touch has no hover)
+ let hoverEl = null;
+ document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest('.btn:not(:disabled), .nav-btn, .menu-btn, .res, .chip, .dk-sec-head, .rs-card.avail, .cell, .room, .ov-tile'); if (el && el !== hoverEl) { hoverEl = el; DE.Audio.sfx('hover'); } else if (!el) hoverEl = null; });
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-place]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ type: el.dataset.place }, e); });
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-move]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ roomId: el.dataset.move }, e); });
  document.addEventListener('keydown', e => { if (/^[1-4]$/.test(e.key)) { const b = document.querySelectorAll('#modal-root .choice')[+e.key - 1]; if (b && !b.disabled) { b.click(); return; } } if (e.key === 'Escape') { if (!$('#modal-root').classList.contains('hidden')) closeModal(); else closeDrawer(); } });

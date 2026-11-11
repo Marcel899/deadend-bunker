@@ -69,11 +69,33 @@ DE.Audio = (function () {
     event: (t) => { tone(988, t, .6, 'sine', .12); tone(1319, t + .12, .7, 'sine', .08); tone(1976, t + .12, .5, 'sine', .03); },
     dig: (t) => { noise(t, .18, .25, 300, .8, 'lowpass', 120); tone(80, t, .12, 'triangle', .12); },
     hit: (t) => { noise(t, .06, .15, 1200, 1.5); },
+    // combat
+    splat: (t) => { noise(t, .07, .16, 700 + Math.random() * 300, 1.2, 'lowpass', 180); tone(95 + Math.random() * 20, t, .07, 'sine', .07, null, 55); },
+    zdie: (t) => { growl(t, 150 + Math.random() * 30, .55, .06, 70); noise(t + .02, .18, .14, 500, .8, 'lowpass', 120); },
+    bigdie: (t) => { growl(t, 90, .9, .09, 40); noise(t, .35, .3, 300, .7, 'lowpass', 50); tone(55, t + .05, .4, 'sine', .25, null, 30); },
+    groan: (t) => { growl(t, 120 + Math.random() * 50, .9 + Math.random() * .5, .035, 85 + Math.random() * 20); },
+    groanbig: (t) => { growl(t, 75 + Math.random() * 15, 1.3, .05, 50); },
+    thud: (t) => { noise(t, .12, .2, 260, .7, 'lowpass', 80); tone(62, t, .14, 'sine', .14, null, 40); },
+    casing: (t) => { tone(4200 + Math.random() * 600, t, .05, 'sine', .025); tone(3100, t + .07, .04, 'sine', .015); },
+    // UI
+    hover: (t) => { tone(1900, t, .035, 'sine', .018); },
+    reveal: (t) => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, t + i * .09, .45, 'triangle', .09)); noise(t + .4, .5, .06, 6000, 2, 'highpass'); },
+    tick: (t) => { tone(1400 + Math.random() * 200, t, .025, 'square', .02); },
   };
+  /* a zombie growl: a wobbling sawtooth through a vowel-ish formant filter, pitch sagging */
+  function growl(t0, f0, dur, vol, fEnd) {
+    const o = ctx.createOscillator(), lfo = ctx.createOscillator(), lg = ctx.createGain(), bp = ctx.createBiquadFilter(), bp2 = ctx.createBiquadFilter(), g = ctx.createGain();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(f0, t0); o.frequency.exponentialRampToValueAtTime(fEnd || f0 * .6, t0 + dur);
+    lfo.frequency.value = 7 + Math.random() * 5; lg.gain.value = f0 * .06; lfo.connect(lg); lg.connect(o.frequency);
+    bp.type = 'bandpass'; bp.frequency.setValueAtTime(650, t0); bp.frequency.linearRampToValueAtTime(420, t0 + dur); bp.Q.value = 3;
+    bp2.type = 'lowpass'; bp2.frequency.value = 1400;
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + .08); g.gain.setValueAtTime(vol, t0 + dur * .6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+    o.connect(bp); bp.connect(bp2); bp2.connect(g); g.connect(sfxBus); o.start(t0); lfo.start(t0); o.stop(t0 + dur + .05); lfo.stop(t0 + dur + .05);
+  }
   /** Play a sound effect. Fast repeats (gunfire) are rate-limited per sound. */
   function sfx(name, minGapMs) {
     if (!prefs.sfxOn || !FX[name] || !ensure()) return;
-    const now = performance.now(); const gap = minGapMs != null ? minGapMs : (name === 'shot' ? 55 : name === 'hit' ? 40 : 30);
+    const now = performance.now(); const gap = minGapMs != null ? minGapMs : (name === 'shot' ? 55 : name === 'hit' || name === 'splat' ? 45 : name === 'hover' ? 60 : 30);
     if (now - (last[name] || 0) < gap) return; last[name] = now;
     FX[name](ctx.currentTime + .005);
   }

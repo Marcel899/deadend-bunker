@@ -398,7 +398,7 @@ DE.UI.Overworld = (function () {
   }
 
   /** Percent positions of key points, for the HTML overlays. */
-  const LAYOUT = { roofY: 358, fenceX: FR, bunkerC: BK.c, doorX: BK.c, towerL: TL + 75, towerR: TR + 75,
+  const LAYOUT = { roofY: 358, fenceX: FR, wallR: BK.r, bunkerC: BK.c, doorX: BK.c, towerL: TL + 75, towerR: TR + 75,
     bunkerL: BK.l / W, bunkerR: BK.r / W, doorL: BK.doorL / W, doorR: BK.doorR / W, center: BK.c / W, fenceR: FR / W };
   return { svg, W, H, GROUND, LAYOUT };
 })();

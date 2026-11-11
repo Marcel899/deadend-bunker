@@ -258,65 +258,49 @@ DE.Chars = (function () {
     }
   }
 
-  /* ---------- assemble a rig ---------- */
+  /* ---------- sprite characters ----------
+   * Every character is a cut-out illustration (assets/chars/<id>.png, see tools/cut_sprites.py).
+   * The <svg class="rig"> keeps the old contract — viewBox -70 -215 140 225, feet at (0,0),
+   * `a-<anim>` class, `.flip` — so all callers keep working. Animations move the whole figure
+   * (css/rigs.css "SPRITE ANIMATION"): a step-bob walk with a slight forward lean, work/repair
+   * bobbing, carry bounce, sleeping lies the figure on its back, shooting recoils with a muzzle
+   * flash at the gun. No limbs flailing. */
+  const SPR = { scientist: 'medic', boss: 'mutant' };
+  const SPR_TINT = { scientist: 'hue-rotate(-25deg) saturate(1.15)', boss: 'hue-rotate(-40deg) saturate(1.3) brightness(.9)' };
+  const SPR_SCALE = { brute: 1.18, mutant: 1.18, boss: 1.55, crawler: 1, armored: 1.04 };
+  // muzzle of the gun each armed character holds, in sprite fractions (x from left, y from top)
+  const MUZZLE = { scavenger: [.98, .62], hunter: [.97, .33], soldier: [.99, .66], farmer: [.36, .73], guard: [.97, .55] };
   function rig(id, o) {
     o = o || {}; const c = ALL[id]; if (!c) return '';
-    const p = Object.assign({ hips: [0, -52], neck: [0, -104], shoulders: [[-24, -98], [24, -98]], hipOff: 11, legLen: 50, armLen: 46, lean: 0, armF: 0, armB: 0, legL: 0, legR: 0, headTilt: 0 }, c.pose || {});
-    // o.item overrides the profession's default (e.g. guards on duty always carry a firearm)
-    const item = o.item !== undefined ? o.item : (c.item || null);
-    const legLen = p.legLen, armLen = p.armLen;
-    const dx = p.neck[0] - p.hips[0], dy = p.neck[1] - p.hips[1];
-    const tL = Math.hypot(dx, dy); const tRot = Math.atan2(dx, -dy) * 180 / Math.PI;
-    const cc = Object.assign({}, c, { torsoLen: tL });
-    const parts = `
-      <g class="pivot-armB" transform="translate(${p.shoulders[0][0]} ${p.shoulders[0][1]}) rotate(${p.armB})"><g class="j j-armB">${arm(cc, armLen, null, id)}</g></g>
-      <g class="pivot-legL" transform="translate(${p.hips[0] - p.hipOff} ${p.hips[1]}) rotate(${p.legL})"><g class="j j-legL">${leg(cc, legLen, id)}</g></g>
-      <g class="pivot-legR" transform="translate(${p.hips[0] + p.hipOff} ${p.hips[1]}) rotate(${p.legR})"><g class="j j-legR">${leg(cc, legLen, id)}</g></g>
-      <g class="pivot-torso" transform="translate(${p.hips[0]} ${p.hips[1]}) rotate(${tRot.toFixed(1)})"><g class="j j-torso">${torso(cc, id)}</g></g>
-      <g class="pivot-head" transform="translate(${p.neck[0]} ${p.neck[1]}) rotate(${p.headTilt})"><g class="j j-head">${head(cc, id)}</g></g>
-      <g class="pivot-armF" transform="translate(${p.shoulders[1][0]} ${p.shoulders[1][1]}) rotate(${p.armF})"><g class="j j-armF">${arm(cc, armLen, item, id)}</g></g>`;
+    const sid = SPR[id] || id, px = (DE.Data && DE.Data.CHAR_SPRITES && DE.Data.CHAR_SPRITES[sid]) || [150, 280];
+    const hgt = Math.round(200 * (SPR_SCALE[id] || 1) * Math.min(1, px[1] / 280 + .12)), wid = Math.round(hgt * px[0] / px[1]);
     const h = o.h || 48; const w = Math.round(h * 140 / 225);
     const vars = Object.entries(c.vars || {}).map(([k, v]) => `${k}:${v}`).join(';');
-    const style = `height:${h}px;width:${w}px;${vars};--pf:${p.armF}deg;--pb:${p.armB}deg${c.filter ? ';filter:' + c.filter : ''}`;
-    return `<svg class="rig rig-${id} kind-${c.kind} a-${o.anim || 'idle'} ${GUNS[item] ? 'armed' : ''} ${o.flip ? 'flip' : ''} ${o.cls || ''}" viewBox="-70 -215 140 225" style="${style}" ${o.title ? `data-title="${o.title}"` : ''} aria-hidden="true"><title>${o.title || c.name || id}</title>${defs(id, c)}
-      <ellipse class="shadow" cx="0" cy="2" rx="${c.big ? 40 : 30}" ry="6" fill="#000" opacity=".3"/>
-      <g class="j j-body" transform="rotate(${p.lean})"><g class="j j-body2">${parts}</g></g></svg>`;
+    const style = `height:${h}px;width:${w}px;${vars}`;
+    const tint = SPR_TINT[id] ? ` style="filter:${SPR_TINT[id]}"` : '';
+    const mz = MUZZLE[sid];
+    const flash = mz ? `<g class="muzzle" transform="translate(${(-wid / 2 + mz[0] * wid + 6).toFixed(1)} ${(-hgt + mz[1] * hgt).toFixed(1)})"><path d="M0 0 L22 -9 L16 0 L22 9 Z M0 0 L12 -15 L9 0 L12 15 Z" fill="#ffe27a" stroke="#ff9a2a" stroke-width="2"/><circle r="6" fill="#fff6c8"/></g>` : '';
+    return `<svg class="rig rig-${id} kind-${c.kind} a-${o.anim || 'idle'} ${mz ? 'armed' : ''} ${o.flip ? 'flip' : ''} ${o.cls || ''}" viewBox="-70 -215 140 225" style="${style}" ${o.title ? `data-title="${DE.Util ? DE.Util.escapeHtml(o.title) : o.title}"` : ''} aria-hidden="true"><title>${o.title || c.name || id}</title>
+      <ellipse class="shadow" cx="0" cy="2" rx="${Math.round(wid * .36)}" ry="7" fill="#000" opacity=".32"/>
+      <g class="j j-body"><g class="j j-body2"><g class="sp-fig"${tint}><image href="assets/chars/${sid}.png" x="${(-wid / 2).toFixed(1)}" y="${-hgt}" width="${wid}" height="${hgt}" preserveAspectRatio="xMidYMax meet"/></g>${flash}</g></g></svg>`;
   }
-
-  /* ---------- character tables (matched to the reference sheet) ---------- */
-  const Z = (x) => Object.assign({ kind: 'zombie', skin: SKIN.zombie, eyes: 'glow', mouth: 'open', angry: true, torn: true, boots: '#3a2a2a' }, x);
-  const C = (x) => Object.assign({ kind: 'crew', skin: SKIN.light, eyes: 'normal', mouth: 'smile', belt: true, boots: '#5a3a24', dirt: true }, x);
+  const Z = (x) => Object.assign({ kind: 'zombie' }, x);
+  const C = (x) => Object.assign({ kind: 'crew' }, x);
   const ZOMBIES = {
-    walker:  Z({ name: 'Walker', hair: { style: 'bald' }, shirt: '#e9e4dc', pants: '#3f4f72', boots: '#3a2a2a', ribs: true, drip: true, pose: { armF: -70, armB: 65, lean: 3 }, vars: { '--t': '1.5s', '--la': '16deg', '--aa': '10deg', '--bob': '2px' } }),
-    runner:  Z({ name: 'Runner', skin: SKIN.pale, hair: { style: 'messy', color: '#2d1e22' }, shirt: '#3a2f33', jacket: { color: '#c73a3a', lapel: '#8f2626', pocket: true }, sleeve: '#c73a3a', pants: '#2e3a4e', boots: '#a0303a', pose: { lean: 14, armF: -40, armB: 40, legL: -10, legR: 14 }, vars: { '--t': '.55s', '--la': '34deg', '--aa': '38deg', '--bob': '4px' } }),
-    brute:   Z({ name: 'Brute', big: true, skin: SKIN.zombie, headW: 40, headH: 42, hair: { style: 'bald' }, shirt: '#ece7dc', sleeveShort: true, sleeve: '#9cb878', pants: '#6b4a2a', boots: '#9cb878', belly: true, boneArm: true, shoulderW: 46, hipW: 38, pose: { hips: [0, -60], neck: [0, -122], shoulders: [[-42, -112], [42, -112]], hipOff: 19, legLen: 56, armLen: 64, armF: -22, armB: 22 }, vars: { '--t': '2.4s', '--la': '12deg', '--aa': '8deg', '--bob': '5px' } }),
-    toxic:   Z({ name: 'Spitter', skin: SKIN.dark, hair: { style: 'bald' }, mouth: 'drool', shirt: '#3a4a3a', pants: '#3a3a3a', glowHands: true, pose: { armF: -80, armB: 80, lean: 2 }, vars: { '--t': '1.7s', '--la': '14deg', '--aa': '14deg', '--bob': '2px' } }),
-    crawler: Z({ name: 'Crawler', skin: SKIN.grey, hair: { style: 'bald' }, mouth: 'fangs', shirt: '#5a5a62', pants: '#3a3a40', torn: true, ribs: true, bone: true, pose: { hips: [30, -22], neck: [-18, -34], shoulders: [[-20, -30], [-4, -34]], hipOff: 6, legLen: 38, armLen: 30, legL: -96, legR: -84, armF: 6, armB: -6, headTilt: -24, lean: 0 }, vars: { '--t': '1.3s', '--la': '8deg', '--aa': '26deg', '--bob': '1px' } }),
-    bomber:  Z({ name: 'Bomber', hair: { style: 'mohawk', color: '#ff5a2a' }, shirt: '#2a2630', jacket: { color: '#3a3540', lapel: '#55536a' }, sleeve: '#3a3540', pants: '#3a3a40', dynamite: true, pose: { armF: -30, armB: 30, lean: 4 }, vars: { '--t': '.8s', '--la': '26deg', '--aa': '30deg', '--bob': '3px' } }),
-    leaper:  Z({ name: 'Leaper', hair: { style: 'wild', color: '#3a2420' }, mouth: 'fangs', shirt: '#4a3a30', pants: '#5a4a3a', claws: true, pose: { lean: 8, armF: -120, armB: -100, legL: -34, legR: 24, hips: [0, -42], neck: [-8, -90], shoulders: [[-30, -84], [14, -84]], headTilt: 10 }, vars: { '--t': '.9s', '--la': '30deg', '--aa': '20deg', '--bob': '8px' } }),
-    armored: Z({ name: 'Riot Walker', skin: SKIN.zombie, eyes: 'glow', mouth: 'grim', torn: false, hat: { type: 'riot', color: '#2a2834' }, shirt: '#2a2834', armor: true, pads: true, kneepads: true, pants: '#2a2834', boots: '#1a1820', gloves: '#2f2d38', shoulderW: 34, hipW: 26, pose: { armF: -20, armB: 20 }, vars: { '--t': '2s', '--la': '12deg', '--aa': '8deg', '--bob': '3px' } }),
-    cultist: Z({ name: 'Cultist', skin: SKIN.dark, eyes: 'greenglow', mouth: 'grim', torn: false, hat: { type: 'hood', color: '#7a3ab0' }, shirt: '#5a2a80', robe: '#7a3ab0', pants: '#4a2070', boots: '#2a1040', glowHands: true, pose: { armF: -60, armB: 60 }, vars: { '--t': '2.2s', '--la': '4deg', '--aa': '10deg', '--bob': '6px' } }),
-    mutant:  Z({ name: 'Mutant', big: true, skin: SKIN.zombie, headW: 38, headH: 40, hair: { style: 'spikes', color: '#b25a8f' }, mouth: 'fangs', shirt: '#9cb878', sleeve: '#9cb878', pants: '#4a3a62', boots: '#9cb878', claws: true, spikes: true, boneArm: true, shoulderW: 42, hipW: 32, pose: { hips: [0, -58], neck: [0, -116], shoulders: [[-38, -108], [38, -108]], hipOff: 17, legLen: 54, armLen: 66, armF: -50, armB: 50, lean: 6 }, vars: { '--t': '1.6s', '--la': '16deg', '--aa': '18deg', '--bob': '4px' } }),
+    walker: Z({ name: 'Walker', vars: { '--t': '1.25s' } }), runner: Z({ name: 'Runner', vars: { '--t': '.55s' } }), brute: Z({ name: 'Brute', big: true, vars: { '--t': '1.6s' } }),
+    toxic: Z({ name: 'Spitter', vars: { '--t': '1.4s' } }), crawler: Z({ name: 'Crawler', vars: { '--t': '1s' } }), bomber: Z({ name: 'Bomber', vars: { '--t': '1.1s' } }),
+    leaper: Z({ name: 'Leaper', vars: { '--t': '.8s' } }), armored: Z({ name: 'Riot Walker', vars: { '--t': '1.5s' } }), cultist: Z({ name: 'Cultist', vars: { '--t': '1.7s' } }),
+    mutant: Z({ name: 'Mutant', big: true, vars: { '--t': '1.4s' } }), boss: Z({ name: 'Colossus', big: true, vars: { '--t': '1.9s' } }),
   };
-  ZOMBIES.boss = Object.assign({}, ZOMBIES.mutant, { name: 'Colossus', headW: 42, headH: 44, shoulderW: 50, hipW: 38, pose: { hips: [0, -64], neck: [0, -128], shoulders: [[-46, -118], [46, -118]], hipOff: 20, legLen: 60, armLen: 76, armF: -55, armB: 55, lean: 6 }, filter: 'hue-rotate(-40deg) saturate(1.4) contrast(1.15)', vars: { '--t': '2.6s', '--la': '14deg', '--aa': '14deg', '--bob': '6px' } });
   const CREW = {
-    scavenger: C({ name: 'Scavenger', hair: { style: 'messy', color: '#5a3a22' }, brows: 'stern', shirt: '#d9c7a6', jacket: { color: '#6b4a2e', lapel: '#4a3220', pocket: true }, sleeve: '#6b4a2e', pants: '#2f2f3a', boots: '#6b4a2e', backpack: true, wristband: '#3a2a2a', item: 'crowbar', pose: { armF: -28, armB: 18 }, vars: { '--t': '1s', '--la': '24deg', '--aa': '22deg', '--bob': '2px' } }),
-    hunter:    C({ name: 'Hunter', hair: { style: 'ponytail', color: '#f2d060' }, mouth: 'smirk', cheeks: true, shirt: '#f4efe6', jacket: { color: '#c93a3a', lapel: '#9a2a2a', len: 30 }, sleeve: '#c93a3a', gloves: '#3a2a2a', pants: '#2b3350', boots: '#6b4a2e', bandolier: true, item: 'sniper', pose: { armF: -28, armB: 10 }, vars: { '--t': '.9s', '--la': '26deg', '--aa': '18deg', '--bob': '2px' } }),
-    engineer:  C({ name: 'Engineer', skin: SKIN.tan, hair: { style: 'short', color: '#6b3a1e' }, beard: { style: 'full', color: '#6b3a1e' }, brows: 'stern', mouth: 'grim', hat: { type: 'hardhat', color: '#f3c21a' }, shirt: '#2f7fd0', vest: '#f08a2a', sleeve: '#2f7fd0', pants: '#3a5a9a', boots: '#6b4a2e', toolbelt: true, kneepads: true, item: 'wrench', pose: { armF: -30, armB: 12 }, vars: { '--t': '1.1s', '--la': '20deg', '--aa': '16deg', '--bob': '2px' } }),
-    medic:     C({ name: 'Medic', hair: { style: 'bun', color: '#4a2a1a' }, eyes: 'glasses', cheeks: true, dirt: false, shirt: '#9ad3ef', jacket: { color: '#f6f4ee', lapel: '#d9d6cf', len: 56, pocket: true }, sleeve: '#f6f4ee', cross: true, stethoscope: true, pants: '#4a4a58', boots: '#3a2a2a', item: 'medkit', pose: { armF: 6, armB: -6 }, vars: { '--t': '1.1s', '--la': '20deg', '--aa': '10deg', '--bob': '2px' } }),
-    soldier:   C({ name: 'Soldier', skin: SKIN.tan, mouth: 'stubble', brows: 'stern', hat: { type: 'helmet', color: '#4f6a3a', color2: '#3e5530' }, shirt: '#55683c', sleeve: '#55683c', gloves: '#2a2a2a', pants: '#4a5c36', boots: '#2a2a2a', bandolier: true, kneepads: true, item: 'ak', pose: { armF: -28, armB: 18 }, vars: { '--t': '.95s', '--la': '24deg', '--aa': '20deg', '--bob': '2px' } }),
-    farmer:    C({ name: 'Farmer', hair: { style: 'white', color: '#e6e6ea' }, beard: { style: 'long', color: '#e6e6ea' }, brows: 'stern', mouth: 'grim', shirt: '#7c8390', jacket: { color: '#7a5a3a', lapel: '#5a4028', len: 62, pocket: true }, sleeve: '#7a5a3a', pants: '#2f2f3a', boots: '#3a2a2a', bandolier: false, item: 'pitchfork', pose: { armF: -24, armB: 14 }, vars: { '--t': '1.4s', '--la': '16deg', '--aa': '12deg', '--bob': '2px' } }),
-    mechanic:  C({ name: 'Mechanic', hair: { style: 'short', color: '#5a3a22' }, hat: { type: 'goggles' }, cheeks: true, shirt: '#d9731f', sleeve: '#d9731f', gloves: '#3a2a2a', pants: '#b85f18', boots: '#3a2a2a', toolbelt: true, item: 'pipewrench', pose: { armF: 10, armB: -10 }, vars: { '--t': '1s', '--la': '22deg', '--aa': '18deg', '--bob': '3px' } }),
-    cook:      C({ name: 'Cook', hair: { style: 'short', color: '#5a3a22' }, hat: { type: 'chef' }, dirt: false, shirt: '#f6f4ee', sleeve: '#f6f4ee', apron: '#6b4a2e', pants: '#2f2f3a', boots: '#3a2a2a', item: 'cleaver', pose: { armF: 24, armB: -8 }, vars: { '--t': '1.2s', '--la': '18deg', '--aa': '14deg', '--bob': '2px' } }),
-    guard:     C({ name: 'Guard', eyes: 'sunglasses', mouth: 'grim', hat: { type: 'police', color: '#2b3350' }, dirt: false, shirt: '#2b3350', sleeve: '#2b3350', gloves: '#1a1a22', pants: '#222a44', boots: '#1a1a22', badge: true, item: 'rifle', pose: { armF: -28, armB: 18 }, vars: { '--t': '1.05s', '--la': '20deg', '--aa': '16deg', '--bob': '2px' } }),
-    scout:     C({ name: 'Scout', hair: { style: 'messy', color: '#5a3a22' }, cheeks: true, hat: { type: 'cap', color: '#d8303a', color2: '#f6f4ee' }, shirt: '#f6f4ee', jacket: { color: '#d8303a', lapel: '#a02028', len: 50, pocket: true }, sleeve: '#d8303a', pants: '#3a5a9a', boots: '#6b4a2e', sneakers: true, backpack: true, item: 'flashlight', pose: { armF: -40, armB: 20 }, vars: { '--t': '.8s', '--la': '28deg', '--aa': '22deg', '--bob': '3px' } }),
+    scavenger: C({ name: 'Scavenger', item: 'rifle' }), hunter: C({ name: 'Hunter', item: 'pistol' }), engineer: C({ name: 'Engineer', item: 'wrench' }),
+    medic: C({ name: 'Medic', item: 'medkit' }), soldier: C({ name: 'Soldier', item: 'rifle' }), farmer: C({ name: 'Farmer', item: 'shotgun' }),
+    mechanic: C({ name: 'Mechanic', item: 'wrench' }), cook: C({ name: 'Cook', item: 'pan' }), guard: C({ name: 'Guard', item: 'rifle' }), scout: C({ name: 'Scout', item: 'flashlight' }),
+    scientist: C({ name: 'Scientist', item: null }),
   };
-  CREW.scientist = Object.assign({}, CREW.medic, { name: 'Scientist', cross: false, stethoscope: false, item: 'clipboard', shirt: '#8fe3d8', hair: { style: 'bun', color: '#2a1a14' }, filter: 'hue-rotate(-12deg)', pose: { armF: -20, armB: 10 } });
   const ALL = Object.assign({}, ZOMBIES, CREW);
-
   function zombie(id, o) { return rig(ZOMBIES[id] ? id : 'walker', o); }
   function crew(prof, o) { return rig(CREW[prof] ? prof : 'scavenger', o); }
-
   /** Weapon a survivor carries on guard duty: their own firearm, else a rifle. */
   function dutyWeapon(prof) { const c = CREW[prof]; return c && GUNS[c.item] ? c.item : 'rifle'; }
   return { rig, zombie, crew, dutyWeapon, ZOMBIES, CREW, ALL };

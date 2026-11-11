@@ -1,156 +1,77 @@
-/* ============ CHARACTER RIGS ============
-   Rigs come from js/ui/chars.js. Each joint group .j-* has its local origin at the joint, so
-   rotating it in CSS bends that limb. Per-character vars set personality:
-     --t   cycle time        --la  leg swing amplitude     --aa  arm swing amplitude
-     --bob vertical bob      (set inline on the <svg>) */
-.rig { display: inline-block; overflow: visible; vertical-align: bottom; --t: 1s; --la: 20deg; --aa: 18deg; --bob: 2px; }
+/* ============ SPRITE CHARACTERS ============
+   Characters are cut-out illustrations (js/ui/chars.js). Animation moves the whole figure, with
+   squash & stretch, instead of flailing individual limbs:
+     .j-body   pivot at the feet (0,0) — lean, lie down (sleep), fall (die)
+     .j-body2  bob / squash / recoil on top of that
+     .sp-fig   the image itself (pixel wobble for idle breathing)
+   --t is the character's step time (set inline per character). */
+.rig { display: inline-block; overflow: visible; vertical-align: bottom; --t: 1s; }
 .rig.flip { transform: scaleX(-1); }
-.rig .j { transform-box: view-box; transform-origin: 0 0; }
+.rig .j, .rig .sp-fig, .rig .muzzle { transform-box: view-box; transform-origin: 0 0; }
 .rig .j-body { transition: transform .35s ease, opacity .4s; }
-.rig .j-head, .rig .j-armF, .rig .j-armB, .rig .j-legL, .rig .j-legR, .rig .j-torso { transition: transform .3s ease; }
-
-/* ---- idle: breathing, head sway, arms hanging ---- */
-.rig.a-idle .j-torso { animation: rg-breathe calc(var(--t) * 3) ease-in-out infinite; }
-.rig.a-idle .j-head { animation: rg-headsway calc(var(--t) * 4) ease-in-out infinite; }
-.rig.a-idle .j-armF { animation: rg-armidle calc(var(--t) * 3) ease-in-out infinite; }
-.rig.a-idle .j-armB { animation: rg-armidle calc(var(--t) * 3) ease-in-out infinite reverse; }
-@keyframes rg-breathe { 50% { transform: scaleY(1.03) translateY(-1px); } }
-@keyframes rg-headsway { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(3deg) translateY(-1px); } }
-@keyframes rg-armidle { 50% { transform: rotate(4deg); } }
-.rig.kind-zombie.a-idle .j-head { animation: rg-zhead calc(var(--t) * 3) ease-in-out infinite; }
-@keyframes rg-zhead { 0%, 100% { transform: rotate(-9deg); } 40% { transform: rotate(7deg) translateY(2px); } 60% { transform: rotate(5deg); } }
-
-/* ---- walk / run: alternate legs, counter-swing arms, bob, head nod ---- */
-.rig.a-walk .j-legL, .rig.a-run .j-legL { animation: rg-leg var(--t) ease-in-out infinite; }
-.rig.a-walk .j-legR, .rig.a-run .j-legR { animation: rg-leg var(--t) ease-in-out infinite; animation-delay: calc(var(--t) / -2); }
-.rig.a-walk .j-armF, .rig.a-run .j-armF { animation: rg-arm var(--t) ease-in-out infinite; animation-delay: calc(var(--t) / -2); }
-.rig.a-walk .j-armB, .rig.a-run .j-armB { animation: rg-arm var(--t) ease-in-out infinite; }
-.rig.a-walk .j-body2, .rig.a-run .j-body2 { animation: rg-bob calc(var(--t) / 2) ease-in-out infinite; }
-.rig.a-walk .j-head, .rig.a-run .j-head { animation: rg-nod var(--t) ease-in-out infinite; }
-.rig.a-run { --t: .5s; } .rig.a-run .j-body { transform: rotate(10deg); }
-@keyframes rg-leg { 0%, 100% { transform: rotate(var(--la)); } 50% { transform: rotate(calc(var(--la) * -1)); } }
-@keyframes rg-arm { 0%, 100% { transform: rotate(var(--aa)); } 50% { transform: rotate(calc(var(--aa) * -1)); } }
-@keyframes rg-bob { 50% { transform: translateY(calc(var(--bob) * -1)); } }
-@keyframes rg-nod { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(3deg); } }
-.rig.kind-zombie.a-walk .j-head { animation: rg-zhead calc(var(--t) * 2) ease-in-out infinite; }
-.rig.kind-zombie.a-walk .j-torso { animation: rg-lurch var(--t) ease-in-out infinite; }
-@keyframes rg-lurch { 0%, 100% { transform: rotate(-3deg); } 50% { transform: rotate(4deg); } }
-
-/* ---- attack (zombies): lunge, front arm slams down ---- */
-.rig.a-attack .j-armF { animation: rg-slam calc(var(--t) * .8) ease-in infinite; }
-.rig.a-attack .j-armB { animation: rg-slam calc(var(--t) * .8) ease-in infinite; animation-delay: calc(var(--t) * -.4); }
-.rig.a-attack .j-body2 { animation: rg-lunge calc(var(--t) * .8) ease-in-out infinite; }
-.rig.a-attack .j-head { animation: rg-bite calc(var(--t) * .8) ease-in-out infinite; }
-@keyframes rg-slam { 0% { transform: rotate(-70deg); } 60% { transform: rotate(-70deg); } 80% { transform: rotate(25deg); } 100% { transform: rotate(-70deg); } }
-@keyframes rg-lunge { 0%, 100% { transform: translateX(0); } 75% { transform: translateX(-8px) translateY(-3px); } }
-@keyframes rg-bite { 0%, 100% { transform: rotate(-6deg); } 75% { transform: rotate(12deg); } }
-
-/* ---- hit / die ---- */
-.rig.a-hit .j-body { animation: rg-hit .35s ease-out 1; }
-.rig.a-hit { animation: rg-flash .35s steps(2) 1; }
-@keyframes rg-hit { 30% { transform: translateX(10px) rotate(-10deg); } }
-@keyframes rg-flash { 50% { filter: brightness(2.5) saturate(0); } }
-.rig.a-die .j-body { transform: rotate(-88deg) translateY(4px); opacity: 0; transition: transform .6s cubic-bezier(.4, 1.5, .6, 1), opacity .8s .5s; }
-.rig.a-die .j-head { transform: rotate(20deg); } .rig.a-die .j-armF, .rig.a-die .j-armB { transform: rotate(60deg); }
-.rig.a-die .shadow { opacity: 0; transition: opacity .5s; }
-
-/* ---- survivor jobs ---- */
-.rig.a-work .j-armF { animation: rg-hammer calc(var(--t) * .9) ease-in infinite; }
-.rig.a-work .j-torso { animation: rg-worklean calc(var(--t) * .9) ease-in-out infinite; }
-.rig.a-work .j-head { animation: rg-worklook calc(var(--t) * 2.7) ease-in-out infinite; }
-@keyframes rg-hammer { 0% { transform: rotate(-95deg); } 55% { transform: rotate(-95deg); } 75% { transform: rotate(-20deg); } 100% { transform: rotate(-95deg); } }
-@keyframes rg-worklean { 50% { transform: rotate(4deg); } }
-@keyframes rg-worklook { 0%, 100% { transform: rotate(6deg); } 50% { transform: rotate(-2deg); } }
-.rig.a-carry .j-armF, .rig.a-carry .j-armB { transform: rotate(-80deg); animation: none; }
-.rig.a-carry .j-legL { animation: rg-leg calc(var(--t) * 1.3) ease-in-out infinite; } .rig.a-carry .j-legR { animation: rg-leg calc(var(--t) * 1.3) ease-in-out infinite; animation-delay: calc(var(--t) / -1.5); }
-.rig.a-carry .j-body2 { animation: rg-bob calc(var(--t) * .65) ease-in-out infinite; } .rig.a-carry .j-body { transform: rotate(-5deg); }
-.rig.a-carry .j-torso { animation: rg-breathe calc(var(--t) * 2) ease-in-out infinite; }
-.rig.a-repair .j-body { transform: rotate(14deg); }
-.rig.a-repair .j-legL { transform: rotate(-28deg); } .rig.a-repair .j-legR { transform: rotate(18deg); }
-.rig.a-repair .j-armF { animation: rg-crank calc(var(--t) * .7) linear infinite; } .rig.a-repair .j-armB { transform: rotate(-50deg); }
-.rig.a-repair .j-head { transform: rotate(16deg); animation: rg-worklook calc(var(--t) * 2) ease-in-out infinite; }
-@keyframes rg-crank { 0% { transform: rotate(-60deg); } 50% { transform: rotate(-20deg); } 100% { transform: rotate(-60deg); } }
-.rig.a-shoot .j-armF { transform: rotate(-80deg); animation: rg-recoil .32s steps(1) infinite; }
-.rig.a-shoot .j-armB { transform: rotate(-70deg); }
-.rig.a-shoot .j-body { transform: rotate(-6deg); animation: rg-kick .32s steps(1) infinite; }
-.rig.a-shoot .j-head { transform: rotate(-8deg); }
-.rig.a-shoot .j-legL { transform: rotate(-16deg); } .rig.a-shoot .j-legR { transform: rotate(12deg); }
-@keyframes rg-recoil { 0% { transform: rotate(-80deg); } 50% { transform: rotate(-86deg) translateY(2px); } }
-@keyframes rg-kick { 0% { transform: rotate(-6deg); } 50% { transform: rotate(-4deg) translateX(2px); } }
-.rig.a-interact .j-armF { animation: rg-point calc(var(--t) * 1.6) ease-in-out infinite; }
-.rig.a-interact .j-head { animation: rg-nodyes calc(var(--t) * 1.6) ease-in-out infinite; }
-.rig.a-interact .j-torso { animation: rg-breathe calc(var(--t) * 3) ease-in-out infinite; }
-@keyframes rg-point { 0%, 100% { transform: rotate(-20deg); } 40% { transform: rotate(-95deg); } 60% { transform: rotate(-90deg); } }
-@keyframes rg-nodyes { 0%, 100% { transform: rotate(0); } 45% { transform: rotate(8deg); } 65% { transform: rotate(-4deg); } }
-
-/* ---- sleeping / eating / resting / healing ---- */
-.rig.a-sleep .j-body { transform: rotate(-90deg) translate(-6px, 10px); }
-.rig.a-sleep .j-torso { animation: rg-breathe 3.5s ease-in-out infinite; }
-.rig.a-sleep .j-armF, .rig.a-sleep .j-armB { transform: rotate(-20deg); } .rig.a-sleep .j-head { transform: rotate(10deg); }
-.rig.a-heal .j-body { transform: rotate(-80deg) translate(-4px, 12px); }
-.rig.a-heal .j-torso { animation: rg-breathe 2.2s ease-in-out infinite; } .rig.a-heal .j-head { transform: rotate(12deg); }
-.rig.a-eat .j-legL, .rig.a-eat .j-legR { transform: rotate(-80deg); } .rig.a-eat .j-body { transform: translateY(14px); }
-.rig.a-eat .j-armF { animation: rg-eat 1.6s ease-in-out infinite; } .rig.a-eat .j-armB { transform: rotate(-30deg); }
-.rig.a-eat .j-head { animation: rg-chew 1.6s ease-in-out infinite; }
-@keyframes rg-eat { 0%, 100% { transform: rotate(-40deg); } 45% { transform: rotate(-120deg); } 60% { transform: rotate(-118deg); } }
-@keyframes rg-chew { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(6deg) translateY(1px); } 65% { transform: rotate(4deg); } }
-
-/* ---- guard: braced aiming stance (rifle up, scanning) ---- */
-.rig.a-guard .j-armF { transform: rotate(-78deg); animation: rg-scanarm 3.2s ease-in-out infinite; }
-.rig.a-guard .j-armB { transform: rotate(-66deg); }
-.rig.a-guard .j-body { transform: rotate(-4deg); } .rig.a-guard .j-head { transform: rotate(-6deg); animation: rg-scanhead 3.2s ease-in-out infinite; }
-.rig.a-guard .j-legL { transform: rotate(-14deg); } .rig.a-guard .j-legR { transform: rotate(12deg); }
-.rig.a-guard .j-torso { animation: rg-breathe 2.8s ease-in-out infinite; }
-@keyframes rg-scanarm { 0%, 100% { transform: rotate(-78deg); } 50% { transform: rotate(-84deg); } }
-@keyframes rg-scanhead { 0%, 100% { transform: rotate(-6deg); } 50% { transform: rotate(-12deg); } }
-
-/* ---- per-type personality ---- */
-.rig-crawler .j-legL, .rig-crawler .j-legR { animation-duration: calc(var(--t) * 1.6) !important; }
-.rig-crawler.a-walk .j-body2 { animation: rg-crawl var(--t) ease-in-out infinite; }
-@keyframes rg-crawl { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(-4px) translateY(-1px); } }
-.rig-leaper.a-walk .j-body2, .rig-leaper.a-run .j-body2 { animation: rg-hop var(--t) cubic-bezier(.3, 0, .2, 1) infinite; }
-.rig-leaper.a-walk .j-legL, .rig-leaper.a-walk .j-legR { animation: rg-tuck var(--t) ease-in-out infinite; }
-@keyframes rg-hop { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-26px) rotate(-10deg); } }
-@keyframes rg-tuck { 0%, 100% { transform: rotate(0); } 50% { transform: rotate(50deg); } }
-.rig-brute.a-walk .j-body2, .rig-boss.a-walk .j-body2 { animation: rg-stomp var(--t) ease-in-out infinite; }
-@keyframes rg-stomp { 0%, 100% { transform: translateY(0) rotate(-2deg); } 50% { transform: translateY(-5px) rotate(2deg); } }
-.rig-cultist .j-body2 { animation: rg-float 3s ease-in-out infinite !important; }
-.rig-cultist.a-walk .j-legL, .rig-cultist.a-walk .j-legR { animation-duration: 3s !important; }
-@keyframes rg-float { 50% { transform: translateY(-7px); } }
-.rig-cultist .orb, .rig-toxic .orb { animation: rg-orb 1.4s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
-@keyframes rg-orb { 50% { transform: scale(1.3); opacity: .9; } }
-.rig-bomber .fuse { animation: rg-fuse .3s steps(2) infinite; } @keyframes rg-fuse { 50% { fill: #fff4a8; r: 4.5; } }
-.rig-bomber .j-head { animation-duration: .6s !important; }
-.rig-runner.a-walk { --t: .55s; }
-.rig-toxic .slime { animation: rg-drip 2s ease-in infinite; transform-box: fill-box; transform-origin: top; } @keyframes rg-drip { 0% { transform: scaleY(.6); } 70% { transform: scaleY(1.1); } 100% { transform: scaleY(.6); } }
-.rig-armored.a-walk .j-body2 { animation: rg-stomp calc(var(--t)) ease-in-out infinite; }
-.rig-scout .beam { animation: rg-beam 2.4s ease-in-out infinite; } @keyframes rg-beam { 50% { opacity: .08; } }
-.rig-mutant.a-idle .spikes, .rig-boss.a-idle .spikes { animation: rg-breathe 2s ease-in-out infinite; transform-box: fill-box; transform-origin: left center; }
-
-/* ---- sizes used around the UI ---- */
-.rig.portrait { height: 56px; }
-body.no-anim .rig *, body.no-anim .rig { animation: none !important; }
-.rig.a-sleep .item { display: none; }
-
-/* ---- aiming is relative to each character's base arm pose (--pf/--pb, set on the rig), so a
-   rifle is held level (arm pointing straight forward = -90deg in world space) ---- */
 .rig .muzzle { opacity: 0; }
-.rig.a-shoot .j-armF { transform: rotate(calc(-90deg - var(--pf, 0deg))); animation: rg-aimkick .36s ease-out infinite; }
-.rig.a-shoot .j-armB { transform: rotate(calc(-78deg - var(--pb, 0deg))); animation: rg-aimkick2 .36s ease-out infinite; }
-.rig.a-shoot .j-body { transform: rotate(-3deg); animation: rg-recoilbody .36s ease-out infinite; }
-.rig.a-shoot .j-head { transform: rotate(-4deg); }
-.rig.a-shoot .muzzle { animation: rg-muzzle .36s steps(1) infinite; }
-@keyframes rg-aimkick { 0% { transform: rotate(calc(-84deg - var(--pf, 0deg))); } 30%, 100% { transform: rotate(calc(-90deg - var(--pf, 0deg))); } }
-@keyframes rg-aimkick2 { 0% { transform: rotate(calc(-72deg - var(--pb, 0deg))); } 30%, 100% { transform: rotate(calc(-78deg - var(--pb, 0deg))); } }
-@keyframes rg-recoilbody { 0% { transform: rotate(-6deg) translateX(-2px); } 35%, 100% { transform: rotate(-3deg); } }
-@keyframes rg-muzzle { 0% { opacity: 1; } 18%, 100% { opacity: 0; } }
-/* guard stance: rifle at a level ready position too */
-.rig.a-guard .j-armF { transform: rotate(calc(-80deg - var(--pf, 0deg))); animation: none; }
-.rig.a-guard .j-armB { transform: rotate(calc(-70deg - var(--pb, 0deg))); }
-/* walking with a weapon: the gun arm carries it steadily (small sway), the free arm swings; longer stride */
-.rig.a-walk .j-legL, .rig.a-run .j-legL, .rig.a-walk .j-legR, .rig.a-run .j-legR { --la2: calc(var(--la) * 1.25); }
-@keyframes rg-leg { 0%, 100% { transform: rotate(var(--la2, var(--la))); } 50% { transform: rotate(calc(var(--la2, var(--la)) * -1)); } }
-.rig.armed.a-walk .j-armF, .rig.armed.a-run .j-armF { animation: rg-carry var(--t) ease-in-out infinite; }
-@keyframes rg-carry { 0%, 100% { transform: rotate(calc(-35deg - var(--pf, 0deg))); } 50% { transform: rotate(calc(-41deg - var(--pf, 0deg))); } }
-.rig.armed.a-walk .j-armB, .rig.armed.a-run .j-armB { animation: rg-carry2 var(--t) ease-in-out infinite; }
-@keyframes rg-carry2 { 0%, 100% { transform: rotate(calc(-25deg - var(--pb, 0deg))); } 50% { transform: rotate(calc(-31deg - var(--pb, 0deg))); } }
+.rig .shadow { transform-box: fill-box; transform-origin: center; }
+
+/* idle: slow breathing (tiny vertical stretch from the feet) */
+.rig.a-idle .sp-fig, .rig.a-guard .sp-fig { animation: rs-breathe 3.2s ease-in-out infinite; }
+@keyframes rs-breathe { 50% { transform: scale(1.012, 1.022); } }
+
+/* walk / run: a step bob — down on contact, up mid-stride — with a slight forward lean */
+.rig.a-walk .j-body { transform: rotate(3deg); }
+.rig.a-walk .j-body2 { animation: rs-step var(--t) ease-in-out infinite; }
+.rig.a-walk .shadow { animation: rs-shadow var(--t) ease-in-out infinite; }
+@keyframes rs-step { 0%, 50%, 100% { transform: translateY(0) scale(1.02, .975); } 25%, 75% { transform: translateY(-7px) scale(.99, 1.015); } }
+@keyframes rs-shadow { 25%, 75% { transform: scale(.85); opacity: .22; } }
+.rig.a-run .j-body { transform: rotate(8deg); }
+.rig.a-run .j-body2 { animation: rs-step calc(var(--t) * .55) ease-in-out infinite; }
+.rig.a-run .shadow { animation: rs-shadow calc(var(--t) * .55) ease-in-out infinite; }
+/* zombies shamble: a heavier side-to-side lurch instead of a clean step */
+.rig.kind-zombie.a-walk .j-body2 { animation: rs-lurch calc(var(--t) * 2) ease-in-out infinite; }
+@keyframes rs-lurch { 0%, 100% { transform: translateY(0) rotate(-2.5deg); } 25% { transform: translateY(-5px) rotate(0); } 50% { transform: translateY(0) rotate(2.5deg); } 75% { transform: translateY(-5px) rotate(0); } }
+.rig-crawler.a-walk .j-body2, .rig-crawler.a-run .j-body2 { animation: rs-crawl calc(var(--t) * 1.2) ease-in-out infinite; }
+@keyframes rs-crawl { 50% { transform: translateX(4px) scale(1.05, .94); } }
+.rig-leaper.a-walk .j-body2, .rig-leaper.a-run .j-body2 { animation: rs-hop calc(var(--t) * 1.3) cubic-bezier(.3, 0, .3, 1) infinite; }
+@keyframes rs-hop { 0%, 100% { transform: translateY(0) scale(1.06, .92); } 45% { transform: translateY(-26px) scale(.96, 1.06); } }
+
+/* work / repair: hands busy — a rhythmic forward dip */
+.rig.a-work .j-body, .rig.a-repair .j-body { animation: rs-work 1.1s ease-in-out infinite; }
+@keyframes rs-work { 0%, 100% { transform: rotate(0); } 40% { transform: rotate(7deg) translateY(2px); } }
+.rig.a-repair .j-body2 { animation: rs-tap .55s ease-in-out infinite; }
+@keyframes rs-tap { 50% { transform: translateY(2px) scale(1.01, .985); } }
+/* carry: bouncy walk-in-place with a bit of strain */
+.rig.a-carry .j-body { transform: rotate(-3deg); }
+.rig.a-carry .j-body2 { animation: rs-step .7s ease-in-out infinite; }
+/* interact / eat / heal: weight shifts, small nods */
+.rig.a-interact .j-body, .rig.a-eat .j-body, .rig.a-heal .j-body { animation: rs-sway 2.6s ease-in-out infinite; }
+@keyframes rs-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2.5deg); } }
+.rig.a-eat .j-body2 { animation: rs-tap 1s ease-in-out infinite; }
+
+/* sleep: lying on the back on the bed (pivot at the feet), slow breathing */
+.rig.a-sleep .j-body { transform: translate(-58px, 0) rotate(-90deg); }
+.rig.a-sleep .sp-fig { animation: rs-sleep 4s ease-in-out infinite; }
+@keyframes rs-sleep { 50% { transform: scale(1.03, 1); } }
+.rig.a-sleep .shadow { opacity: 0; }
+
+/* guard: alert stance, a slow look-around lean */
+.rig.a-guard .j-body { animation: rs-scan 5s ease-in-out infinite; }
+@keyframes rs-scan { 0%, 100% { transform: rotate(-1.5deg); } 50% { transform: rotate(2deg); } }
+/* shoot: braced lean, sharp recoil kick + muzzle flash every shot cycle */
+.rig.a-shoot .j-body { transform: rotate(-3deg); }
+.rig.a-shoot .j-body2 { animation: rs-recoil .36s ease-out infinite; }
+.rig.a-shoot .muzzle { animation: rs-flash .36s steps(1) infinite; }
+@keyframes rs-recoil { 0% { transform: translateX(-5px) rotate(-3deg); } 40%, 100% { transform: translateX(0) rotate(0); } }
+@keyframes rs-flash { 0% { opacity: 1; } 22%, 100% { opacity: 0; } }
+
+/* zombie attack: lunge-and-claw */
+.rig.a-attack .j-body { animation: rs-lunge .8s ease-in-out infinite; }
+@keyframes rs-lunge { 0%, 100% { transform: rotate(-4deg); } 30% { transform: rotate(12deg) translateX(6px); } 45% { transform: rotate(8deg) translateX(4px); } }
+/* hit: flash white + knock back */
+.rig.a-hit .j-body2 { animation: rs-hit .3s ease-out 1; }
+@keyframes rs-hit { 0% { transform: translateX(-8px) rotate(-6deg); filter: brightness(2.2); } 100% { transform: none; } }
+/* die: fall backwards and fade */
+.rig.a-die .j-body { transform: rotate(-86deg) translate(6px, 4px); opacity: 0; transition: transform .45s cubic-bezier(.5, 0, .7, 1.4), opacity .7s .9s; }
+.rig.a-die .shadow { opacity: 0; transition: opacity .6s .6s; }
+
+/* special glow for spell-casters */
+.rig-cultist .sp-fig, .rig-toxic .sp-fig { filter: drop-shadow(0 0 6px rgba(120, 255, 90, .45)); }
+body.no-anim .rig * { animation: none !important; }

@@ -17,9 +17,9 @@ DE.UI = DE.UI || {};
 DE.UI.Battlefield = (function () {
   const NS = 'http://www.w3.org/2000/svg';
   const OW = () => DE.UI.Overworld;
-  let root = null, world = null, fx = null, scaleSig = '';
+  let root = null, world = null, fx = null, decals = null, scaleSig = '';
   let raf = 0, lastT = 0, running = false;
-  const st = { zombies: [], turrets: [], guards: {}, party: {}, missiles: [], launcher: null, incoming: false, fighting: false, fightEnd: 0, breach: false, wave: -1, turretSig: '', missileLvl: 0 };
+  const st = { zombies: [], turrets: [], guards: {}, party: {}, missiles: [], launcher: null, incoming: false, fighting: false, resolved: false, result: null, fightStart: 0, wave: -1, turretSig: '', missileLvl: 0, barricades: 0, ratio: 1, kills: 0, killBudget: 0, front: 0 };
 
   /* turret mounts in order of purchase: [x, baseY, ground?] */
   const MOUNTS = () => { const G = OW().GROUND, R = OW().LAYOUT.roofY; return [[262, R, false], [638, R, false], [118, G, true], [866, G, true], [330, R, false], [570, R, false], [56, G, true], [700, G, true]]; };
@@ -31,8 +31,8 @@ DE.UI.Battlefield = (function () {
     const scene = document.getElementById('scene'); if (!scene) return false;
     if (!root || !root.isConnected) {
       root = document.createElement('div'); root.className = 'bf'; root.id = 'bf';
-      root.innerHTML = `<div class="bf-world"><svg class="bf-fx" viewBox="0 0 ${OW().W} ${OW().H}" width="${OW().W}" height="${OW().H}" aria-hidden="true"></svg></div>`;
-      scene.appendChild(root); world = root.firstChild; fx = world.firstChild; scaleSig = '';
+      root.innerHTML = `<div class="bf-world"><svg class="bf-decals" viewBox="0 0 ${OW().W} ${OW().H}" width="${OW().W}" height="${OW().H}" aria-hidden="true"></svg><svg class="bf-fx" viewBox="0 0 ${OW().W} ${OW().H}" width="${OW().W}" height="${OW().H}" aria-hidden="true"></svg></div>`;
+      scene.appendChild(root); world = root.firstChild; decals = world.firstChild; fx = world.children[1]; scaleSig = '';
       st.zombies = []; st.turrets = []; st.guards = {}; st.party = {}; st.missiles = []; st.launcher = null; st.turretSig = ''; st.missileLvl = 0; st.wave = -1;
       // the clickable wall / hatch hot-spots and the entrance sign live in world space too
       ['hatch', 'wall', 'entrance-sign'].forEach(c => { const e = scene.querySelector('.ow-overlay .' + c); if (e) world.appendChild(e); });
@@ -93,9 +93,10 @@ DE.UI.Battlefield = (function () {
     let want;
     if (live.length) {
       // nearest zombie to the turret
-      if (!t.target || t.target.dead) t.target = live.reduce((b, z) => (!b || Math.abs(z.x - t.px) < Math.abs(b.x - t.px) ? z : b), null);
-      const z = t.target; const aimY = z.y - z.h * .5;
-      want = Math.atan2(aimY - t.py, z.x - t.px) * 180 / Math.PI;
+      // nearest zombie in range (retarget when the old one died, broke through or walked off)
+      if (!t.target || t.target.dead || t.target.through || t.target.retreat || !live.includes(t.target)) t.target = live.filter(z => Math.abs(z.x - t.px) < 600).reduce((b, z) => (!b || Math.abs(z.x - t.px) < Math.abs(b.x - t.px) ? z : b), null);
+      if (!t.target) { t.scan += dt; want = -6 + Math.sin(t.scan * .5) * 12; }
+      else { const z = t.target; const aimY = z.y - z.h * .5; want = Math.atan2(aimY - t.py, z.x - t.px) * 180 / Math.PI; }
     } else { t.target = null; t.scan += dt; want = -6 + Math.sin(t.scan * .5) * 12; }
     const d = ang(want - t.a); const turn = 160 * dt;
     t.a = ang(t.a + Math.max(-turn, Math.min(turn, d))); aimHead(t);
@@ -107,7 +108,7 @@ DE.UI.Battlefield = (function () {
       tracer(mx, my, t.target.x + (Math.random() - .5) * 8, t.target.y - t.target.h * (.35 + Math.random() * .3), true);
       t.flash.setAttribute('opacity', '1'); setTimeout(() => t.flash.setAttribute('opacity', '0'), 60);
       t.recoil.setAttribute('transform', 'translate(-3 0)'); setTimeout(() => t.recoil.removeAttribute('transform'), 70);
-      hit(t.target, st.fighting ? 1 : .55);
+      hit(t.target, st.fighting ? 1 : .7, true);
     }
   }
 
@@ -138,7 +139,7 @@ DE.UI.Battlefield = (function () {
     // biggest threat first, then nearest
     if (!L.target || L.target.dead) L.target = live.slice().sort((a, b) => (b.big - a.big) || (a.x - b.x))[0];
     const z = L.target, T = 1.3 + Math.abs(z.x - L.px) / 1000;
-    const ix = Math.max(FENCE() + 10, z.walking ? z.x - z.speed * T : z.x), iy = z.y - 4;
+    const moving = z.mode === 'walk' && !z.through && !z.retreat; const ix = Math.max((st.front || 700) + 4, moving ? z.x - z.speed * T * .8 : z.x), iy = z.y - 4;
     const a = arc(L.px, L.py, ix, iy); const want = Math.atan2(a.y1 - a.y0, a.x1 - a.x0) * 180 / Math.PI;
     const d = ang(want - L.a); L.a = ang(L.a + Math.max(-70 * dt, Math.min(70 * dt, d)));
     L.rails.setAttribute('transform', `translate(0 -4) rotate(${L.a.toFixed(1)})`);
@@ -172,7 +173,7 @@ DE.UI.Battlefield = (function () {
     fx.appendChild(g); setTimeout(() => g.remove(), 1100); DE.Audio.sfx('boom', 150);
     for (let i = 0; i < 4; i++) puff(x + (Math.random() - .5) * 40, y - 10 - Math.random() * 20, 12 + Math.random() * 8, 'bf-smoke big');
     // splash damage
-    st.zombies.forEach(z => { if (!z.dead && Math.abs(z.x - x) < 70) hit(z, dmg * (1 - Math.abs(z.x - x) / 90)); });
+    st.zombies.forEach(z => { if (!z.dead && z.delay <= 0 && Math.abs(z.x - x) < 70) hit(z, dmg * (1 - Math.abs(z.x - x) / 90), true); });
     root.classList.add('shake'); setTimeout(() => root && root.classList.remove('shake'), 220);
   }
   function puff(x, y, r, cls) { const c = document.createElementNS(NS, 'circle'); c.setAttribute('class', cls); c.setAttribute('cx', x.toFixed(1)); c.setAttribute('cy', y.toFixed(1)); c.setAttribute('r', r.toFixed(1)); fx.appendChild(c); setTimeout(() => c.remove(), cls.includes('big') ? 1400 : 900); }
@@ -183,36 +184,133 @@ DE.UI.Battlefield = (function () {
     const sp = document.createElementNS(NS, 'circle'); sp.setAttribute('class', 'bf-spark'); sp.setAttribute('cx', x2.toFixed(1)); sp.setAttribute('cy', y2.toFixed(1)); sp.setAttribute('r', heavy ? 5 : 3.5); fx.appendChild(sp); setTimeout(() => sp.remove(), 200);
   }
 
-  /* ---------- zombies ---------- */
+  /* ---------- zombies ----------
+   * Navigation is a per-lane queue: every zombie walks left until it touches the zombie ahead in its
+   * lane or, at the head of the lane, the current DEFENSIVE FRONT — sandbag nest, a guard, the
+   * ground turret or the bunker wall (frontX(), recomputed every frame as guards move). There they
+   * attack. When the one ahead dies, the queue moves up. Steel hedgehogs slow them down.
+   * How many fall before reaching the front follows the real odds (firepower vs. wave strength):
+   * before the wave resolves a "kill budget" limits deaths; after it resolves the field plays out
+   * the actual result (wiped out / wall held / breach). */
+  const LANES = 5;
+  function frontX() {
+    const L = OW().LAYOUT; let f = L.wallR + 12;
+    if (st.barricades >= 1) f = Math.max(f, 872);                       // sandbag nest in front of the wall
+    if (st.turrets.some(t => t.px > L.wallR)) f = Math.max(f, 900);      // the ground turret on the right
+    for (const id in st.guards) { const g = st.guards[id]; if (g.combat && g.x > L.wallR) f = Math.max(f, g.x + 26); }
+    return f;
+  }
   function spawnHorde(s) {
     st.zombies.forEach(z => z.el.remove()); st.zombies = [];
-    const comp = DE.Defense.waveComposition(DE.Defense.waveHp(s), s.defense.wave).slice(0, 22);
+    const all = DE.Defense.waveComposition(DE.Defense.waveHp(s), s.defense.wave);
+    const comp = all.slice(0, 24);
+    const pw = DE.Defense.defensePower(s), hp = DE.Defense.waveHp(s);
+    st.ratio = hp > 0 ? pw.total / hp : 1; st.kills = 0; st.resolved = false; st.result = null;
+    // arrivals spread over the warning window: a steady trickle instead of one big clump
+    const secs = Math.max(20, (s.defense.nextWaveAt - Date.now()) / 1000);
+    const gap = Math.max(1.1, Math.min(3.4, (secs - 14) / comp.length));
     comp.forEach((zd, i) => {
-      const big = !!(zd.boss || zd.id === 'brute' || zd.id === 'mutant'); const h = big ? 92 : 62;
-      const speed = zd.id === 'runner' ? 74 : zd.id === 'leaper' ? 62 : zd.id === 'crawler' ? 38 : big ? 22 : 30;
-      const lane = (i * 7) % 5;
+      const big = !!(zd.boss || zd.id === 'brute' || zd.id === 'mutant'); const h = zd.boss ? 120 : big ? 92 : 62;
+      const speed = zd.id === 'runner' ? 70 : zd.id === 'leaper' ? 58 : zd.id === 'crawler' ? 34 : zd.boss ? 16 : big ? 22 : 28 + Math.random() * 6;
+      const lane = i % LANES;
       const el = unit(DE.Chars.zombie(zd.id, { anim: zd.id === 'runner' ? 'run' : 'walk', h, flip: true }), 'bf-z');
-      const z = { el, rig: el.querySelector('.rig'), id: zd.id, big, h, speed, lane, x: OW().W + 30 + Math.random() * 40, y: OW().GROUND + 4 + lane * 3,
-        stopX: FENCE() + 18 + lane * 9 + Math.random() * 70, hp: 1, delay: i * 2.4 + Math.random() * 1.5, walking: true, dead: false, through: false };
-      el.style.zIndex = 20 + lane; el.style.width = (h * 140 / 225) + 'px'; el.style.height = h + 'px';
+      const z = { el, rig: el.querySelector('.rig'), id: zd.id, big, boss: !!zd.boss, h, speed, lane, x: OW().W + 40, y: OW().GROUND + 2 + lane * 3,
+        hp: zd.boss ? 4 : big ? 2.2 : 1, delay: i * gap + Math.random() * gap * .5, dead: false, through: false, retreat: false, mode: 'walk', atkCd: Math.random(), groanAt: 2 + Math.random() * 10,
+        toxic: zd.id === 'toxic' || zd.id === 'cultist' };
+      el.style.zIndex = 20 + lane; el.style.width = (h * 140 / 225) + 'px'; el.style.height = h + 'px'; el.style.visibility = 'hidden';
       place(z); st.zombies.push(z);
     });
+    st.spawned = comp.length;
+    st.killBudget = Math.round(comp.length * Math.min(1, st.ratio) * .9);
   }
   function place(z) { put(z.el, z.x - z.h * 70 / 225, z.y - z.h * 215 / 225); }
-  /** A shot lands. Before the wave resolves (incoming) they are only wounded; during the fight they die. */
-  function hit(z, k) {
-    if (z.dead) return;
-    z.hp -= .34 * k; if (!st.fighting) z.hp = Math.max(.2, z.hp);
-    z.el.classList.add('pinged'); setTimeout(() => z.el.classList.remove('pinged'), 140);
-    if (z.hp <= 0 && !(st.breach && z.survivor)) kill(z);
+
+  /** A shot lands on a zombie: knock-back, flash, blood; it dies when out of health — unless the
+   * odds say it should still reach the wall (kill budget, or it is one of a breach's survivors). */
+  function hit(z, k, heavy) {
+    if (z.dead || z.through) return;
+    z.hp -= .38 * k;
+    const protectedNow = (!st.resolved && st.kills >= st.killBudget) || (st.resolved && z.survivor);
+    if (protectedNow) z.hp = Math.max(.12, z.hp);
+    z.x += heavy ? 7 : 4; place(z);
+    z.el.classList.remove('pinged'); void z.el.offsetWidth; z.el.classList.add('pinged');
+    blood(z.x, z.y - z.h * (.45 + Math.random() * .25), heavy ? 6 : 4, z.toxic);
+    DE.Audio.sfx('splat');
+    if (z.hp <= 0) kill(z);
   }
-  function kill(z) { z.dead = true; z.walking = false; anim(z.rig, 'die'); z.el.classList.add('dead'); setTimeout(() => { z.el.remove(); }, 1600); }
-  function stepZombie(z, dt) {
+  function kill(z) {
     if (z.dead) return;
-    if (z.delay > 0) { z.delay -= dt; return; }
-    if (z.through) { z.x -= z.speed * 1.4 * dt; place(z); if (z.x < OW().LAYOUT.doorX + 20) { z.dead = true; z.el.classList.add('gone'); setTimeout(() => z.el.remove(), 600); } return; }
-    if (z.walking) { z.x -= z.speed * dt; if (z.x <= z.stopX) { z.x = z.stopX; z.walking = false; anim(z.rig, 'attack'); } place(z); }
+    z.dead = true; st.kills++; anim(z.rig, 'die'); z.el.classList.add('dead');
+    pool(z.x - 10, z.y, z.big ? 34 : 22, z.toxic);
+    blood(z.x, z.y - z.h * .5, z.big ? 12 : 8, z.toxic);
+    DE.Audio.sfx(z.big ? 'bigdie' : 'zdie', 90);
+    if (z.big) { root.classList.add('shake'); setTimeout(() => root && root.classList.remove('shake'), 220); }
+    setTimeout(() => z.el.remove(), 1800);
   }
+  /* blood: droplets that arc out and a pool decal that fades — stylised, dark red (green for toxic) */
+  function blood(x, y, n, toxic) {
+    for (let i = 0; i < n; i++) {
+      const c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', x.toFixed(1)); c.setAttribute('cy', y.toFixed(1)); c.setAttribute('r', (1.6 + Math.random() * 2.2).toFixed(1));
+      c.setAttribute('class', 'bf-drop' + (toxic ? ' tox' : ''));
+      c.style.setProperty('--dx', ((Math.random() * .8 + .2) * 34 * (Math.random() < .8 ? 1 : -1)).toFixed(0) + 'px'); c.style.setProperty('--dy', (8 + Math.random() * 22).toFixed(0) + 'px');
+      fx.appendChild(c); setTimeout(() => c.remove(), 650);
+    }
+  }
+  function pool(x, y, r, toxic) {
+    const e = document.createElementNS(NS, 'ellipse'); e.setAttribute('cx', x.toFixed(1)); e.setAttribute('cy', (y + 2).toFixed(1)); e.setAttribute('rx', r); e.setAttribute('ry', (r * .22).toFixed(1));
+    e.setAttribute('class', 'bf-pool' + (toxic ? ' tox' : '')); decals.appendChild(e); setTimeout(() => e.remove(), 9000);
+    while (decals.children.length > 40) decals.firstChild.remove();
+  }
+  function dust(x, y) {
+    for (let i = 0; i < 3; i++) { const c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', (x + (Math.random() - .5) * 10).toFixed(1)); c.setAttribute('cy', (y + (Math.random() - .5) * 16).toFixed(1)); c.setAttribute('r', (3 + Math.random() * 4).toFixed(1)); c.setAttribute('class', 'bf-smoke'); fx.appendChild(c); setTimeout(() => c.remove(), 900); }
+  }
+
+  function stepZombies(dt) {
+    const front = frontX();
+    st.front = front;
+    for (let lane = 0; lane < LANES; lane++) {
+      const q = st.zombies.filter(z => z.lane === lane && !z.dead && !z.through && !z.retreat && z.delay <= 0).sort((a, b) => a.x - b.x);
+      q.forEach((z, k) => {
+        const ahead = q[k - 1];
+        const gapX = ahead ? (ahead.big || z.big ? 40 : 26) : 0;
+        const stop = ahead ? ahead.x + gapX : front + lane * 5;
+        let spd = z.speed;
+        if (st.barricades >= 2 && z.id !== 'leaper' && z.x > 960 && z.x < 1190) spd *= .45;   // steel hedgehogs
+        if (z.x > stop + .5) {
+          z.x = Math.max(stop, z.x - spd * dt);
+          if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, z.id === 'runner' ? 'run' : 'walk'); }
+        } else {
+          // at the front of the lane: attack the defence; queued behind: press on (attacks the air when close)
+          const atFront = !ahead;
+          const mode = atFront || front + 70 > z.x ? 'attack' : 'idle';
+          if (z.mode !== mode) { z.mode = mode; anim(z.rig, mode); }
+          if (atFront) {
+            z.atkCd -= dt;
+            if (z.atkCd <= 0) {
+              z.atkCd = .75 + Math.random() * .5;
+              dust(z.x - 14, z.y - z.h * .45);
+              DE.Audio.sfx('thud', 160);
+              const g = guardAt(z.x - 26);
+              if (g) { g.el.classList.remove('pinged'); void g.el.offsetWidth; g.el.classList.add('pinged'); }
+              else if (z.x - 20 < OW().LAYOUT.wallR + 30) { const b = document.querySelector('#scene .ow-bunker'); if (b) { b.classList.remove('struck'); void b.getBBox; b.classList.add('struck'); } }
+              // a breach: the survivors at the front force their way in
+              if (st.resolved && st.result && st.result.breach && z.survivor && (z.blows = (z.blows || 0) + 1) > 2) { z.through = true; anim(z.rig, 'run'); }
+            }
+          }
+        }
+        place(z);
+      });
+    }
+    // entering the field, groaning, breaking through, retreating
+    st.zombies.forEach(z => {
+      if (z.dead) return;
+      if (z.delay > 0) { z.delay -= dt; if (z.delay <= 0) z.el.style.visibility = ''; return; }
+      if ((z.groanAt -= dt) <= 0) { z.groanAt = 5 + Math.random() * 9; if (z.x < OW().W) DE.Audio.sfx(z.big ? 'groanbig' : 'groan', 700); }
+      if (z.through) { z.x -= z.speed * 1.6 * dt; place(z); if (z.x < OW().LAYOUT.doorX + 30) { z.dead = true; z.el.classList.add('gone'); setTimeout(() => z.el.remove(), 600); } }
+      else if (z.retreat) { z.x += z.speed * dt; face(z.rig, false); if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, 'walk'); } place(z); if (z.x > OW().W + 30) { z.dead = true; z.el.remove(); } }
+    });
+  }
+  function guardAt(x) { for (const id in st.guards) { const g = st.guards[id]; if (g.combat && Math.abs(g.x - x) < 30) return g; } return null; }
 
   /* ---------- guards ---------- */
   function syncGuards(s) {
@@ -229,21 +327,32 @@ DE.UI.Battlefield = (function () {
     });
     for (const id in st.guards) if (!seen[id]) { st.guards[id].el.remove(); delete st.guards[id]; }
   }
+  const RANGE = 480;
   function stepGuard(u, dt, live) {
     const combat = (st.incoming || st.fighting) && live.length;
+    u.combat = !!combat;
     if (combat) {
-      // firing line behind the fence (sandbag nests when built), spread out
-      const post = Math.min(FENCE() - 40, 760 + (u.i % 4) * 34 - Math.floor(u.i / 4) * 20);
-      if (Math.abs(u.x - post) > 2) { const d = Math.sign(post - u.x); u.x += d * 70 * dt; if (Math.sign(post - u.x) !== d) u.x = post; face(u.rig, d < 0); anim(u.rig, 'run'); }
+      // firing line in front of the bunker wall (inside the sandbag nest when built), spread out;
+      // without cover a guard steps back when a zombie gets into arm's reach
+      let post = 760 + (u.i % 4) * 30 - Math.floor(u.i / 4) * 18;
+      const nearest = live.reduce((b, z) => (!b || z.x < b.x ? z : b), null);
+      if (st.barricades < 1 && nearest && nearest.x - u.x < 34) u.hold = Math.max(OW().LAYOUT.wallR + 34, (u.hold || u.x) - 30 * dt);
+      else if (st.barricades >= 1) u.hold = null;
+      if (u.hold) post = Math.min(post, u.hold);
+      if (Math.abs(u.x - post) > 2) { const d = Math.sign(post - u.x); u.x += d * (u.hold ? 30 : 70) * dt; if (Math.sign(post - u.x) !== d) u.x = post; face(u.rig, d < 0 && !u.hold); anim(u.rig, u.hold ? 'shoot' : 'run'); }
       else {
         face(u.rig, false); u.cd -= dt;
-        if (u.cd <= 0) {
-          const z = live.reduce((b, z) => (!b || z.x < b.x ? z : b), null);
+        const z = live.filter(q => q.x - u.x < RANGE && q.x > u.x).reduce((b, q) => (!b || q.x < b.x ? q : b), null);
+        if (!z) anim(u.rig, 'guard');
+        else if (u.cd <= 0) {
           u.cd = .45 + Math.random() * .45; anim(u.rig, 'shoot'); DE.Audio.sfx('shot');
-          tracer(u.x + 64 * .44, u.y - 64 * .62, z.x, z.y - z.h * (.4 + Math.random() * .3), false); hit(z, .6);
+          const mx = u.x + 64 * .44, my = u.y - 64 * .55;
+          tracer(mx, my, z.x, z.y - z.h * (.4 + Math.random() * .3), false); hit(z, .6, false);
+          casing(mx - 10, my);
         }
       }
     } else {
+      u.hold = null;
       // patrol: each guard walks its own stretch of grass, pausing at the ends to look around
       const span = (PATROL[1] - PATROL[0]) / u.n, a = PATROL[0] + u.i * span, b = a + span;
       if (u.pause > 0) { u.pause -= dt; anim(u.rig, 'guard'); }
@@ -253,6 +362,10 @@ DE.UI.Battlefield = (function () {
       }
     }
     put(u.el, u.x - 64 * 70 / 225, u.y - 64 * 215 / 225);
+  }
+  function casing(x, y) {
+    const r = document.createElementNS(NS, 'rect'); r.setAttribute('x', x.toFixed(1)); r.setAttribute('y', y.toFixed(1)); r.setAttribute('width', 4); r.setAttribute('height', 2); r.setAttribute('class', 'bf-casing');
+    fx.appendChild(r); setTimeout(() => r.remove(), 600); if (Math.random() < .25) DE.Audio.sfx('casing', 120);
   }
 
   /* ---------- expedition party: walks out along the road ---------- */
@@ -273,14 +386,14 @@ DE.UI.Battlefield = (function () {
     raf = 0; if (!running || !root || !root.isConnected) { running = false; return; }
     const dt = Math.min(.05, Math.max(0, (t - (lastT || t)) / 1000)); lastT = t;
     if (!document.hidden) {
-      const live = st.zombies.filter(z => !z.dead && z.delay <= 0 && z.x < OW().W);
-      st.zombies.forEach(z => stepZombie(z, dt));
+      const live = st.zombies.filter(z => !z.dead && !z.through && !z.retreat && z.delay <= 0 && z.x < OW().W - 10);
+      stepZombies(dt);
       st.turrets.forEach(tu => stepTurret(tu, dt, live));
       if (st.launcher) stepLauncher(st.launcher, dt, live);
       st.missiles = st.missiles.filter(m => stepMissile(m, dt));
       for (const id in st.guards) stepGuard(st.guards[id], dt, live);
       for (const id in st.party) stepParty(st.party[id], dt);
-      if (st.fighting && performance.now() > st.fightEnd) endFight();
+      if (st.fighting) checkFightEnd();
       st.zombies = st.zombies.filter(z => z.el.isConnected);
     }
     raf = requestAnimationFrame(frame);
@@ -289,9 +402,10 @@ DE.UI.Battlefield = (function () {
   /** Called every UI tick from the bunker view. */
   function sync(s, flags) {
     if (!ensure()) return;
+    st.barricades = (s.overworld && s.overworld.barricades) || 0;
     syncTurrets(s); syncLauncher(s); syncGuards(s); syncParty(s);
     st.incoming = !!flags.incoming;
-    if (st.incoming && st.wave !== s.defense.wave && !st.fighting) { st.wave = s.defense.wave; spawnHorde(s); DE.Audio.sfx('alarm', 5000); }
+    if (st.incoming && st.wave !== s.defense.wave && !st.fighting) { st.wave = st.hordeWave = s.defense.wave; spawnHorde(s); DE.Audio.sfx('alarm', 5000); }
     if (!st.incoming && !st.fighting && st.zombies.length && st.wave !== -1) { st.zombies.forEach(z => z.el.remove()); st.zombies = []; st.wave = -1; }
     const animOn = s.settings.animations;
     if (animOn && !running) { running = true; lastT = 0; raf = requestAnimationFrame(frame); }
@@ -301,26 +415,39 @@ DE.UI.Battlefield = (function () {
   /** Without animations: units stand still in sensible places. */
   function staticPose() {
     for (const id in st.guards) { const u = st.guards[id]; const span = (PATROL[1] - PATROL[0]) / u.n; u.x = PATROL[0] + (u.i + .5) * span; anim(u.rig, 'guard'); face(u.rig, false); put(u.el, u.x - 64 * 70 / 225, u.y - 64 * 215 / 225); }
-    st.zombies.forEach(z => { if (!z.dead) { z.x = z.stopX; place(z); } });
+    const f = frontX(); const per = {};
+    st.zombies.forEach(z => { if (!z.dead) { const k = per[z.lane] = (per[z.lane] || 0) + 1; z.x = f + z.lane * 5 + (k - 1) * 26; z.el.style.visibility = ''; place(z); } });
   }
 
-  /** A wave just resolved: the field plays out the result. */
+  /** A wave just resolved: the field now plays out the real result. */
   function fight(result) {
     if (!ensure()) return;
-    if (!st.zombies.length) { const s = DE.UI.state(); if (s) spawnHorde(s); st.zombies.forEach(z => { z.delay = 0; z.x = z.stopX + 40 + Math.random() * 120; }); }
-    st.fighting = true; st.breach = !!result.breach; st.fightEnd = performance.now() + 4200;
-    // on a breach some of the horde gets through no matter what
-    if (st.breach) st.zombies.forEach(z => { if (Math.random() < .4) z.survivor = true; });
-    if (!running) { // animations off: resolve instantly
-      st.zombies.forEach(z => z.survivor ? (z.el.remove(), z.dead = true) : kill(z)); st.fighting = false;
+    const s = DE.UI.state();
+    // a horde only appears here if none was spawned for this wave (e.g. the page was opened mid-wave)
+    if (st.hordeWave !== result.wave && s) { spawnHorde(s); st.zombies.forEach((z, i) => { z.delay = i * .35; z.x = 1250 + Math.random() * 300; }); }
+    st.resolved = true; st.result = result; st.fighting = true; st.fightStart = performance.now();
+    // anyone still waiting off-screen comes in quickly now
+    st.zombies.forEach(z => { if (z.delay > 3) z.delay = 1 + Math.random() * 2; });
+    if (result.breach) { const live = st.zombies.filter(z => !z.dead); live.forEach((z, i) => { if (i % 5 < 2) z.survivor = true; }); }
+    if (!running) { st.zombies.forEach(z => z.survivor ? (z.el.remove(), z.dead = true) : kill(z)); endFight(); }
+  }
+  /** The fight ends when the field is clear — or, if nobody can shoot, the horde gives up and leaves. */
+  function checkFightEnd() {
+    const now = performance.now(), age = (now - st.fightStart) / 1000;
+    const live = st.zombies.filter(z => !z.dead && !z.through && !z.retreat);
+    if (!live.length) { endFight(); return; }
+    const shooters = Object.keys(st.guards).length + st.turrets.length + (st.launcher ? 1 : 0);
+    if (age > (shooters ? 25 : 9)) {
+      live.forEach(z => { if (shooters && !z.survivor) kill(z); else if (!(st.result && st.result.breach && z.survivor)) { z.retreat = true; } });
+      if (age > 30) endFight();
     }
   }
   function endFight() {
-    st.fighting = false;
-    st.zombies.forEach(z => { if (z.dead) return; if (st.breach && z.survivor) { z.through = true; z.walking = false; anim(z.rig, 'run'); } else kill(z); });
-    st.breach = false; st.wave = -1;
+    st.fighting = false; st.resolved = false;
+    st.zombies.forEach(z => { if (!z.dead && !z.through && !z.retreat) z.retreat = true; });
+    st.wave = -1;
   }
-  function status() { return { zombies: st.zombies.filter(z => !z.dead).length, turrets: st.turrets.map(t => ({ x: t.px, y: t.py, a: +t.a.toFixed(1), target: t.target ? t.target.x : null })), launcher: st.launcher ? { a: st.launcher.a, cd: st.launcher.cd } : null, missiles: st.missiles.length, guards: Object.values(st.guards).map(g => ({ x: +g.x.toFixed(1), y: g.y })), fighting: st.fighting, incoming: st.incoming }; }
+  function status() { return { zombies: st.zombies.filter(z => !z.dead).length, turrets: st.turrets.map(t => ({ x: t.px, y: t.py, a: +t.a.toFixed(1), target: t.target ? t.target.x : null })), launcher: st.launcher ? { a: st.launcher.a, cd: st.launcher.cd } : null, missiles: st.missiles.length, guards: Object.values(st.guards).map(g => ({ x: +g.x.toFixed(1), y: g.y })), fighting: st.fighting, incoming: st.incoming, front: st.front, kills: st.kills, budget: st.killBudget, zs: st.zombies.filter(z => !z.dead).map(z => ({ id: z.id, x: Math.round(z.x), lane: z.lane, mode: z.mode, d: +z.delay.toFixed(1), t: z.through, r: z.retreat })) }; }
 
   return { sync, fight, status };
 })();
