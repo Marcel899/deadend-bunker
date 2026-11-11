@@ -57,7 +57,7 @@ DE.UI.Overworld = (function () {
     </defs>`;
   }
   function symbols() {
-    return `<symbol id="ow-cloudsym" viewBox="0 0 300 130">
+    return `<symbol id="ow-cloudsym" viewBox="-12 -12 324 154" overflow="visible">
         <clipPath id="ow-cloudsym-clip"><g><circle cx="70" cy="78" r="40"/><circle cx="120" cy="56" r="54"/><circle cx="176" cy="60" r="48"/><circle cx="230" cy="76" r="40"/><circle cx="150" cy="92" r="30"/><ellipse cx="150.0" cy="106" rx="130.0" ry="22"/></g></clipPath>
         <g fill="url(#ow-cloud)" stroke="#1c1020" stroke-width="6" stroke-linejoin="round"><ellipse cx="150.0" cy="106" rx="130.0" ry="22"/><circle cx="70" cy="78" r="40"/><circle cx="120" cy="56" r="54"/><circle cx="176" cy="60" r="48"/><circle cx="230" cy="76" r="40"/><circle cx="150" cy="92" r="30"/></g>
         <g fill="url(#ow-cloud)" stroke="none"><ellipse cx="150.0" cy="106" rx="130.0" ry="22"/><circle cx="70" cy="78" r="40"/><circle cx="120" cy="56" r="54"/><circle cx="176" cy="60" r="48"/><circle cx="230" cy="76" r="40"/><circle cx="150" cy="92" r="30"/></g>
@@ -65,7 +65,7 @@ DE.UI.Overworld = (function () {
         <g fill="#ffe2c8" opacity=".75"><circle cx="56" cy="60" r="12"/><circle cx="101" cy="32" r="16"/><circle cx="159" cy="38" r="14"/><circle cx="216" cy="58" r="12"/></g>
         <g fill="#fff3e4" opacity=".6"><circle cx="52" cy="56" r="5"/><circle cx="96" cy="26" r="6"/><circle cx="154" cy="34" r="6"/><circle cx="212" cy="54" r="5"/></g>
       </symbol>
-      <symbol id="ow-cloudsym2" viewBox="0 0 300 136">
+      <symbol id="ow-cloudsym2" viewBox="-12 -12 324 160" overflow="visible">
         <clipPath id="ow-cloudsym2-clip"><g><circle cx="60" cy="90" r="36"/><circle cx="100" cy="60" r="48"/><circle cx="150" cy="44" r="56"/><circle cx="205" cy="62" r="46"/><circle cx="250" cy="86" r="34"/><ellipse cx="150.0" cy="112" rx="130.0" ry="22"/></g></clipPath>
         <g fill="url(#ow-cloud)" stroke="#1c1020" stroke-width="6" stroke-linejoin="round"><ellipse cx="150.0" cy="112" rx="130.0" ry="22"/><circle cx="60" cy="90" r="36"/><circle cx="100" cy="60" r="48"/><circle cx="150" cy="44" r="56"/><circle cx="205" cy="62" r="46"/><circle cx="250" cy="86" r="34"/></g>
         <g fill="url(#ow-cloud)" stroke="none"><ellipse cx="150.0" cy="112" rx="130.0" ry="22"/><circle cx="60" cy="90" r="36"/><circle cx="100" cy="60" r="48"/><circle cx="150" cy="44" r="56"/><circle cx="205" cy="62" r="46"/><circle cx="250" cy="86" r="34"/></g>
@@ -123,9 +123,8 @@ DE.UI.Overworld = (function () {
     return s;
   }
   function clouds() {
-    const C = [[40, 30, 320, 130, 0], [420, 90, 240, 160, -40], [700, 16, 380, 180, -90], [1020, 60, 280, 150, -20], [1260, 112, 330, 170, -70], [1470, 10, 300, 140, -110], [220, 190, 200, 210, -30], [1140, 196, 220, 220, -120]];
-    const far = `<g class="ow-cloud-far" opacity=".55">${[[120, 180, 440], [760, 160, 520], [1300, 175, 480]].map(([x, y, w]) => `<ellipse cx="${x + w / 2}" cy="${y + 40}" rx="${w / 2}" ry="26" fill="url(#ow-cloud2)" stroke="${INK}" stroke-width="4"/><ellipse cx="${x + w * .35}" cy="${y + 18}" rx="${w * .22}" ry="30" fill="url(#ow-cloud2)" stroke="${INK}" stroke-width="4"/><ellipse cx="${x + w * .68}" cy="${y + 22}" rx="${w * .2}" ry="26" fill="url(#ow-cloud2)" stroke="${INK}" stroke-width="4"/>`).join('')}</g>`;
-    return far + C.map(([x, y, w, sp, d], i) => `<g class="ow-cloud" style="--spd:${sp}s;--d:${d}s"><use href="#ow-cloudsym${i % 2 ? '2' : ''}" x="${x}" y="${y}" width="${w}" height="${w * 130 / 300}"/></g>`).join('');
+    const C = [[40, 30, 320, 130, 0], [420, 84, 240, 160, -40], [700, 16, 380, 180, -90], [1020, 60, 280, 150, -20], [1260, 104, 330, 170, -70], [1470, 10, 300, 140, -110], [220, 150, 200, 210, -30], [1140, 150, 220, 220, -120]];
+    return C.map(([x, y, w, sp, d], i) => `<g class="ow-cloud" style="--spd:${sp}s;--d:${d}s"><use href="#ow-cloudsym${i % 2 ? '2' : ''}" x="${x}" y="${y}" width="${w}" height="${w * 130 / 300}"/></g>`).join('');
   }
   function win(list, w = 10, h = 12) { return list.map(([x, y]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1"/>`).join(''); }
   function skyline() {
