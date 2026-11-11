@@ -222,12 +222,12 @@ DE.Chars = (function () {
    * dangle below the hand upright instead. */
   const GUNS = { rifle: 1, shotgun: 1, pistol: 1, sniper: 1, ak: 1 };
   const HELD = {
-    rifle: { s: 'rifle', size: 74, grip: [.4, .72], tip: [1, .3] }, shotgun: { s: 'shotgun', size: 72, grip: [.33, .7], tip: [1, .25] },
-    pistol: { s: 'pistol', size: 32, grip: [.22, .8], tip: [1, .22] }, sniper: { s: 'sniper', size: 82, grip: [.42, .7], tip: [1, .3] }, ak: { s: 'ak', size: 72, grip: [.42, .72], tip: [1, .3] },
-    wrench: { s: 'wrench', size: 48, grip: [.2, .82], tip: [.85, .15] }, pipewrench: { s: 'pipewrench', size: 44, grip: [.22, .85], tip: [.8, .12] },
-    crowbar: { s: 'crowbar', size: 58, grip: [.14, .86], tip: [.9, .1] }, pitchfork: { s: 'rake', size: 78, grip: [.72, .28], tip: [.1, .92] },
-    cleaver: { s: 'cleaver', size: 40, grip: [.86, .45], tip: [.1, .5] }, shovel: { s: 'shovel', size: 56, grip: [.8, .18], tip: [.2, .85] },
-    medkit: { s: 'medkit2', size: 32, hang: true }, flashlight: { s: 'lantern', size: 30, hang: true }, toolbox: { s: 'toolbox', size: 30, hang: true },
+    rifle: { s: 'rifle', size: 92, grip: [.4, .72], tip: [1, .3] }, shotgun: { s: 'shotgun', size: 90, grip: [.33, .7], tip: [1, .25] },
+    pistol: { s: 'pistol', size: 40, grip: [.22, .8], tip: [1, .22] }, sniper: { s: 'sniper', size: 102, grip: [.42, .7], tip: [1, .3] }, ak: { s: 'ak', size: 90, grip: [.42, .72], tip: [1, .3] },
+    wrench: { s: 'wrench', size: 60, grip: [.2, .82], tip: [.85, .15] }, pipewrench: { s: 'pipewrench', size: 55, grip: [.22, .85], tip: [.8, .12] },
+    crowbar: { s: 'crowbar', size: 72, grip: [.14, .86], tip: [.9, .1] }, pitchfork: { s: 'rake', size: 98, grip: [.72, .28], tip: [.1, .92] },
+    cleaver: { s: 'cleaver', size: 50, grip: [.86, .45], tip: [.1, .5] }, shovel: { s: 'shovel', size: 70, grip: [.8, .18], tip: [.2, .85] },
+    medkit: { s: 'medkit2', size: 40, hang: true }, flashlight: { s: 'lantern', size: 38, hang: true }, toolbox: { s: 'toolbox', size: 38, hang: true },
   };
   function held(t, len) {
     const h = HELD[t], px = h && DE.Data && DE.Data.SPRITES && DE.Data.SPRITES[h.s]; if (!px) return null;
