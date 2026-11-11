@@ -503,3 +503,40 @@ img.ico-room, img.ico-struct { image-rendering: auto; border-radius: 22%; }
   background: linear-gradient(180deg, #ffc35a 0%, #f5a02a 48%, #e07a12 52%, #e07a12 100%); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .45), 0 2px 0 #a34f05; }
 .res-plus:hover { filter: brightness(1.1); } .res-plus:active { transform: translateY(2px); box-shadow: none; }
 @media (max-width: 1400px) { .res-max { display: none !important; } .res { padding-left: 26px; } }
+
+/* ============ SIDE PANEL: overview (reference style) ============ */
+#sidepanel { background: linear-gradient(180deg, #2e2a38, #24212c); }
+.ov-head { display: flex; align-items: center; gap: 12px; padding: 4px 4px 12px; }
+.ov-head .ov-home { width: 54px; height: 54px; filter: drop-shadow(0 3px 0 rgba(0, 0, 0, .5)); }
+.ov-head h3 { margin: 0; font-family: var(--display); font-size: 24px; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, .55); }
+.ov-head p { margin: 2px 0 0; font-size: 13px; font-weight: 700; color: #c9c3d6; }
+.ov-card { margin-bottom: 12px; padding: 10px 12px; border-radius: 14px; border: 3px solid #0d0b12; background: linear-gradient(180deg, #34303f, #2a2733); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .06), 0 3px 0 rgba(0, 0, 0, .35); }
+.ov-card h4 { display: flex; align-items: center; gap: 8px; margin: 0 0 8px; font-family: var(--display); font-size: 19px; color: #ffcf3a; text-shadow: 0 2px 0 rgba(0, 0, 0, .55); }
+.ico-h4 { width: 28px; height: 28px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .5)); }
+.ov-goal { display: flex; align-items: center; gap: 10px; padding: 7px 2px; border-top: 2px solid rgba(0, 0, 0, .3); }
+.ov-goal:first-of-type { border-top: 0; }
+.ov-badge { flex: 0 0 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: radial-gradient(circle at 40% 35%, #6a7a5a, #2f3a26); border: 2px solid #0d0b12; }
+.ov-badge img { width: 22px; height: 22px; }
+.ov-goal > div { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.ov-goal b { font-family: var(--display); font-weight: 400; font-size: 16px; color: #fff; text-shadow: 0 1px 0 rgba(0, 0, 0, .5); }
+.ov-goal small { font-size: 12px; font-weight: 700; color: #b9b3c6; }
+.ov-reward { display: flex; gap: 4px; flex-wrap: wrap; justify-content: flex-end; max-width: 110px; }
+.pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 6px; border-radius: 8px; border: 2px solid #0d0b12; background: #15121b; font-family: var(--display); font-size: 13px; color: #fff; }
+.pill img { width: 16px; height: 16px; }
+.ov-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 12px; }
+.ov-tile { display: flex; align-items: center; gap: 7px; padding: 8px 8px; min-width: 0; border-radius: 12px; border: 3px solid #0d0b12; background: linear-gradient(180deg, #34303f, #2a2733); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .06), 0 3px 0 rgba(0, 0, 0, .35); }
+.ov-tile .ico-ov { width: 34px; height: 34px; flex: 0 0 34px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .5)); }
+.ov-tile span { display: flex; flex-direction: column; min-width: 0; line-height: 1.05; }
+.ov-tile small { font-size: 10px; font-weight: 900; letter-spacing: .6px; text-transform: uppercase; color: #c9c3d6; }
+.ov-tile b { font-family: var(--display); font-weight: 400; font-size: 19px; color: #fff; text-shadow: 0 2px 0 rgba(0, 0, 0, .5); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-tile b i { font-style: normal; font-size: 12px; opacity: .85; }
+.ov-tile b.pos { color: #8ee07b; } .ov-tile b.neg { color: #ff7a6a; } .ov-tile b.warn { color: #ffcf3a; } .ov-tile b.cyan { color: #6fd8ff; }
+.ov-tips { margin: 0 0 8px; padding-left: 18px; font-size: 13px; font-weight: 700; color: #ddd8e8; } .ov-tips li { margin: 3px 0; }
+.ov-log { list-style: none; margin: 0; padding: 0; }
+.ov-log li { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 2px solid rgba(0, 0, 0, .25); font-size: 13px; font-weight: 700; color: #ece8f4; }
+.ov-log li:first-child { border-top: 0; }
+.ov-log .ico-log { width: 22px; height: 22px; flex: 0 0 22px; }
+.ov-log span { flex: 1; min-width: 0; } .ov-log time { flex: 0 0 auto; font-size: 12px; color: #a9a3b6; }
+.ov-grid { gap: 6px; } .ov-tile { gap: 5px; padding: 7px 6px; }
+.ov-tile .ico-ov { width: 28px; height: 28px; flex-basis: 28px; }
+.ov-tile small { font-size: 9px; letter-spacing: .3px; } .ov-tile b { font-size: 17px; text-overflow: clip; } .ov-tile b i { font-size: 11px; }

@@ -71,7 +71,13 @@ NAMES = {
                54: 'extinguisher', 55: 'jerrycan', 56: 'jerrycan2', 57: 'toolbox', 58: 'medkit2', 59: 'toolbox2', 60: 'chainsaw2', 61: 'drill', 62: 'circularsaw', 63: 'rope', 64: 'hook', 65: 'pulley', 66: 'lantern'},
 }
 # UI icon sheets: written to assets/icons/<name>.png (the HUD / navigation icon set)
-ICONS = {'icons1': {0: 'snow', 1: 'water', 2: 'truck', 3: 'move', 4: 'refresh'}, 'power': {0: 'power'}}
+ICONS = {'icons1': {1: 'water', 2: 'truck'}, 'power': {0: 'power'},
+  'icons2': {0: 'coin', 2: 'ingot', 3: 'jerrycan', 4: 'brick', 6: 'flask', 7: 'people', 8: 'zombie', 9: 'biohazard', 10: 'radiation', 12: 'clock', 13: 'shield', 14: 'heart',
+             15: 'up', 16: 'alert', 17: 'gear', 18: 'star', 19: 'trophy', 20: 'medal', 21: 'scroll', 25: 'bunker', 26: 'factory', 27: 'hospital', 28: 'labbuilding', 29: 'construction',
+             30: 'garage', 31: 'watchtower', 32: 'dish', 35: 'van', 37: 'wrench', 38: 'hammer', 42: 'pickaxe', 43: 'shovel', 47: 'medkit', 49: 'helmet', 51: 'check', 53: 'coins',
+             54: 'home', 57: 'cross', 63: 'group', 66: 'info', 70: 'chest', 73: 'search', 75: 'warning', 82: 'chart', 88: 'move', 91: 'mappin', 93: 'lock', 99: 'mail', 104: 'turret',
+             107: 'trash', 109: 'calendar', 114: 'plus', 122: 'crown', 127: 'refresh', 129: 'diamond', 133: 'barrier', 137: 'gift', 143: 'spikes', 146: 'signal', 147: 'fire',
+             150: 'play', 152: 'snow', 159: 'bolt', 171: 'skull'}}
 
 PREVIEW = '--preview' in sys.argv
 MAX = 256   # longest side in px: crisp at 2x for the sizes the game draws them

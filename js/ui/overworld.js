@@ -301,9 +301,10 @@ DE.UI.Overworld = (function () {
   function flag() {
     const x = r => BK.r - 20 + r;
     return `<g class="ow-flagwrap"><path d="M${x(0)} 340 V118" stroke="${INK}" stroke-width="8" stroke-linecap="round"/><path d="M${x(0)} 340 V118" stroke="#8a8c94" stroke-width="3" stroke-linecap="round"/><circle cx="${x(0)}" cy="114" r="8" fill="#ffd34a" stroke="${INK}" stroke-width="4"/>
-      <g class="ow-flag"><path d="M${x(4)} 126 L${x(96)} 142 L${x(90)} 198 L${x(4)} 206 Z" fill="#1f1b24" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
-        <g fill="#f4f2ec" stroke="${INK}" stroke-width="2"><path d="M${x(50)} 146 a12 11 0 1 1 0 22 a12 11 0 1 1 0 -22 Z"/><rect x="${x(43)}" y="164" width="14" height="6" rx="2"/><path d="M${x(34)} 178 L${x(66)} 190 M${x(66)} 178 L${x(34)} 190" stroke="#f4f2ec" stroke-width="5" stroke-linecap="round"/></g>
-        <g fill="${INK}"><circle cx="${x(45)}" cy="156" r="3"/><circle cx="${x(55)}" cy="156" r="3"/></g></g></g>`;
+      <g class="ow-flag"><path d="M${x(4)} 126 L${x(96)} 142 L${x(90)} 198 L${x(4)} 206 Z" fill="#c7782a" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M${x(4)} 186 L${x(91)} 182 L${x(90)} 198 L${x(4)} 206 Z" fill="#8a4a18" opacity=".55"/><path d="M${x(10)} 134 L${x(88)} 148" stroke="#f0b060" stroke-width="3" opacity=".6"/>
+        <circle cx="${x(48)}" cy="${166}" r="19" fill="#ffd34a" stroke="${INK}" stroke-width="3"/><circle cx="${x(48)}" cy="166" r="4.5" fill="${INK}"/>
+        <g fill="${INK}">${[0, 120, 240].map(a => { const r1 = 7, r2 = 16, a1 = (a - 30) * Math.PI / 180, a2 = (a + 30) * Math.PI / 180; return `<path d="M${(x(48) + Math.cos(a1) * r1).toFixed(1)} ${(166 + Math.sin(a1) * r1).toFixed(1)} L${(x(48) + Math.cos(a1) * r2).toFixed(1)} ${(166 + Math.sin(a1) * r2).toFixed(1)} A${r2} ${r2} 0 0 1 ${(x(48) + Math.cos(a2) * r2).toFixed(1)} ${(166 + Math.sin(a2) * r2).toFixed(1)} L${(x(48) + Math.cos(a2) * r1).toFixed(1)} ${(166 + Math.sin(a2) * r1).toFixed(1)} Z"/>`; }).join('')}</g></g></g>`;
   }
   function compoundProps() {
     const crates = [[174, 442, '#3f5a44', 60], [214, 432, '#8a6a3a', 70], [712, 430, '#3f5a44', 80], [770, 440, '#8a6a3a', 70], [850, 428, '#3f5a44', 90]];

@@ -43,25 +43,24 @@ DE.UI.Side = (function () {
  if (s.defense.wall.hp < DE.Defense.wallMaxHp(s) * 0.5) tips.push(' The wall is damaged — repair it in Defense.');
  if (!tips.length) tips.push(' Things are stable. Upgrade production or dig deeper.');
  const goals = DE.Events.activeGoals(s); const nEv = (s.events || []).length; const noise = DE.Events.noise(s);
- return `<div class="panel-head"><h3>${DE.Icons.img('home', 'ico-title')} Bunker Overview</h3><p class="muted">Click a room to manage it, an empty cell to build, or drag rooms from the build list.</p></div>
- ${nEv ? `<button class="btn primary decide-btn" data-action="nextEvent">${DE.Icons.img('scroll', 'ico-inline')} ${nEv} decision${nEv > 1 ? 's' : ''} waiting</button>` : ''}
- <div class="card goals"><h4>${DE.Icons.img('medal', 'ico-inline')} Objectives</h4>${goals.map(g => `<div class="goal"><span class="tag tier-${g.tier}">T${g.tier}</span><div><b>${esc(g.name)}</b><small class="muted">${esc(g.desc)}</small></div><small class="reward">${Object.keys(g.reward).map(k => DE.Data.RESOURCES[k] ? DE.Icons.res(k, 'ico-inline') + g.reward[k] : '+' + g.reward[k] + ' ' + k).join(' ')}</small></div>`).join('') || '<small class="muted">Every objective done. The bunker is yours.</small>'}</div>
- <div class="card stats-grid">
- <div><small>Floors</small><b>${s.floors.length}</b></div>
- <div><small>Rooms</small><b>${DE.Bunker.roomCount(s)}</b></div>
- <div><small>Survivors</small><b>${pop}/${cap}</b></div>
- <div><small>Morale</small><b>${Math.round(s.morale)}</b></div>
- <div><small>Power</small><b class="${rates.powerFactor < 1 ? 'neg' : ''}">${U().fmt(rates.powerGen, 1)}/${U().fmt(rates.powerUse, 1)}</b></div>
- <div><small>Wave ${s.defense.wave}</small><b class="${power.total < hp ? 'neg' : 'pos'}">${U().fmt(power.total)} vs ${U().fmt(hp)}</b></div>
- <div><small>Noise</small><b class="noise ${DE.Events.noiseLevel(noise)}">${DE.Events.noiseLevel(noise)}</b></div>
- <div><small>Vehicle</small><b>${esc(DE.Events.bus(s).name)}</b></div>
- <div><small>Artifacts</small><b>${Object.keys(s.artifacts || {}).length}</b></div>
+ const I = (k) => DE.Icons.img(k, 'ico-ov');
+ const ago = (t) => { const d = Math.max(0, (Date.now() - t) / 1000); return d < 60 ? 'now' : d < 3600 ? Math.floor(d / 60) + 'm ago' : d < 86400 ? Math.floor(d / 3600) + 'h ago' : Math.floor(d / 86400) + 'd ago'; };
+ const logIcon = (m) => /wave|horde|breach|zombie/i.test(m) ? 'zombie' : /research/i.test(m) ? 'research' : /join|recruit|survivor|friends/i.test(m) ? 'pop' : /power|brownout|fuel/i.test(m) ? 'power' : /dug|excavat|floor/i.test(m) ? 'dig' : /upgrad|built|install|complete/i.test(m) ? 'up' : /injur|hurt|died|lost/i.test(m) ? 'warning' : 'star';
+ const tile = (icon, label, value, cls) => `<div class="ov-tile">${I(icon)}<span><small>${label}</small><b class="${cls || ''}">${value}</b></span></div>`;
+ const noiseLvl = DE.Events.noiseLevel(noise);
+ return `<div class="ov-head">${DE.Icons.img('home', 'ov-home')}<div><h3>Bunker Overview</h3><p>Click a room to manage it, or assign your crew.</p></div></div>
+ ${nEv ? `<button class="btn primary decide-btn" data-action="nextEvent">${DE.Icons.img('events', 'ico-btn')} ${nEv} decision${nEv > 1 ? 's' : ''} waiting</button>` : ''}
+ <div class="ov-card"><h4>${DE.Icons.img('alert', 'ico-h4')} Objectives</h4>${goals.map(g => `<div class="ov-goal"><span class="ov-badge tier-${g.tier}">${DE.Icons.img('star', '')}</span><div><b>${esc(g.name)}</b><small>${esc(g.desc)}</small></div><span class="ov-reward">${Object.keys(g.reward).slice(0, 2).map(k => DE.Data.RESOURCES[k] ? `<span class="pill">${U().fmt(g.reward[k])}${DE.Icons.res(k, '')}</span>` : `<span class="pill">+${g.reward[k]}</span>`).join('')}</span></div>`).join('') || `<div class="ov-goal done"><span class="ov-badge">${DE.Icons.img('check', '')}</span><div><b>All objectives done</b><small>The bunker is yours.</small></div></div>`}</div>
+ <div class="ov-grid">
+ ${tile('floors', 'Floors', s.floors.length)}${tile('rooms', 'Rooms', DE.Bunker.roomCount(s))}${tile('pop', 'Survivors', pop + '/' + cap, pop > cap ? 'neg' : '')}
+ ${tile('morale', 'Morale', Math.round(s.morale) + '%', s.morale >= 50 ? 'pos' : s.morale >= 30 ? 'warn' : 'neg')}${tile('power', 'Power', `${U().fmt(rates.powerGen, 1)}<i>/${U().fmt(rates.powerUse, 1)}</i>`, rates.powerFactor < 1 ? 'neg' : 'cyan')}${tile('wave', 'Wave ' + s.defense.wave, `${U().fmt(power.total)}<i>/${U().fmt(hp)}</i>`, power.total < hp ? 'neg' : 'pos')}
+ ${tile('noise', 'Noise', noiseLvl.charAt(0).toUpperCase() + noiseLvl.slice(1), noiseLvl === 'quiet' ? 'pos' : noiseLvl === 'loud' || noiseLvl === 'deafening' ? 'neg' : 'warn')}${tile('vehicle', 'Vehicle', esc(DE.Events.bus(s).name.split(' ').slice(-1)[0]))}${tile('artifacts', 'Artifacts', Object.keys(s.artifacts || {}).length)}
  </div>
- <div class="card"><h4>Status</h4><ul class="tips">${tips.map(t => `<li>${t}</li>`).join('')}</ul><button class="btn small" data-action="openDrawer" data-drawer="economy"> Production dashboard</button></div>
- ${cur ? `<div class="card"><h4>Researching ${esc(DE.Data.RESEARCH[cur.id].name)}</h4>${bar(100 * (1 - (cur.endsAt - now) / (cur.duration * 1000)), 'purple')}<small class="muted">${U().fmtTime((cur.endsAt - now) / 1000)} left</small></div>` : ''}
- ${s.excavation ? `<div class="card"><h4>Excavating B${s.excavation.depth}</h4>${bar(100 * (1 - (s.excavation.endsAt - now) / (s.excavation.duration * 1000)), 'brown')}<small class="muted">${U().fmtTime((s.excavation.endsAt - now) / 1000)} left</small></div>` : ''}
- ${s.expeditions.active.length ? `<div class="card"><h4>Expeditions out: ${s.expeditions.active.length}</h4>${s.expeditions.active.map(e => `<small>${DE.Icons.img('location','ico-inline')} ${esc(DE.Expeditions.location(e.location).name)} · ${U().fmtTime((e.endsAt - now) / 1000)}</small>`).join('<br>')}</div>` : ''}
- <div class="card"><h4>Recent events</h4><ul class="log">${s.log.slice(-6).reverse().map(l => `<li>${esc(l.msg)}</li>`).join('')}</ul></div>`;
+ <div class="ov-card"><h4>${DE.Icons.img('info', 'ico-h4')} Status</h4><ul class="ov-tips">${tips.map(t => `<li>${t.trim()}</li>`).join('')}</ul><button class="btn small" data-action="openDrawer" data-drawer="economy">${DE.Icons.img('chart', 'ico-btn')} Production dashboard</button></div>
+ ${cur ? `<div class="ov-card"><h4>${DE.Icons.img('research', 'ico-h4')} Researching ${esc(DE.Data.RESEARCH[cur.id].name)}</h4>${bar(100 * (1 - (cur.endsAt - now) / (cur.duration * 1000)), 'purple')}<small class="muted">${U().fmtTime((cur.endsAt - now) / 1000)} left</small></div>` : ''}
+ ${s.excavation ? `<div class="ov-card"><h4>${DE.Icons.img('dig', 'ico-h4')} Excavating B${s.excavation.depth}</h4>${bar(100 * (1 - (s.excavation.endsAt - now) / (s.excavation.duration * 1000)), 'brown')}<small class="muted">${U().fmtTime((s.excavation.endsAt - now) / 1000)} left</small></div>` : ''}
+ ${s.expeditions.active.length ? `<div class="ov-card"><h4>${DE.Icons.img('truck', 'ico-h4')} Expeditions out: ${s.expeditions.active.length}</h4>${s.expeditions.active.map(e => `<small>${DE.Icons.img('location', 'ico-inline')} ${esc(DE.Expeditions.location(e.location).name)} · ${U().fmtTime((e.endsAt - now) / 1000)}</small>`).join('<br>')}</div>` : ''}
+ <div class="ov-card"><h4>Recent events</h4><ul class="ov-log">${s.log.slice(-6).reverse().map(l => `<li>${DE.Icons.img(logIcon(l.msg), 'ico-log')}<span>${esc(l.msg)}</span><time>${ago(l.t)}</time></li>`).join('')}</ul></div>`;
  }
 
  /* ---------- effect labels ---------- */

@@ -8,13 +8,13 @@ DE.Icons = (function () {
   const MAP = {
     // resources
     'res.food': I + 'can.png', 'res.water': I + 'water.png', 'res.electricity': I + 'power.png', 'res.scrap': I + 'ingot.png',
-    'res.concrete': I + 'brick.png', 'res.fuel': I + 'barrel.png', 'res.research': I + 'flask.png', 'res.legacy': I + 'badge.png',
+    'res.concrete': I + 'brick.png', 'res.fuel': I + 'jerrycan.png', 'res.research': I + 'flask.png', 'res.legacy': I + 'crown.png',
     // navigation / HUD
-    'nav.bunker': I + 'home.png', 'nav.survivors': I + 'people.png', 'nav.research': I + 'flask.png', 'nav.excavate': I + 'map.png',
-    'nav.defense': I + 'shield.png', 'nav.expeditions': I + 'truck.png', 'nav.legacy': I + 'badge.png', 'nav.settings': I + 'gear.png',
-    'nav.economy': I + 'chart.png', 'brand': I + 'radiation.png', 'wave': I + 'zombie.png', 'morale': I + 'medal.png', 'pop': I + 'people.png',
-    'build': I + 'factory.png', 'housing': I + 'home.png', 'warning': I + 'radiation.png', 'xp': I + 'medal.png', 'loot': I + 'backpack.png',
-    'clock': I + 'gear.png', 'dig': I + 'map.png', 'facility': I + 'factory.png', 'trait': I + 'medal.png', 'rescue': I + 'people.png',
+    'nav.bunker': I + 'home.png', 'nav.survivors': I + 'group.png', 'nav.research': I + 'flask.png', 'nav.excavate': I + 'pickaxe.png',
+    'nav.defense': I + 'shield.png', 'nav.expeditions': I + 'truck.png', 'nav.legacy': I + 'trophy.png', 'nav.settings': I + 'gear.png',
+    'nav.economy': I + 'chart.png', 'brand': I + 'radiation.png', 'wave': I + 'zombie.png', 'morale': I + 'heart.png', 'pop': I + 'people.png',
+    'build': I + 'hammer.png', 'housing': I + 'home.png', 'warning': I + 'warning.png', 'xp': I + 'star.png', 'loot': I + 'chest.png',
+    'clock': I + 'clock.png', 'dig': I + 'shovel.png', 'facility': I + 'factory.png', 'trait': I + 'star.png', 'rescue': I + 'people.png',
     // rooms
     'room.quarters': R + 'quarters-thumb.png', 'room.farm': R + 'farm-thumb.png', 'room.water': I + 'water.png', 'room.generator': R + 'generator-thumb.png',
     'room.workshop': R + 'workshop-thumb.png', 'room.refinery': I + 'barrel.png', 'room.lab': R + 'lab-thumb.png', 'room.storage': R + 'storage-thumb.png',
@@ -22,12 +22,13 @@ DE.Icons = (function () {
     'room.training': I + 'medal.png', 'room.radio': I + 'factory.png', 'room.garage': I + 'scroll.png',
     'room.geothermal': I + 'power.png', 'room.aquifer': I + 'water.png', 'room.orevein': I + 'ingot.png', 'room.server': R + 'lab-thumb.png',
     'room.cache': I + 'badge.png', 'room.dormitory': R + 'quarters-thumb.png',
+    'home': I + 'home.png', 'info': I + 'info.png', 'alert': I + 'alert.png', 'up': I + 'up.png', 'vehicle': I + 'van.png', 'check': I + 'check.png', 'floors': I + 'bunker.png', 'rooms': I + 'home.png', 'noise': I + 'signal.png', 'artifacts': I + 'diamond.png', 'power': I + 'bolt.png', 'research': I + 'flask.png', 'objectives': I + 'alert.png', 'events': I + 'scroll.png', 'repair2': I + 'wrench.png', 'skull': I + 'skull.png', 'fire': I + 'fire.png', 'star': I + 'star.png', 'chart': I + 'chart.png',
     'move': I + 'move.png', 'refresh': I + 'refresh.png', 'repair': I + 'refresh.png', 'snow': I + 'snow.png', 'truck': I + 'truck.png', 'vehicle': I + 'truck.png',
     // research branches
     'branch.economy': I + 'chart.png', 'branch.engineering': I + 'gear.png', 'branch.survival': I + 'shield.png',
     // people & enemies
     'prof': I + 'people.png', 'zombie': I + 'zombie.png', 'zombie.art': 'assets/zombies/walker-art.png',
-    'location': I + 'map.png', 'wall': I + 'brick.png', 'turret': I + 'power.png', 'trap': I + 'gear.png', 'guard': I + 'shield.png',
+    'location': I + 'mappin.png', 'wall': I + 'brick.png', 'turret': I + 'turret.png', 'trap': I + 'spikes.png', 'guard': I + 'shield.png',
     'logo': 'assets/ui/logo.png', 'entrance': 'assets/ui/bunker-entrance.png',
   };
   /* A profession's portrait is the people icon tinted per job (CSS filter). */
