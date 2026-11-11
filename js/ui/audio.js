@@ -138,10 +138,29 @@ DE.Audio = (function () {
     applyVolumes();
   }
   function setNight(v) { night = !!v; }
+  /* weather ambience: a looping filtered-noise bed — rain hiss or winter wind — faded by intensity */
+  let amb = null;
+  function ambience(kind, level) {
+    if (!ctx || !prefs.sfxOn) { if (amb) amb.g.gain.setTargetAtTime(0, ctx ? ctx.currentTime : 0, .5); return; }
+    if (!amb) {
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+      const f = ctx.createBiquadFilter(); const g = ctx.createGain(); g.gain.value = 0;
+      const lfo = ctx.createOscillator(), lg = ctx.createGain(); lfo.frequency.value = .13; lg.gain.value = 0; lfo.connect(lg); lg.connect(g.gain);
+      src.connect(f); f.connect(g); g.connect(sfxBus); src.start(); lfo.start(); amb = { f, g, lg, kind: '' };
+    }
+    const t = ctx.currentTime, on = kind === 'rain' || kind === 'snow' || kind === 'leaves';
+    if (on && amb.kind !== kind) {
+      amb.kind = kind;
+      if (kind === 'rain') { amb.f.type = 'highpass'; amb.f.frequency.setTargetAtTime(1400, t, .3); amb.f.Q.value = .4; }
+      else { amb.f.type = 'lowpass'; amb.f.frequency.setTargetAtTime(kind === 'snow' ? 380 : 520, t, .3); amb.f.Q.value = .7; }
+    }
+    const vol = !on ? 0 : (kind === 'rain' ? .05 : .035) * level;
+    amb.g.gain.setTargetAtTime(vol, t, 1.5); amb.lg.gain.setTargetAtTime(kind === 'rain' ? 0 : vol * .6, t, 1.5);
+  }
   // range sliders in the settings drawer: <input data-audio="music|sfx">
   document.addEventListener('input', e => { const k = e.target && e.target.dataset && e.target.dataset.audio; if (k) set(k, +e.target.value); });
 
   /** Current output level 0..1 (peak of the last few ms) — for tests and a future VU meter. */
   function level() { if (!meter) return 0; const a = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(a); let m = 0; for (const v of a) m = Math.max(m, Math.abs(v)); return m; }
-  return { level, sfx, set, setNight, prefs: () => prefs, ensure, stopMusic };
+  return { ambience, level, sfx, set, setNight, prefs: () => prefs, ensure, stopMusic };
 })();

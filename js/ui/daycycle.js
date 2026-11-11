@@ -16,8 +16,6 @@ var DE = globalThis.DE = globalThis.DE || {};
 DE.UI = DE.UI || {};
 
 DE.UI.DayCycle = (function () {
-  const DAY_SEC = 480, DAYS_PER_SEASON = 3;
-  const SEASONS = ['spring', 'summer', 'autumn', 'winter'];
   const SEASON_NAME = { spring: 'Spring', summer: 'Summer', autumn: 'Autumn', winter: 'Winter' };
   const NS = 'http://www.w3.org/2000/svg';
   let built = null, lastKey = '';
@@ -41,14 +39,8 @@ DE.UI.DayCycle = (function () {
     return list[0][1];
   }
 
-  /** Clock for a state: hour 0..24, day number, season id. */
-  function clock(state) {
-    const t = (state && state.playtime || 0) + DAY_SEC * 0.3;   // a new game starts mid-morning
-    const dayF = t / DAY_SEC, day = Math.floor(dayF) + 1, hour = (dayF % 1) * 24;
-    const season = SEASONS[Math.floor((day - 1) / DAYS_PER_SEASON) % 4];
-    const sunUp = hour >= 6 && hour <= 18.5;
-    return { hour, day, season, sunUp, night: hour < 5.5 || hour > 19.5 };
-  }
+  /** Clock for a state (calendar, season, weather): see js/core/season.js. */
+  function clock(state) { return DE.Season.clock(state); }
   /** 0 at full daylight … 1 in deep night. */
   function darkness(h) { if (h >= 7.5 && h <= 16.5) return 0; if (h < 4.5 || h > 19.8) return 1; return h < 12 ? 1 - smooth((h - 4.5) / 3) : smooth((h - 16.5) / 3.3); }
 
@@ -96,16 +88,19 @@ DE.UI.DayCycle = (function () {
     const scene = document.getElementById('scene'); if (!scene || !state) return;
     if (!built || built.scene !== scene || !built.amb.isConnected) { built = null; build(scene); }
     const c = clock(state), h = c.hour, dark = darkness(h);
-    const key = Math.round(h * 20) + c.season; if (key === lastKey) return; lastKey = key;
+    const wx = c.intensity, key = Math.round(h * 20) + c.season + c.weather + Math.round(wx * 20) + Math.round(c.cover.snow * 20) + Math.round(c.cover.leaves * 20) + Math.round(c.cover.flowers * 20);
+    if (key === lastKey) return; lastKey = key;
+    const overcast = c.weather === 'rain' ? wx : c.weather === 'snow' ? wx * .7 : 0;
     // sky
     const [top, mid, hor] = keyed(SKY, h);
-    const cols = [top, mix(top, mid, .5), mid, mix(mid, hor, .45), hor, hor];
+    const grey = (col, k) => mix(col, dark > .6 ? '#242838' : '#7a8092', k);
+    const cols = [top, mix(top, mid, .5), mid, mix(mid, hor, .45), hor, hor].map(col => grey(col, .45 * overcast));
     built.stops.forEach((s, i) => s.setAttribute('stop-color', cols[Math.min(i, cols.length - 1)]));
     // sun: an arc from east (right) at 6:00 to west (left) at 18:30; the art's sun sits at (1120, 265)
     const W = DE.UI.Overworld.W;
     const sp = Math.max(-.08, Math.min(1.08, (h - 6) / 12.5)), sx = W * (.92 - .84 * sp), sy = 430 - Math.sin(Math.max(0, Math.min(1, sp)) * Math.PI) * 330;
     built.sun.setAttribute('transform', `translate(${(sx - 1120).toFixed(1)} ${(sy - 265).toFixed(1)})`);
-    built.sun.style.opacity = c.sunUp ? 1 : 0;
+    built.sun.style.opacity = c.sunUp ? (1 - .75 * overcast).toFixed(2) : 0;
     const low = 1 - Math.sin(Math.max(0, Math.min(1, sp)) * Math.PI);           // 1 near the horizon
     if (built.rays) built.rays.style.opacity = (c.sunUp ? Math.max(0, low - .45) * 1.1 : 0).toFixed(2);   // god-rays only when the sun is low
     if (built.haze) built.haze.style.opacity = (.15 + .35 * low * (1 - dark)).toFixed(2);
@@ -115,13 +110,14 @@ DE.UI.DayCycle = (function () {
     built.moonGlow.setAttribute('cx', mx.toFixed(1)); built.moonGlow.setAttribute('cy', my.toFixed(1)); built.moonGlow.style.opacity = dark.toFixed(2);
     // clouds are lit by the sky: white at noon, peach/pink at the ends of the day, blue-grey at night
     const ct = dark > .6 ? ['#5a6488', '#3e4870', '#2a3050'] : [mix('#ffffff', '#ffe2c8', low), mix('#e8eef6', '#f4ab9c', low), mix('#b8c4d8', '#c8628a', low)];
-    built.cloudStops.forEach((st, i) => st.setAttribute('stop-color', ct[i] || ct[2]));
+    built.cloudStops.forEach((st, i) => st.setAttribute('stop-color', grey(ct[i] || ct[2], .5 * overcast)));
     built.stars.style.opacity = Math.max(0, dark * 1.1 - .1).toFixed(2);
     // shadows lean away from the sun and lengthen when it is low; at night they fade
     const lean = (sx - W / 2) / (W / 2);                                              // +1 sun far right
     built.shadows.forEach(s => { s.style.transform = `skewX(${(-lean * (25 + 30 * low)).toFixed(1)}deg) scaleY(${(1 + low).toFixed(2)})`; s.style.opacity = ((1 - dark) * .5).toFixed(2); });
     // ambient tint and artificial lights
-    let amb = keyed(AMB, h); if (c.season === 'winter') amb = mix(amb, '#dfe8ff', .25 * (1 - dark));
+    let amb = keyed(AMB, h); if (c.cover.snow > 0) amb = mix(amb, '#dfe8ff', .25 * c.cover.snow * (1 - dark));
+    if (overcast) amb = mix(amb, c.weather === 'snow' ? '#c8cede' : '#9aa2b6', .38 * overcast * (1 - dark * .5));
     built.amb.style.backgroundColor = amb;
     built.lights.style.opacity = Math.min(1, dark * 1.15).toFixed(2);
     // units are above the light layers: dim them to match (a little cooler at night, warmer at golden hour)
@@ -132,10 +128,17 @@ DE.UI.DayCycle = (function () {
     built.fx.style.bottom = ((OW.H - OW.GROUND - 2) * k).toFixed(0) + 'px';
     if (DE.Audio) DE.Audio.setNight(dark > .6);
     if (scene.dataset.season !== c.season) scene.dataset.season = c.season;
+    // weather particles + ground cover fade with their intensity (CSS reads the variables)
+    if (scene.dataset.weather !== c.weather) scene.dataset.weather = c.weather;
+    scene.classList.toggle('wx-heavy', c.heavy);
+    scene.style.setProperty('--wx', wx.toFixed(2)); scene.style.setProperty('--snow', c.cover.snow.toFixed(2)); scene.style.setProperty('--leaves', c.cover.leaves.toFixed(2)); scene.style.setProperty('--flowers', c.cover.flowers.toFixed(2));
+    if (DE.Audio && DE.Audio.ambience) DE.Audio.ambience(c.weather, wx);
     scene.dataset.tod = c.night ? 'night' : (h < 8 || h > 17) ? 'twilight' : 'day';
     const hh = Math.floor(h), mm = Math.floor((h % 1) * 60 / 15) * 15;
-    built.chip.innerHTML = `${c.season === 'winter' ? '<img class="dc-snow" src="assets/icons/snow.png" alt="">' : ''}<b>${c.night ? '☾' : '☀'}</b> ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Day ${c.day} · ${SEASON_NAME[c.season]}`;
+    const wxTxt = c.weather === 'clear' ? '' : ` · ${c.weather === 'snow' ? '<img class="dc-snow" src="assets/icons/snow.png" alt="">' : ''}${c.heavy ? 'Heavy ' : ''}${c.weatherName.toLowerCase()}`;
+    built.chip.innerHTML = `<b>${c.night ? '☾' : '☀'}</b> ${String(hh).padStart(2, '0')}:${String(mm).padStart(2, '0')} · Day ${c.day} · ${c.seasonName} ${c.seasonDay}/${c.daysPerSeason}${wxTxt}`;
+    built.chip.title = c.seasonName + ': ' + DE.Season.mods(state).label + '\nNext: ' + DE.Season.NAME[c.nextSeason] + ' in ' + DE.Util.fmtTime(c.nextSeasonIn);
   }
 
-  return { update, clock, darkness, DAY_SEC, DAYS_PER_SEASON, SEASONS };
+  return { update, clock, darkness, DAY_SEC: DE.Season.DAY_SEC, DAYS_PER_SEASON: DE.Season.DAYS_PER_SEASON, SEASONS: DE.Season.SEASONS };
 })();

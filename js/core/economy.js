@@ -44,6 +44,7 @@ DE.Economy = (function () {
     DE.Data.RESOURCE_ORDER.forEach(r => { production[r] = 0; consumption[r] = 0; });
     const morale = moraleMult(state.morale);
     const rooms = Object.values(state.rooms).filter(isActive);
+    const season = DE.Season ? DE.Season.mods(state) : { room: {}, fuelUse: 0 };
 
     // pass 1: raw outputs, power usage
     let powerGen = 0, powerUse = 0;
@@ -52,15 +53,16 @@ DE.Economy = (function () {
       const adj = DE.Bunker.adjacencyBonus(state, room);
       const wm = workerMult(state, room, def, fx);
       const research = 1 + (fx.roomMult[room.type] || 0);
-      const mult = levelMult(room.level) * wm * (1 + adj) * research * (1 + fx.globalMult) * morale;
+      const seasonal = 1 + (season.room[room.type] || 0);
+      const mult = levelMult(room.level) * wm * (1 + adj) * research * (1 + fx.globalMult) * morale * seasonal;
       // input starvation
       let starve = 1;
       if (def.consumes) for (const r in def.consumes) if (state.resources[r] <= 0) starve = Math.min(starve, def.starvedFloor || 0);
-      const info = { mult, workerMult: wm, adjacency: adj, research, starve, power: 1, produces: {}, consumes: {}, powerUse: 0 };
+      const info = { mult, workerMult: wm, adjacency: adj, research, seasonal, starve, power: 1, produces: {}, consumes: {}, powerUse: 0 };
       if (def.produces) for (const r in def.produces) info.produces[r] = def.produces[r] * mult * starve;
       if (def.consumes) for (const r in def.consumes) {
         let rate = def.consumes[r] * levelMult(room.level) * fx.consumptionMult * starve;
-        if (r === 'fuel') rate *= fx.fuelUseMult;
+        if (r === 'fuel') rate *= fx.fuelUseMult * (1 + season.fuelUse);
         info.consumes[r] = rate;
       }
       if (def.powerUse) info.powerUse = def.powerUse * (1 + 0.25 * (room.level - 1)) * fx.powerUseMult;
