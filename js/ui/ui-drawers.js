@@ -18,20 +18,32 @@ DE.UI.Drawers = (function () {
 
  function moodIcon(m) { return m >= 75 ? '' : m >= 50 ? '' : m >= 30 ? '' : ''; }
 
+ /* A survivor card: sprite portrait on a rarity backdrop, identity, level ring, vitals, strengths,
+  * traits and what they are doing — plus the assign / unassign actions. */
  function survivorCard(s, sv, extra) {
- const need = DE.Survivors.xpNeeded(sv.level);
- const traits = (sv.traits || []).map(t => { const d = DE.Data.TRAITS[t]; return `<span class="trait" title="${esc(d.desc)}">${DE.Icons.img('trait', 'ico-inline')}${d.name}</span>`; }).join('');
+ const need = DE.Survivors.xpNeeded(sv.level); const fx = s._fx;
  const away = sv.assignment && sv.assignment.kind === 'expedition';
  const rar = DE.Data.RARITIES[sv.rarity] || DE.Data.RARITIES.common; const mood = DE.Survivors.mood(s, sv);
- return `<div class="sv-card rar-${rar.id} ${sv.hp < 50 ? 'hurt' : ''}">
- <div class="sv-avatar" style="--rc:${rar.color}">${DE.Chars.crew(sv.profession, { anim: away ? 'walk' : sv.hp < 50 ? 'idle' : 'interact', h: 56, title: P()[sv.profession].name })}</div>
- <div class="sv-body"><b>${esc(sv.name)}</b> <span class="rarity" style="color:${rar.color}" title="${rar.name}: +${Math.round(rar.bonus * 100)}% efficiency">${rar.name}</span> <small class="muted">${P()[sv.profession].name} · Lv${sv.level}${sv.level >= DE.CONFIG.SURVIVOR_MAX_LEVEL ? ' ★' : ''} · ${moodIcon(mood)} ${mood}</small>
- ${bar(100 * sv.xp / need, 'xp')}
- <div class="needs-row"><span class="act-tag act-${sv.act ? sv.act.kind : 'idle'}">${DE.Needs.describe(sv)}</span><small title="Energy">${DE.Icons.img('power', 'ico-inline')}${bar(sv.energy == null ? 100 : sv.energy, 'energy')}</small><small title="Hunger">${DE.Icons.img('res.food', 'ico-inline')}${bar(100 - (sv.hunger == null ? 0 : sv.hunger), 'food')}</small></div>
- ${sv.hp < 100 ? `<div class="hp-row"><small>${sv.hp < 50 ? ' Injured' : ' Healing'}</small>${bar(sv.hp, 'hp')}</div>` : ''}
- <div class="sv-meta">${assignmentText(s, sv)} ${traits}${(() => { const f = Object.keys(sv.bonds || {}).filter(id => sv.bonds[id] >= 60 && s.survivors[id]).map(id => esc(s.survivors[id].name)); return f.length ? `<span class="trait friend" title="Friends work 4% better together">${DE.Icons.img('people', 'ico-inline')}${f.join(', ')}</span>` : ''; })()}</div></div>
- <div class="sv-actions">${extra != null ? extra : (away ? '' : `<button class="btn small" data-action="openAssignSurvivor" data-sid="${sv.id}">Assign…</button>${sv.assignment ? `<button class="btn small ghost" data-action="unassign" data-sid="${sv.id}">Unassign</button>` : ''}`)}</div>
- </div>`;
+ const room = sv.assignment && sv.assignment.kind === 'room' ? s.rooms[sv.assignment.id] : null;
+ const def = room ? DE.Data.ROOMS[room.type] : null;
+ const eff = Math.round(100 * DE.Survivors.efficiency(sv, def, fx));
+ const best = def && def.profession === sv.profession;
+ const traits = (sv.traits || []).map(t => { const d = DE.Data.TRAITS[t]; return d ? `<span class="sc-trait" title="${esc(d.desc)}">${esc(d.name)}</span>` : ''; }).join('');
+ const friends = Object.keys(sv.bonds || {}).filter(id => sv.bonds[id] >= 60 && s.survivors[id]).map(id => esc(s.survivors[id].name.split(' ')[0]));
+ const vbar = (label, v, cls) => `<div class="sc-vital" title="${label} ${Math.round(v)}%"><small>${label}</small><span class="sc-bar ${cls}"><i style="width:${Math.max(0, Math.min(100, v))}%"></i></span></div>`;
+ const xpPct = Math.min(100, 100 * sv.xp / need);
+ return `<div class="sc rar-${rar.id} ${sv.hp < 50 ? 'hurt' : ''}" style="--rc:${rar.color}">
+ <div class="sc-portrait"><div class="sc-glow"></div>${DE.Chars.crew(sv.profession, { anim: away ? 'walk' : sv.act && sv.act.kind === 'sleep' ? 'idle' : 'idle', h: 92, title: P()[sv.profession].name })}
+   <span class="sc-lvl" style="--xp:${xpPct}%" title="Level ${sv.level} · ${Math.round(sv.xp)}/${need} XP"><b>${sv.level}</b></span>
+   <span class="sc-rar">${esc(rar.name)}</span></div>
+ <div class="sc-body">
+   <div class="sc-name"><b>${esc(sv.name)}</b><span class="sc-prof">${DE.Icons.prof(sv.profession, 'ico-inline')}${P()[sv.profession].name}</span></div>
+   <div class="sc-doing"><span class="act-tag act-${sv.act ? sv.act.kind : 'idle'}">${DE.Needs.describe(sv)}</span><span class="sc-where">${assignmentText(s, sv)}</span></div>
+   <div class="sc-stats"><span title="Work efficiency${def ? ' in ' + def.name : ''}"><small>Work</small><b class="${best ? 'pos' : ''}">${eff}%</b></span><span title="Damage per second on guard duty"><small>Guard</small><b>${U().fmt(DE.Survivors.guardPower(sv, fx), 1)}</b></span><span title="Mood"><small>Mood</small><b class="${mood >= 50 ? 'pos' : mood >= 30 ? 'warn' : 'neg'}">${Math.round(mood)}</b></span></div>
+   <div class="sc-vitals">${vbar('Health', sv.hp, 'hp')}${vbar('Energy', sv.energy == null ? 100 : sv.energy, 'en')}${vbar('Fed', 100 - (sv.hunger == null ? 0 : sv.hunger), 'fd')}</div>
+   ${traits || friends.length ? `<div class="sc-traits">${traits}${friends.length ? `<span class="sc-trait friend" title="Friends work 4% better together">♥ ${friends.join(', ')}</span>` : ''}</div>` : ''}
+   <div class="sc-actions">${extra != null ? extra : (away ? '<small class="muted">Away on an expedition</small>' : `<button class="btn small primary" data-action="openAssignSurvivor" data-sid="${sv.id}">Assign…</button>${sv.assignment ? `<button class="btn small" data-action="unassign" data-sid="${sv.id}">Unassign</button>` : ''}`)}</div>
+ </div></div>`;
  }
 
  /* ================= SURVIVORS ================= */
@@ -39,25 +51,29 @@ DE.UI.Drawers = (function () {
  title: (s) => `Survivors <small>${DE.Bunker.population(s)} / ${DE.Bunker.housingCapacity(s)} housing</small>`,
  render(s) {
  const cost = DE.Survivors.recruitCost(s); const can = DE.Survivors.canRecruit(s);
- const prof = ui().recruitProfession || null;
- const filter = ui().survivorFilter;
- let list = Object.values(s.survivors);
- if (filter === 'idle') list = list.filter(v => !v.assignment);
- else if (filter === 'working') list = list.filter(v => v.assignment && v.assignment.kind === 'room');
- else if (filter === 'guards') list = list.filter(v => v.assignment && v.assignment.kind === 'guard');
- else if (filter === 'away') list = list.filter(v => v.assignment && v.assignment.kind === 'expedition');
- const filters = [['all', 'All'], ['idle', 'Idle'], ['working', 'Working'], ['guards', 'Guards'], ['away', 'Away']];
- return `<div class="card recruit-card"><h4>Recruit a survivor</h4>
- <p class="muted">Costs food and water; needs free housing. Pick a profession or leave it to chance.</p>
- <div class="prof-row">${DE.Data.PROFESSION_ORDER.map(p => `<button class="btn small ${prof === p ? 'active' : ''}" data-action="setRecruitProfession" data-prof="${p}" title="${esc(P()[p].desc)}">${DE.Icons.prof(p, 'ico-inline')} ${P()[p].name}</button>`).join('')}
- <button class="btn small ${!prof ? 'active' : ''}" data-action="setRecruitProfession" data-prof=""> Random</button></div>
- <button class="btn primary ${can.ok ? '' : 'cant'}" data-action="recruit" ${can.ok ? '' : 'disabled'}>Recruit <span class="cost">${U().costText(cost)}</span></button>
- ${can.ok ? '' : `<small class="neg">${can.reason}</small>`}
- <div class="muted small-note">Morale ${Math.round(s.morale)} → production ×${DE.Economy.moraleMult(s.morale).toFixed(2)}. Each survivor eats ${(DE.CONFIG.SURVIVOR_FOOD * 60).toFixed(1)} food & water per minute.</div></div>
- <div class="filters">${filters.map(([k, l]) => `<button class="btn small ${filter === k ? 'active' : ''}" data-action="setFilter" data-filter="${k}">${l}</button>`).join('')}</div>
- ${list.length ? list.map(v => survivorCard(s, v)).join('') : '<p class="muted">Nobody here.</p>'}`;
+ const filter = ui().survivorFilter || 'all';
+ const all = Object.values(s.survivors);
+ const groups = { all: all, idle: all.filter(v => !v.assignment), working: all.filter(v => v.assignment && v.assignment.kind === 'room'), guards: all.filter(v => v.assignment && v.assignment.kind === 'guard'), away: all.filter(v => v.assignment && v.assignment.kind === 'expedition'), hurt: all.filter(v => v.hp < 100) };
+ const list = (groups[filter] || all).slice().sort((a, b) => (b.level - a.level) || a.name.localeCompare(b.name));
+ const filters = [['all', 'All'], ['idle', 'Idle'], ['working', 'Working'], ['guards', 'Guards'], ['away', 'Away'], ['hurt', 'Hurt']];
+ const odds = Object.values(DE.Data.RARITIES); const tw = odds.reduce((a, r) => a + r.weight, 0);
+ const pop = DE.Bunker.population(s), capH = DE.Bunker.housingCapacity(s);
+ return `<div class="sv-top">
+   <div class="rc-card"><div class="rc-radio"><span class="rv-signal"><i></i><i></i><i></i></span>${DE.Icons.img('signal', 'rc-ico')}</div>
+     <div class="rc-text"><b>Recruit a survivor</b><small>Someone out there is always listening. Who answers is up to fate.</small>
+       <div class="rc-odds">${odds.map(r => `<span style="--c:${r.color}"><i></i>${r.name} ${Math.round(100 * r.weight / tw)}%</span>`).join('')}</div></div>
+     <div class="rc-go"><button class="btn primary ${can.ok ? '' : 'cant'}" data-action="recruit" ${can.ok ? '' : 'disabled'}>${DE.Icons.img('signal', 'ico-btn')} Call on the radio <span class="cost">${U().costText(cost)}</span></button>${can.ok ? '' : `<small class="neg">${esc(can.reason)}</small>`}</div></div>
+   <div class="sv-sum">
+     <div><small>Housing</small><b class="${pop >= capH ? 'warn' : ''}">${pop}/${capH}</b></div>
+     <div><small>Morale</small><b class="${s.morale >= 50 ? 'pos' : s.morale >= 30 ? 'warn' : 'neg'}">${Math.round(s.morale)}</b></div>
+     <div><small>Output bonus</small><b>×${DE.Economy.moraleMult(s.morale).toFixed(2)}</b></div>
+     <div><small>Food & water</small><b>${(DE.CONFIG.SURVIVOR_FOOD * 60 * all.length).toFixed(1)}/min</b></div>
+   </div></div>
+ <div class="sv-tabs">${filters.map(([k, l]) => `<button class="btn small ${filter === k ? 'active' : ''}" data-action="setFilter" data-filter="${k}">${l} <span class="cost">${groups[k].length}</span></button>`).join('')}</div>
+ <div class="sv-grid">${list.length ? list.map(v => survivorCard(s, v)).join('') : '<p class="muted">Nobody here.</p>'}</div>`;
  },
  };
+
 
  /* ================= ECONOMY DASHBOARD ================= */
  const economy = {

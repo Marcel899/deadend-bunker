@@ -104,12 +104,13 @@ DE.Actions = (function () {
  const r = DE.Survivors.assign(S(), p.sid, isGuard ? null : { kind: 'guard' }); if (!r.ok) return fail(r); done();
  };
  A.recruit = (p, el) => {
- const r = DE.Survivors.recruit(S(), UI().ui.recruitProfession || undefined); if (!r.ok) return fail(r);
- UI().toast('' + esc(r.survivor.name) + ' the ' + P()[r.survivor.profession].name + ' joined the bunker', 'ok');
- S().log.push({ t: Date.now(), msg: r.survivor.name + ' (' + P()[r.survivor.profession].name + ') was recruited.' });
- done();
+ // always random: the profession, rarity and traits are rolled by the simulation, then revealed
+ const r = DE.Survivors.recruit(S()); if (!r.ok) return fail(r);
+ S().log.push({ t: Date.now(), msg: r.survivor.name + ' (' + P()[r.survivor.profession].name + ') joined the bunker.' });
+ done(); DE.UI.Reveal.show(r.survivor);
  };
- A.setRecruitProfession = (p) => { UI().ui.recruitProfession = p.prof || null; UI().refresh(true); };
+ A.revealAssign = (p) => { UI().closeModal(); A.openAssignSurvivor({ sid: p.sid }); };
+ A.setRecruitProfession = () => {};   // recruiting is random now (kept for old bindings)
  A.setFilter = (p) => { UI().ui.survivorFilter = p.filter; UI().refresh(true); };
 
  /* ---- research ---- */
