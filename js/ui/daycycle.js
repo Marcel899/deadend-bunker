@@ -66,9 +66,15 @@ DE.UI.DayCycle = (function () {
       </g>
       <ellipse class="dc-moonglow" cx="0" cy="0" rx="160" ry="160" fill="url(#dc-moon)"/>`;
     const fx = document.createElement('div'); fx.className = 'dc-weather';
-    // weather particles: cheap CSS-animated spans, generated once
-    let p = ''; for (let i = 0; i < 70; i++) { const x = (i * 37.3) % 100, d = (i * 0.61) % 7, dur = 4 + (i * 13 % 50) / 10, s = 2 + (i % 4); p += `<i style="left:${x.toFixed(1)}%;animation-delay:-${d.toFixed(1)}s;animation-duration:${dur.toFixed(1)}s;--s:${s}px;--dx:${(i % 7) * 6 - 18}px"></i>`; }
-    fx.innerHTML = p;
+    // weather particles: cheap CSS-animated spans, generated once. Rain, snow and leaves each have their
+    // own layer (and particles), so a shower in autumn never stops the leaves, and switching weather
+    // never makes a falling particle jump. Everything falls to the bottom of the layer = the grass line.
+    const parts = (n, f) => { let p = ''; for (let i = 0; i < n; i++) p += f(i); return p; };
+    const rain = parts(72, i => `<i style="left:${((i * 37.3) % 126).toFixed(1)}%;--d:${(.5 + (i * 7 % 10) / 45).toFixed(2)}s;animation-delay:-${((i * .173) % 1).toFixed(2)}s;--l:${14 + (i % 4) * 4}px"></i>`);
+    const splash = parts(22, i => `<b style="left:${((i * 53.9) % 100).toFixed(1)}%;--d:${(.8 + (i % 4) * .17).toFixed(2)}s;animation-delay:-${((i * .37) % 1.2).toFixed(2)}s"></b>`);
+    const leaves = parts(24, i => `<i style="left:${((i * 29.1) % 100).toFixed(1)}%;--d:${(6 + (i * 11 % 40) / 10).toFixed(1)}s;animation-delay:-${((i * .83) % 9).toFixed(1)}s;--s:${3 + (i % 3)}px;--dx:${(i % 5) * 16 - 40}px"></i>`);
+    const snow = parts(60, i => `<i style="left:${((i * 41.7) % 104).toFixed(1)}%;--d:${(5 + (i * 13 % 50) / 10).toFixed(1)}s;animation-delay:-${((i * .61) % 9).toFixed(1)}s;--s:${2 + (i % 4)}px;--dx:${(i % 7) * 6 - 22}px"></i>`);
+    fx.innerHTML = `<div class="wx wx-rain">${rain}</div><div class="wx wx-splash">${splash}</div><div class="wx wx-leaves">${leaves}</div><div class="wx wx-snow">${snow}</div>`;
     const chip = document.createElement('div'); chip.className = 'dc-chip';
     // order: art SVG, battlefield, then ambient darkness, then lights, then weather, then UI overlay
     const bf = scene.querySelector('.bf');
@@ -76,12 +82,21 @@ DE.UI.DayCycle = (function () {
     scene.insertBefore(amb, after); scene.insertBefore(lights, after); scene.insertBefore(fx, after);
     (scene.querySelector('.ow-overlay') || scene).appendChild(chip);
     built = { scene, amb, lights, fx, chip, svg: scene.querySelector('.ow-svg:not(.dc-lights)') };
+    built.wx = { rain: fx.querySelector('.wx-rain'), splash: fx.querySelector('.wx-splash'), leaves: fx.querySelector('.wx-leaves'), snow: fx.querySelector('.wx-snow') };
     built.stops = Array.from(built.svg.querySelectorAll('#ow-sky stop'));
     built.sun = built.svg.querySelector('.ow-sunwrap'); built.stars = built.svg.querySelector('.ow-stars');
     built.moon = built.svg.querySelector('.dc-moon'); built.shadows = built.svg.querySelectorAll('.ow-shadows');
     built.rays = built.svg.querySelector('.ow-godrays'); built.haze = built.svg.querySelector('.ow-horizonhaze');
     built.moonGlow = lights.querySelector('.dc-moonglow');
     built.cloudStops = Array.from(built.svg.querySelectorAll('#ow-cloudbody stop'));
+  }
+
+  /** Show one weather layer at intensity v (0..1); light weather shows half its particles. */
+  function layer(el, v, gain, heavy) {
+    const on = v > .01;
+    if (el.classList.contains('on') !== on) el.classList.toggle('on', on);
+    if (el.classList.contains('light') === !!heavy) el.classList.toggle('light', !heavy);
+    const o = on ? Math.min(1, v * gain).toFixed(2) : '0'; if (el.style.opacity !== o) el.style.opacity = o;
   }
 
   function update(state) {
@@ -132,6 +147,16 @@ DE.UI.DayCycle = (function () {
     if (scene.dataset.weather !== c.weather) scene.dataset.weather = c.weather;
     scene.classList.toggle('wx-heavy', c.heavy);
     scene.style.setProperty('--wx', wx.toFixed(2)); scene.style.setProperty('--snow', c.cover.snow.toFixed(2)); scene.style.setProperty('--leaves', c.cover.leaves.toFixed(2)); scene.style.setProperty('--flowers', c.cover.flowers.toFixed(2));
+    // the layers: rain (with splashes on the grass), snow, and leaves — blown about on windy days,
+    // drifting down lightly all autumn long (rain included)
+    const W2 = built.wx, rain = c.weather === 'rain' ? wx : 0;
+    layer(W2.rain, rain, 1.25, c.heavy); layer(W2.splash, rain, 1.25, c.heavy);
+    layer(W2.snow, c.weather === 'snow' ? wx : 0, 1.4, c.heavy);
+    const windy = c.weather === 'leaves';
+    layer(W2.leaves, windy ? wx : c.season === 'autumn' && c.weather !== 'snow' ? c.cover.leaves : 0, windy ? 1.6 : 1, windy ? c.heavy : true);
+    W2.leaves.classList.toggle('drift', !windy);
+    const fh = built.fx.clientHeight;
+    if (fh && fh !== built.fh) { built.fh = fh; built.fx.style.setProperty('--fallH', fh + 'px'); built.fx.style.setProperty('--rx', (-fh * .2126).toFixed(0) + 'px'); }
     if (DE.Audio && DE.Audio.ambience) DE.Audio.ambience(c.weather, wx);
     scene.dataset.tod = c.night ? 'night' : (h < 8 || h > 17) ? 'twilight' : 'day';
     const hh = Math.floor(h), mm = Math.floor((h % 1) * 60 / 15) * 15;

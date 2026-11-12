@@ -170,9 +170,6 @@ body.no-anim .ow-svg * { animation: none !important; }
 #scene[data-tod="day"] :is(.ow-ruins-near, .ow-latticetower, .ow-ferris, .ow-gasstation) { filter: hue-rotate(-45deg) saturate(.6) brightness(1.08); }
 #scene[data-tod="day"] .ow-ruins-glow, #scene[data-tod="day"] .ow-flare { opacity: 0 !important; }
 /* weather */
-/* rain: slanted streaks that fall straight along their slant (no spinning) */
-@keyframes dc-rain { from { transform: translate(0, -30px) rotate(12deg); } to { transform: translate(-130px, 620px) rotate(12deg); } }
-@keyframes dc-fall { from { transform: translate(0, 0) rotate(0); } to { transform: translate(var(--dx), 640px) rotate(540deg); } }
 body.no-anim .dc-weather { display: none !important; }
 .dc-chip { position: absolute; left: 10px; top: 8px; padding: 3px 10px; border-radius: 10px; background: rgba(20, 14, 30, .72); border: 2px solid var(--ink); color: #f4ead0; font-size: 12px; font-weight: 800; pointer-events: none; }
 .dc-chip b { color: #ffd34a; margin-right: 2px; }
@@ -180,10 +177,6 @@ body.no-anim .dc-weather { display: none !important; }
 .ow-floodcone, .ow-lampcone { display: none; }
 #scene[data-tod="day"] .ow-searchlight { opacity: 0; } .ow-searchlight { transition: opacity 2s; }
 
-/* particles fall to the bottom of the weather layer (= the grass), never into the ground */
-@keyframes dc-fall { from { top: -12px; transform: translateX(0) rotate(0); } to { top: 100%; transform: translateX(var(--dx)) rotate(540deg); } }
-@keyframes dc-rain { from { top: -30px; transform: translateX(0) rotate(12deg); } to { top: 100%; transform: translateX(-90px) rotate(12deg); } }
-.dc-weather i { margin-top: calc(var(--s) * -1); }
 
 /* ---- combat effects ---- */
 .bf-decals { position: absolute; left: 0; top: 0; overflow: visible; z-index: 8; pointer-events: none; }
@@ -258,12 +251,42 @@ body.no-anim .dc-weather { display: none !important; }
 :is(#scene, .menu-scene)[data-season="autumn"] :is(.ow-blades, .ow-foliage, .ow-trees, .ow-hills2, .ow-bushfg) { filter: hue-rotate(-38deg) saturate(1.25) brightness(1.02); }
 :is(#scene, .menu-scene)[data-season="winter"] :is(.ow-blades, .ow-foliage, .ow-trees, .ow-hills2, .ow-bushfg) { filter: hue-rotate(0deg) saturate(.3) brightness(1.08); }
 :is(#scene, .menu-scene)[data-season="winter"] .ow-blades { opacity: .35; }
-.dc-weather { position: absolute; left: 0; right: 0; top: 0; z-index: 1; pointer-events: none; overflow: hidden; display: none; opacity: var(--wx, 0); transition: opacity 2s linear; }
-.dc-weather i { position: absolute; top: -12px; width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: .85; animation: dc-fall linear infinite; }
-:is(#scene, .menu-scene):is([data-weather="snow"], [data-weather="rain"], [data-weather="leaves"]) .dc-weather { display: block; }
-/* light weather shows half the particles */
-:is(#scene, .menu-scene):not(.wx-heavy) .dc-weather i:nth-child(2n) { display: none; }
-[data-weather="leaves"] .dc-weather i { border-radius: 60% 0; background: #d0702a; width: calc(var(--s) * 2); }
-[data-weather="leaves"] .dc-weather i:nth-child(3n) { background: #e0a030; } [data-weather="leaves"] .dc-weather i:nth-child(4n) { display: none; }
-[data-weather="rain"] .dc-weather i { width: 2px; height: 22px; border-radius: 2px; background: linear-gradient(180deg, rgba(200, 225, 255, 0), rgba(200, 225, 255, .8)); opacity: 1; animation-name: dc-rain; animation-duration: .7s !important; }
-.wx-heavy[data-weather="rain"] .dc-weather i { animation-duration: .55s !important; }
+/* Weather (js/ui/daycycle.js): one layer per kind — rain, its splashes, autumn leaves, snow — each
+   faded by its own intensity, so they never share particles. The container ends at the grass line
+   (bottom set in JS) and --fallH is its height: particles move by transform only and land exactly
+   on the grass. Hidden layers pause their animations. */
+.dc-weather { position: absolute; left: 0; right: 0; top: 0; z-index: 1; pointer-events: none; overflow: hidden; --fallH: 300px; --rx: -64px; }
+.dc-weather .wx { position: absolute; inset: 0; opacity: 0; transition: opacity 2s linear; }
+.dc-weather .wx:not(.on) { visibility: hidden; } .dc-weather .wx:not(.on) * { animation-play-state: paused; }
+.dc-weather .wx.light > :nth-child(2n) { display: none; }
+.dc-weather .wx > * { position: absolute; top: 0; will-change: transform; }
+/* rain: slanted streaks that fall along their slant onto the grass */
+.wx-rain i { width: 2px; height: var(--l); margin-top: calc(var(--l) * -1); border-radius: 2px; background: linear-gradient(180deg, rgba(205, 228, 255, 0), rgba(205, 228, 255, .85)); animation: wx-rain var(--d) linear infinite; }
+.wx-rain:not(.light) i { animation-duration: calc(var(--d) * .82); }
+@keyframes wx-rain { from { transform: translate(0, -20px) rotate(12deg); } to { transform: translate(var(--rx), var(--fallH)) rotate(12deg); } }
+/* where it lands: little crowns of spray and a wet sheen along the grass */
+.dc-weather .wx-splash { top: auto; bottom: 0; height: 12px; overflow: visible; }
+.wx-splash::before { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 6px; background: linear-gradient(180deg, rgba(160, 192, 235, 0), rgba(160, 192, 235, .28)); }
+.dc-weather .wx-splash b { top: auto; bottom: 0; width: 10px; height: 5px; margin-left: -5px; border: 1.6px solid rgba(215, 232, 255, .9); border-bottom: 0; border-radius: 6px 6px 0 0; opacity: 0; transform-origin: 50% 100%; animation: wx-splash var(--d) ease-out infinite; }
+.wx-splash b::before, .wx-splash b::after { content: ''; position: absolute; top: -4px; width: 2px; height: 2px; border-radius: 50%; background: rgba(215, 232, 255, .9); }
+.wx-splash b::before { left: -2px; } .wx-splash b::after { right: -2px; }
+@keyframes wx-splash { 0% { opacity: 0; transform: scale(.2, .3); } 12% { opacity: .95; } 55% { opacity: 0; transform: scale(1.35, 1.1); } 100% { opacity: 0; transform: scale(1.35, 1.1); } }
+/* leaves: tumbling and swaying down; "drift" = the light autumn fall (a third of them) */
+.wx-leaves i { width: calc(var(--s) * 2); height: var(--s); border-radius: 60% 0; background: #d0702a; animation: wx-leaf var(--d) linear infinite; }
+.wx-leaves i:nth-child(3n) { background: #e0a030; } .wx-leaves i:nth-child(5n) { background: #b8502a; }
+.dc-weather .wx-leaves.drift > :not(:nth-child(3n)) { display: none; }
+.wx-leaves:not(.drift) i { animation-duration: calc(var(--d) * .7); }
+@keyframes wx-leaf {
+  0% { transform: translate(0, -14px) rotate(0); opacity: 1; }
+  25% { transform: translate(calc(var(--dx) * .25 + 16px), calc(var(--fallH) * .25)) rotate(150deg); }
+  50% { transform: translate(calc(var(--dx) * .5 - 12px), calc(var(--fallH) * .5)) rotate(290deg); }
+  75% { transform: translate(calc(var(--dx) * .75 + 14px), calc(var(--fallH) * .75)) rotate(420deg); }
+  94% { opacity: 1; }
+  100% { transform: translate(var(--dx), calc(var(--fallH) - 4px)) rotate(540deg); opacity: 0; } }
+/* snow: soft flakes that sway and settle */
+.wx-snow i { width: var(--s); height: var(--s); border-radius: 50%; background: #fff; opacity: .9; animation: wx-snow var(--d) linear infinite; }
+@keyframes wx-snow {
+  0% { transform: translate(0, -10px); }
+  33% { transform: translate(calc(var(--dx) * .33 + 9px), calc(var(--fallH) * .33)); }
+  66% { transform: translate(calc(var(--dx) * .66 - 9px), calc(var(--fallH) * .66)); }
+  100% { transform: translate(var(--dx), calc(var(--fallH) - var(--s))); } }
