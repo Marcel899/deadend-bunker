@@ -125,7 +125,7 @@ DE.UI.Side = (function () {
  room.workers.forEach(sid => {
  const sv = s.survivors[sid]; if (!sv) return;
  const eff = DE.Survivors.efficiency(sv, def, s._fx);
- html += `<div class="row worker-row"><span class="worker-cell">${DE.Chars.crew(sv.profession, { anim: 'idle', h: 34 })}<span><b>${esc(sv.name)}</b> <small class="muted">Lv${sv.level} · ${Math.round(eff * 100)}%${sv.hp < 50 ? ' · injured' : ''}</small><br><small class="act-tag act-${sv.act ? sv.act.kind : 'idle'}">${DE.Needs.describe(sv)}</small></span></span><button class="btn small" data-action="unassign" data-sid="${sid}">Unassign</button></div>`;
+ html += `<div class="row worker-row"><span class="worker-cell">${DE.Icons.prof(sv.profession, 'ava')}<span><b>${esc(sv.name)}</b> <small class="muted">Lv${sv.level} · ${Math.round(eff * 100)}%${sv.hp < 50 ? ' · injured' : ''}</small><br><small class="act-tag act-${sv.act ? sv.act.kind : 'idle'}">${DE.Needs.describe(sv)}</small></span></span><button class="btn small" data-action="unassign" data-sid="${sid}">Unassign</button></div>`;
  });
  if (room.workers.length < def.workers) {
  const idle = DE.Survivors.idle(s).length;

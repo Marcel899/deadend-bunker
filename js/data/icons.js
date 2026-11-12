@@ -33,11 +33,13 @@ DE.Icons = (function () {
   };
   // every file in assets/icons is also reachable by its plain name ("medal", "badge", "flask"…)
   ['alert', 'backpack', 'badge', 'barrel', 'barrier', 'biohazard', 'bolt', 'brick', 'bunker', 'calendar', 'can', 'chart', 'check', 'chest', 'clock', 'coin', 'coins', 'construction', 'cross', 'crown', 'diamond', 'dish', 'drop', 'eye', 'eyeoff', 'factory', 'fire', 'flask', 'garage', 'gear', 'gift', 'group', 'hammer', 'heart', 'helmet', 'home', 'hospital', 'info', 'ingot', 'jerrycan', 'labbuilding', 'lock', 'mail', 'map', 'mappin', 'medal', 'medkit', 'move', 'move4', 'people', 'pickaxe', 'play', 'plus', 'power', 'radiation', 'refresh', 'save', 'scroll', 'search', 'shield', 'shovel', 'signal', 'skull', 'snow', 'spikes', 'star', 'trash', 'trophy', 'truck', 'turret', 'up', 'van', 'warning', 'watchtower', 'water', 'wrench', 'zombie'].forEach(n => { if (!MAP[n]) MAP[n] = I + n + '.png'; });
-  /* A profession's portrait is the people icon tinted per job (CSS filter). */
-  const PROF_HUE = { farmer: 60, mechanic: 20, engineer: 0, scientist: 180, soldier: 300, medic: 330, cook: 40, scavenger: 90 };
-  /* Zombie variants: hue shift + scale on the one sprite. */
-  const ZOMBIE_STYLE = { walker: 'filter:none', runner: 'filter:hue-rotate(-20deg) saturate(1.3);transform:scaleX(-1)', brute: 'filter:hue-rotate(20deg) contrast(1.2);transform:scale(1.5)',
-    toxic: 'filter:hue-rotate(60deg) saturate(2)', mutant: 'filter:hue-rotate(-90deg) saturate(1.6);transform:scale(1.8)', boss: 'filter:hue-rotate(-140deg) saturate(1.5) contrast(1.2);transform:scale(2.6)' };
+  /* Profession and zombie icons are face crops of the illustrated characters (assets/chars/face-*.png,
+   * made by tools/build_faces.py). Types without their own art borrow a face with a tint. */
+  const FACE_ALIAS = { scientist: ['medic', 'hue-rotate(-25deg) saturate(1.15)'], boss: ['mutant', 'hue-rotate(-40deg) saturate(1.3) brightness(.9)'] };
+  function face(id, cls, kind, title) {
+    const al = FACE_ALIAS[id]; const f = al ? al[0] : id;
+    return `<img class="ico ico-face ico-${kind} ${cls || ''}" src="assets/chars/face-${f}.png" alt="" draggable="false"${al ? ` style="filter:${al[1]}"` : ''}${title ? ` title="${title}"` : ''}>`;
+  }
 
   function src(key) { return MAP[key] || MAP.brand; }
   function img(key, cls, title) {
@@ -47,8 +49,8 @@ DE.Icons = (function () {
   const room = (type, cls) => img('room.' + type, cls || 'ico-room');
   const nav = (n, cls) => img('nav.' + n, cls || 'ico-nav');
   const branch = (b, cls) => img('branch.' + b, cls);
-  function prof(p, cls, title) { return `<img class="ico ico-prof ${cls || ''}" src="${MAP.prof}" alt="" style="filter:hue-rotate(${PROF_HUE[p] || 0}deg)"${title ? ` title="${title}"` : ''}>`; }
-  function zombie(id, cls) { return `<img class="ico ico-zombie ${id} ${cls || ''}" src="${MAP.zombie}" alt="" style="${ZOMBIE_STYLE[id] || ''}">`; }
+  function prof(p, cls, title) { return face(DE.Data.PROFESSIONS && DE.Data.PROFESSIONS[p] ? p : 'scavenger', cls, 'prof', title); }
+  function zombie(id, cls, title) { return face(id || 'walker', cls, 'zombie', title); }
 
-  return { MAP, src, img, res, room, nav, branch, prof, zombie, PROF_HUE };
+  return { MAP, src, img, res, room, nav, branch, prof, zombie };
 })();

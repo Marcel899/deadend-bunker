@@ -41,11 +41,11 @@ DE.UI.Menu = (function () {
     const zs = ['walker', 'runner', 'brute', 'walker', 'crawler', 'toxic', 'walker'];
     zs.forEach((id, i) => {
       const big = id === 'brute', h = big ? 96 : 68;
-      const el = document.createElement('div'); el.className = 'menu-unit'; el.innerHTML = DE.Chars.zombie(id, { anim: id === 'runner' ? 'run' : 'walk', h, flip: true }); world.appendChild(el);
+      const el = document.createElement('div'); el.className = 'menu-unit'; el.innerHTML = DE.Chars.zombie(id, { anim: id === 'runner' ? 'run' : 'walk', h, flip: true, phase: i * .37 }); world.appendChild(el);
       units.push({ el, h, x: 1000 + i * 140 + Math.random() * 80, stop: 884 + (i % 4) * 22, y: OW.GROUND + 2 + (i % 3) * 3, v: id === 'runner' ? 44 : big ? 16 : id === 'crawler' ? 20 : 22 + Math.random() * 8 });
     });
     [['guard', 772], ['soldier', 818]].forEach(([prof, x]) => {
-      const g = document.createElement('div'); g.className = 'menu-unit guard'; g.innerHTML = DE.Chars.crew(prof, { anim: 'guard', h: 70 }); world.appendChild(g);
+      const g = document.createElement('div'); g.className = 'menu-unit guard'; g.innerHTML = DE.Chars.crew(prof, { anim: 'guard', h: 70, phase: x / 100 }); world.appendChild(g);
       units.push({ el: g, h: 70, x, y: OW.GROUND + 8, v: 0, guard: true });
     });
     const has = DE.Save.hasSave();

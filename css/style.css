@@ -1133,3 +1133,24 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 /* composed structure icons read better a little larger */
 .dk-line img.ico-struct.dk-mid { width: 46px !important; height: 46px !important; flex: 0 0 46px; }
 .dk-sec-head img.ico-struct.dk-big, .dk-wallcard img.ico-struct.dk-big { width: 56px !important; height: 56px !important; flex: 0 0 56px; }
+
+/* ================= CHARACTER ICONS: the illustrated cut-outs ================= */
+/* full-figure portraits (survivor cards, reveal, event cast, expedition seats, horde preview) */
+.cport { display: inline-flex; align-items: flex-end; justify-content: center; height: 48px; flex: 0 0 auto; vertical-align: bottom; line-height: 0; }
+.cport img { height: 100%; width: auto; max-width: none; display: block; pointer-events: none; -webkit-user-drag: none; filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, .5)); }
+.cport.flip img { transform: scaleX(-1); }
+.ev-stage figure .cport { height: 84px; }
+.sc-portrait .cport { position: relative; height: 92px; }
+.sc.hurt .sc-portrait .cport img { filter: drop-shadow(0 0 4px rgba(231, 76, 90, .9)); }
+.rv-fig .cport { height: 170px; }
+.rv-fig.sil .cport img { filter: brightness(0) drop-shadow(0 0 6px rgba(140, 220, 255, .55)); }
+.rv-fig.lit .cport img { filter: drop-shadow(0 4px 3px rgba(0, 0, 0, .6)); animation: rv-lit .45s ease-out; }
+.ex-seat .cport { height: 60px; }
+.dk-sec-art .cport { height: 60px; }
+/* face avatars (profession / zombie icons, roster rows) */
+img.ico-face { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: radial-gradient(circle at 50% 30%, #5a4f74, #231c31 75%); border: 2px solid #0d0b12; box-sizing: border-box; flex: 0 0 auto; }
+img.ico-face.ico-inline { width: 20px; height: 20px; border-width: 1.5px; vertical-align: -5px; }
+img.ico-face.ico-zombie { background: radial-gradient(circle at 50% 30%, #4f6a3a, #1e2a18 75%); }
+img.ico-face.ava { width: 40px; height: 40px; border-width: 2.5px; box-shadow: 0 2px 0 rgba(0, 0, 0, .45); }
+.worker-cell img.ico-face.ava { width: 36px; height: 36px; }
+.ex-crew { gap: 0; } .ex-crew img.ico-face.ava { width: 26px; height: 26px; border-width: 2px; margin-left: -6px; box-shadow: none; } .ex-crew img.ico-face.ava:first-child { margin-left: 0; }

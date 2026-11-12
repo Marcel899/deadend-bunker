@@ -253,7 +253,7 @@ DE.UI = (function () {
  // the people involved stand in the header scene
  const ids = ev.kind === 'expedition' ? (ev.ctx.members || []) : [ev.ctx.aId, ev.ctx.bId];
  const people = ids.map(id => s.survivors[id]).filter(Boolean).slice(0, 4);
- const cast = people.map((sv, i) => `<figure>${DE.Chars.crew(sv.profession, { anim: i % 2 ? 'interact' : 'idle', h: 74, flip: i % 2 === 1 })}<figcaption>${esc(sv.name.split(' ')[0])}</figcaption></figure>`).join('');
+ const cast = people.map((sv, i) => `<figure>${DE.Chars.portrait(sv.profession, { cls: i % 2 ? 'flip' : '' })}<figcaption>${esc(sv.name.split(' ')[0])}</figcaption></figure>`).join('');
  const eloc = ev.kind === 'expedition' && ev.ctx && DE.Expeditions.location(ev.ctx.location);
  const kind = ev.kind === 'expedition' ? 'On the road' + (eloc ? ' · ' + esc(eloc.name) : '') : 'Bunker event';
  modal({ title: `<span class="ev-kind">${kind}</span>${esc(ev.title)}`, icon: ev.kind === 'expedition' ? 'map' : 'scroll', cls: 'event ' + ev.kind, locked: true,

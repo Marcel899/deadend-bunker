@@ -15,6 +15,8 @@ var DE = globalThis.DE = globalThis.DE || {};
 DE.UI = DE.UI || {};
 
 DE.UI.Battlefield = (function () {
+  // slight per-zombie colour variation so a horde never looks cloned
+  const ZTINT = ['', '', 'hue-rotate(-12deg)', 'hue-rotate(10deg) saturate(.85)', 'brightness(.9)', 'saturate(1.2) brightness(1.05)'];
   const NS = 'http://www.w3.org/2000/svg';
   const OW = () => DE.UI.Overworld;
   let root = null, world = null, fx = null, decals = null, scaleSig = '';
@@ -213,7 +215,7 @@ DE.UI.Battlefield = (function () {
       const big = !!(zd.boss || zd.id === 'brute' || zd.id === 'mutant'); const h = zd.boss ? 120 : big ? 92 : 62;
       const speed = zd.id === 'runner' ? 70 : zd.id === 'leaper' ? 58 : zd.id === 'crawler' ? 34 : zd.boss ? 16 : big ? 22 : 28 + Math.random() * 6;
       const lane = i % LANES;
-      const el = unit(DE.Chars.zombie(zd.id, { anim: zd.id === 'runner' ? 'run' : 'walk', h, flip: true }), 'bf-z');
+      const el = unit(DE.Chars.zombie(zd.id, { anim: zd.id === 'runner' ? 'run' : 'walk', h, flip: true, phase: Math.random() * 4, tint: ZTINT[(Math.random() * ZTINT.length) | 0] }), 'bf-z');
       const z = { el, rig: el.querySelector('.rig'), id: zd.id, big, boss: !!zd.boss, h, speed, lane, x: OW().W + 40, y: OW().GROUND + 2 + lane * 3,
         hp: zd.boss ? 4 : big ? 2.2 : 1, delay: i * gap + Math.random() * gap * .5, dead: false, through: false, retreat: false, mode: 'walk', atkCd: Math.random(), groanAt: 2 + Math.random() * 10,
         toxic: zd.id === 'toxic' || zd.id === 'cultist' };
@@ -319,7 +321,7 @@ DE.UI.Battlefield = (function () {
       seen[g.id] = true; let u = st.guards[g.id];
       if (!u || u.prof !== g.profession) {
         if (u) u.el.remove();
-        const el = unit(DE.Chars.crew(g.profession, { anim: 'walk', h: 64, item: DE.Chars.dutyWeapon(g.profession), title: g.name }), 'bf-guard');
+        const el = unit(DE.Chars.crew(g.profession, { anim: 'walk', h: 64, phase: Math.random() * 4, item: DE.Chars.dutyWeapon(g.profession), title: g.name }), 'bf-guard');
         el.style.width = (64 * 140 / 225) + 'px'; el.style.height = '64px'; el.title = g.name + ' · on guard';
         u = st.guards[g.id] = { el, rig: el.querySelector('.rig'), prof: g.profession, x: PATROL[0] + Math.random() * (PATROL[1] - PATROL[0]), y: OW().GROUND + 8, dir: Math.random() < .5 ? -1 : 1, pause: 0, cd: Math.random() };
       }
@@ -374,7 +376,7 @@ DE.UI.Battlefield = (function () {
     const seen = {};
     members.slice(0, 6).forEach((m, i) => {
       seen[m.id] = true; if (st.party[m.id]) return;
-      const el = unit(DE.Chars.crew(m.profession, { anim: 'walk', h: 56 }), 'bf-party'); el.style.width = (56 * 140 / 225) + 'px'; el.style.height = '56px'; el.title = m.name + ' · on expedition';
+      const el = unit(DE.Chars.crew(m.profession, { anim: 'walk', h: 56, phase: Math.random() * 2 }), 'bf-party'); el.style.width = (56 * 140 / 225) + 'px'; el.style.height = '56px'; el.title = m.name + ' · on expedition';
       st.party[m.id] = { el, x: OW().LAYOUT.doorX - i * 26, y: OW().GROUND - 6 };
     });
     for (const id in st.party) if (!seen[id]) { st.party[id].el.remove(); delete st.party[id]; }

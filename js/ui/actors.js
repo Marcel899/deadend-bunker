@@ -84,7 +84,7 @@ DE.UI.Actors = (function () {
 
   function make(sv) {
     const el = document.createElement('div'); el.className = 'actor';
-    el.innerHTML = DE.Chars.crew(sv.profession, { anim: 'idle', h: 54, title: sv.name }) + `<span class="bubble"></span>`;
+    el.innerHTML = DE.Chars.crew(sv.profession, { anim: 'idle', h: 54, title: sv.name, phase: (hash(sv.id) % 900) / 100 }) + `<span class="bubble"></span>`;
     el.dataset.sid = sv.id; el.dataset.action = 'selectSurvivor';
     layer.appendChild(el);
     const a = { id: sv.id, el, rig: el.querySelector('.rig'), bubble: el.querySelector('.bubble'), x: 0, y: 0, floor: 0, queue: [], segEnd: 0, key: '', placed: false, anim: 'idle', prof: sv.profession };

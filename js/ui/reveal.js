@@ -38,10 +38,10 @@ DE.UI.Reveal = (function () {
       if (!root.isConnected) return;
       if (i < steps) {
         const p = pool[(i * 3 + 1) % pool.length];
-        fig.innerHTML = DE.Chars.crew(p, { anim: 'idle', h: 170 }); fig.className = 'rv-fig sil';
+        fig.innerHTML = DE.Chars.portrait(p); fig.className = 'rv-fig sil';
         DE.Audio.sfx('tick', 20); i++; delay *= 1.13; timer = setTimeout(spin, delay); return;
       }
-      fig.innerHTML = DE.Chars.crew(sv.profession, { anim: 'interact', h: 170 }); fig.className = 'rv-fig sil';
+      fig.innerHTML = DE.Chars.portrait(sv.profession); fig.className = 'rv-fig sil';
       timer = setTimeout(() => { if (!root.isConnected) return; fig.className = 'rv-fig lit'; root.classList.add('done', big ? 'big' : 'small'); DE.Audio.sfx(big ? 'upgrade' : 'reveal'); }, 260);
     };
     clearTimeout(timer); spin();
