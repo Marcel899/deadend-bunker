@@ -61,8 +61,9 @@ DE.State = (function () {
     for (let d = 1; d <= startFloors; d++) s.floors.push(emptyFloor(d));
     s.stats.maxDepth = startFloors;
 
-    // starting rooms on floor 1
-    const starters = [['quarters', 0], ['farm', 4], ['water', 6], ['generator', 8], ['workshop', 10]];
+    // starting rooms on floor 1: just a roof and the lights. Food, water and scrap production are the
+    // first things the survivors build (the starting stock covers them and lasts while they go up)
+    const starters = [['quarters', 0], ['generator', 4]];
     starters.forEach(([type, slot]) => DE.Bunker.placeRoom(s, type, 1, slot, 1, now));
 
     // starting survivors
@@ -73,7 +74,7 @@ DE.State = (function () {
     // auto-assign the starters to matching rooms
     const byType = {};
     for (const id in s.rooms) byType[s.rooms[id].type] = id;
-    const assignments = { farmer: 'farm', mechanic: 'water', engineer: 'generator', scavenger: 'workshop' };
+    const assignments = { engineer: 'generator', mechanic: 'generator' };
     for (const id in s.survivors) {
       const sv = s.survivors[id];
       const rt = assignments[sv.profession];

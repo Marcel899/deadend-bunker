@@ -14,11 +14,18 @@ var DE = globalThis.DE = globalThis.DE || {};
 DE.UI = DE.UI || {};
 
 DE.UI.Elevator = (function () {
-  const SPEED = 110;          // px per second
-  const DOOR_MS = 550, DWELL_MS = 1600, CAB_H = 84;
+  const SPEED = 170;          // px per second
+  const DOOR_MS = 500, DWELL_MS = 1200, CAB_H = 84;
   let el = null, cabin = null, floorsSig = '', stops = {}, depths = [];
-  let cur = 1, dir = 0, state = 'open', until = 0, target = null, cabY = null;
-  const tickets = []; const calls = new Set();
+  let cur = 1, dir = 0, state = 'open', until = 0, target = null, cabY = null, clock = 0;
+  const tickets = [];
+  /** Floors the cabin still has to visit, derived from the live tickets (so a cancelled ride never
+   * leaves a stale call behind): where waiting riders stand, and where riders aboard are going. */
+  function calls() {
+    const s = new Set();
+    for (const t of tickets) { if (t.state === 'wait' || t.state === 'board') s.add(t.from); else if (t.state === 'aboard') s.add(t.to); }
+    return s;
+  }
 
   function ensure() {
     const bunker = document.getElementById('bunker'), floors = document.getElementById('floors'); if (!bunker || !floors) return false;
@@ -46,8 +53,18 @@ DE.UI.Elevator = (function () {
         box.appendChild(d);
       });
       if (stops[cur] == null) cur = depths[0];
-      place(cur, 0);
+      if (state === 'moving' && stops[target] != null) {
+        // the floors moved under a travelling cabin: carry on to the same landing at its new height,
+        // and take the riders along (they follow onMove)
+        const left = Math.max(0.05, (until - clock) / 1000);
+        place(target, left);
+        tickets.forEach(t => { if (t.state === 'aboard' && t.onMove) t.onMove(stops[target], left, target); });
+      } else {
+        if (state === 'moving') { state = 'opening'; until = 0; }
+        place(cur, 0);
+      }
       setDoors(state === 'open' || state === 'opening');
+      indicators();
     }
     return true;
   }
@@ -64,28 +81,31 @@ DE.UI.Elevator = (function () {
   }
   function indicators() {
     const arrow = dir < 0 ? '▲' : dir > 0 ? '▼' : '';
-    el.querySelectorAll('.ev-stop').forEach(s => { s.querySelector('b').textContent = 'B' + cur; s.querySelector('.ev-arrow').textContent = arrow; s.classList.toggle('called', calls.has(+s.dataset.depth)); });
+    const c = calls();
+    el.querySelectorAll('.ev-stop').forEach(s => { s.querySelector('b').textContent = 'B' + cur; s.querySelector('.ev-arrow').textContent = arrow; s.classList.toggle('called', c.has(+s.dataset.depth)); });
     cabin.querySelector('b').textContent = 'B' + cur;
   }
 
   /** A survivor wants to ride from one floor to another. Returns a ticket (see header). */
   function request(from, to, opts) {
-    const t = Object.assign({ from, to, state: 'wait', boarded() { if (t.state === 'board') { t.state = 'aboard'; calls.add(t.to); } } }, opts || {});
-    tickets.push(t); calls.add(from); return t;
+    const t = Object.assign({ from, to, state: 'wait', boarded() { if (t.state === 'board') t.state = 'aboard'; } }, opts || {});
+    tickets.push(t); return t;
   }
   function cancel(t) { const i = tickets.indexOf(t); if (i >= 0) tickets.splice(i, 1); }
+  /** New game / prestige: an empty shaft, cabin parked at the top. */
+  function reset() { tickets.length = 0; cur = 1; dir = 0; state = 'open'; target = null; until = 0; floorsSig = ''; }
 
   /** Next floor to serve: keep going in the current direction while there are calls that way. */
   function nextStop() {
-    if (!calls.size) return null;
-    const list = Array.from(calls).filter(d => stops[d] != null);
-    if (!list.length) { calls.clear(); return null; }
+    const list = Array.from(calls()).filter(d => stops[d] != null);
+    if (!list.length) return null;
     const ahead = list.filter(d => dir > 0 ? d > cur : dir < 0 ? d < cur : false).sort((a, b) => dir > 0 ? a - b : b - a);
     if (ahead.length) return ahead[0];
     return list.sort((a, b) => Math.abs(a - cur) - Math.abs(b - cur))[0];
   }
 
   function update(now) {
+    clock = now;
     if (!ensure()) return;
     // tickets whose floor vanished (re-render, prestige) are dropped
     for (let i = tickets.length - 1; i >= 0; i--) { const t = tickets[i]; if (t.state === 'done' || stops[t.from] == null || stops[t.to] == null) tickets.splice(i, 1); }
@@ -96,8 +116,7 @@ DE.UI.Elevator = (function () {
         tickets.forEach(t => { if (t.state === 'wait' && t.from === cur) t.state = 'board'; });
         // keep the doors open while someone is still walking in or out
         if (tickets.some(t => (t.state === 'board' && t.from === cur) || (t.state === 'exit' && t.to === cur))) { until = now + 300; break; }
-        calls.delete(cur);
-        const n = nextStop(); if (n == null) { dir = 0; indicators(); until = now + 400; break; }
+        const n = nextStop(); if (n == null || n === cur) { if (n == null) dir = 0; indicators(); until = now + 400; break; }
         state = 'closing'; setDoors(false); until = now + DOOR_MS; break;
       }
       case 'closing': {
@@ -116,14 +135,14 @@ DE.UI.Elevator = (function () {
       }
       case 'opening': {
         tickets.forEach(t => { if (t.state === 'aboard' && t.to === cur) t.state = 'exit'; else if (t.state === 'wait' && t.from === cur) t.state = 'board'; });
-        calls.delete(cur);
+        indicators();
         state = 'open'; until = now + DWELL_MS; break;
       }
     }
   }
   function relayout() { floorsSig = ''; }
   function floorY(depth) { return stops[depth]; }
-  function status() { return { floor: cur, state, dir, target, calls: Array.from(calls), tickets: tickets.length, cabinY: cabY, stops: Object.assign({}, stops) }; }
+  function status() { return { floor: cur, state, dir, target, calls: Array.from(calls()), tickets: tickets.length, cabinY: cabY, stops: Object.assign({}, stops) }; }
 
-  return { update, request, cancel, relayout, floorY, status };
+  return { update, request, cancel, reset, relayout, floorY, status };
 })();

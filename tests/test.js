@@ -32,11 +32,27 @@ function run(state, seconds, now, step) {
 console.log('State');
 let now = 1700000000000;
 let S = DE.State.create(null, now);
-t('new game has 5 starter rooms and 4 survivors, all assigned', () => {
-  assert(Object.keys(S.rooms).length === 5); assert(Object.keys(S.survivors).length === 4);
-  assert(Object.values(S.survivors).every(sv => sv.assignment && sv.assignment.kind === 'room'), 'everyone works');
+t('new game starts nearly empty: quarters + generator, 4 survivors', () => {
+  assert(Object.values(S.rooms).map(r => r.type).sort().join() === 'generator,quarters'); assert(Object.keys(S.survivors).length === 4);
+  assert(Object.values(S.rooms).every(r => r.level === 1 && !r.construction), 'starters are finished');
   assert(S.floors.length === 1);
+  const gen = Object.values(S.rooms).find(r => r.type === 'generator'); assert(gen.workers.length === 2, 'generator staffed');
 });
+t('starting scrap covers farm, water and workshop', () => {
+  const R = DE.Data.ROOMS, need = R.farm.cost.scrap + R.water.cost.scrap + R.workshop.cost.scrap;
+  assert(S.resources.scrap >= need + 100, 'scrap ' + S.resources.scrap + ' vs ' + need);
+});
+// the rest of the suite uses the classic five-room layout
+(function classic() {
+  const gen = Object.values(S.rooms).find(r => r.type === 'generator');
+  gen.workers.slice().forEach(id => DE.Survivors.assign(S, id, null));
+  S.floors[0].slots[4] = S.floors[0].slots[5] = null; delete S.rooms[gen.id];
+  [['farm', 4], ['water', 6], ['generator', 8], ['workshop', 10]].forEach(([type, slot]) => DE.Bunker.placeRoom(S, type, 1, slot, 1, now));
+  const by = {}; for (const id in S.rooms) by[S.rooms[id].type] = id;
+  const jobs = { farmer: 'farm', mechanic: 'water', engineer: 'generator', scavenger: 'workshop' };
+  for (const id in S.survivors) DE.Survivors.assign(S, id, { kind: 'room', id: by[jobs[S.survivors[id].profession]] });
+  S._fx = null;
+})();
 t('starter survivors are assigned to matching rooms', () => {
   const farm = Object.values(S.rooms).find(r => r.type === 'farm');
   assert(farm.workers.length === 1, 'farm has a farmer');
@@ -207,7 +223,7 @@ t('noise raises wave strength; dampening lowers it', () => {
   const hp1 = DE.Defense.waveHp(E); E.research.done.dampening = true; E._fx = null; const n2 = DE.Events.noise(E); assert(n2 < n1); assert(DE.Defense.waveHp(E) <= hp1);
 });
 t('artifact effects reach the economy', () => {
-  const E = DE.State.create(null, now); const farm = Object.values(E.rooms).find(r => r.type === 'farm');
+  const E = DE.State.create(null, now); const farm = DE.Bunker.placeRoom(E, 'farm', 1, 6, 1, now); E._fx = null;
   const before = DE.Economy.computeRates(E).perRoom[farm.id].produces.food; E.artifacts = { seedvault: true }; E._fx = null;
   approx(DE.Economy.computeRates(E).perRoom[farm.id].produces.food, before * 1.2, 1e-6, 'seed vault');
 });
@@ -529,7 +545,8 @@ t('reset grants LP, keeps upgrades, applies legacy', () => {
   const gain = DE.Prestige.potentialPoints(S); assert(gain >= 3, 'gain ' + gain);
   const r = DE.Prestige.reset(S, now); assert(r.ok, r.reason);
   const N = r.state; assert(N.prestige.points === gain && N.prestige.resets === 1);
-  assert(Object.keys(N.rooms).length === 5 && N.floors.length === 1, 'fresh run');
+  assert(Object.keys(N.rooms).length === 2 && N.floors.length === 1 && !N.excavation, 'fresh run: nothing carried over');
+  assert(Object.values(N.survivors).every(v => !v.assignment || (v.assignment.kind === 'room' && N.rooms[v.assignment.id])), 'no stale assignments');
   N.prestige.points = 100;
   assert(DE.Prestige.buy(N, 'hands').ok); assert(DE.Prestige.buy(N, 'tunnels').ok); assert(DE.Prestige.buy(N, 'friends').ok);
   const N2 = DE.Prestige.reset(Object.assign(N, { stats: Object.assign(N.stats, { runScore: 5e6, maxDepth: 3 }) }), now).state;

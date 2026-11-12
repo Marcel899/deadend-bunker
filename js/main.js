@@ -37,6 +37,8 @@ DE.Game = (function () {
  /** Replace the active state with `s` and (re)start the loop. */
  G.loadState = function (s) {
  G.stop();
+ // a different bunker: nobody of the old one is still walking about or riding the lift
+ if (G.state !== s) { if (DE.UI.Actors) DE.UI.Actors.reset(); if (DE.UI.Elevator) DE.UI.Elevator.reset(); }
  G.state = s;
  s._fx = DE.Effects.compute(s);
  s._rates = DE.Economy.computeRates(s, s._fx);

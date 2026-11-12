@@ -164,6 +164,10 @@ DE.UI.Actors = (function () {
       const pointFor = () => t.site ? sitePoint(t.sx) : t.room ? (t.bed ? bedPoint(t.room, t.bed) : roomPoint(t.room, t.sx)) : shaftPoint(t.floor || 1);
       // mid-ride survivors finish the ride before re-planning; ones still waiting just leave the queue
       const riding = a.lift && a.lift.ticket.state !== 'wait';
+      if (a.snap && !riding) {
+        a.snap = false; const sp = shaftPoint(a.floor);
+        if (sp) { moveTo(a, a.x, sp.y, 0); setAnim(a, 'idle'); a.queue = []; a.segEnd = 0; } else a.placed = false;
+      }
       if (key !== a.key && !riding) {
         if (a.lift) { DE.UI.Elevator.cancel(a.lift.ticket); a.lift = null; }
         a.key = key; a.walkAnim = t.walk || null;
@@ -193,7 +197,8 @@ DE.UI.Actors = (function () {
           const ticket = DE.UI.Elevator.request(seg.from, seg.to);
           a.lift = { ticket, seg, shaftX: shaft ? shaft.x : a.x };
           // the cabin reports each departure (landing y in #floors space); ride along with it
-          ticket.onMove = (y, secs) => { if (!a.lift) return; const dy = y - DE.UI.Elevator.floorY(ticket.from); moveTo(a, a.lift.shaftX, a.lift.y0 + dy, secs, null, 'ease-in-out'); };
+          // (positions come from the landing itself, so they stay right after a re-layout)
+          ticket.onMove = (y, secs, depth) => { if (!a.lift) return; const sp = shaftPoint(depth); if (sp) moveTo(a, sp.x, sp.y, secs, null, 'ease-in-out'); };
           setAnim(a, 'idle'); a.segEnd = Infinity; continue;
         }
         const flip = seg.x < a.x - 1 ? true : seg.x > a.x + 1 ? false : null;
@@ -224,7 +229,11 @@ DE.UI.Actors = (function () {
       const sp = shaftPoint(t.from); if (!sp) return;
       L.walkIn = now + 600; setAnim(a, 'walk'); moveTo(a, sp.x, sp.y, 0.6, sp.x < a.x);
     } else if (t.state === 'board' && now >= L.walkIn) {
-      L.y0 = a.y; t.boarded(); setAnim(a, 'idle'); a.el.classList.add('riding');
+      t.boarded(); setAnim(a, 'idle'); a.el.classList.add('riding');
+    } else if (t.state === 'aboard' && L.resync) {
+      // the bunker was re-laid out while we stood in the cabin: stand where the cabin is now
+      L.resync = false; const st = DE.UI.Elevator.status();
+      if (st.state !== 'moving') { const sp = shaftPoint(st.floor); if (sp) moveTo(a, sp.x, sp.y, 0); }
     } else if (t.state === 'exit') {
       // doors open at the destination: we are at its landing now
       const sp = shaftPoint(t.to); if (sp) moveTo(a, sp.x, sp.y, 0);
@@ -234,8 +243,21 @@ DE.UI.Actors = (function () {
   }
 
   /** Rooms were re-rendered: positions are stale, snap everyone to where they should be. */
-  function relayout() { for (const id in actors) { const a = actors[id]; a.key = ''; a.placed = false; a.bedFloorY = null; if (a.lift) { DE.UI.Elevator.cancel(a.lift.ticket); a.lift = null; a.segEnd = 0; a.el.classList.remove('riding'); } } last = 0; }
+  function relayout() {
+    for (const id in actors) {
+      const a = actors[id]; a.key = ''; a.bedFloorY = null;
+      // riders already in (or stepping into) the cabin finish the ride; then they re-plan from the landing
+      if (a.lift && a.lift.ticket.state !== 'wait') { a.queue = []; a.lift.resync = true; continue; }
+      // everyone else stays on the floor they are on (no teleporting between floors): drop them onto
+      // its corridor at the new layout and let them walk or ride from there
+      if (a.placed) a.snap = true;
+      if (a.lift) { DE.UI.Elevator.cancel(a.lift.ticket); a.lift = null; a.segEnd = 0; a.el.classList.remove('riding'); }
+    }
+    last = 0;
+  }
   function reset() { for (const id in actors) actors[id].el.remove(); for (const id in actors) delete actors[id]; }
 
-  return { update, relayout, reset, target };
+  /** For tests: where each actor is and what it is doing. */
+  function debug() { const o = {}; for (const id in actors) { const a = actors[id]; o[id] = { floor: a.floor, x: Math.round(a.x), y: Math.round(a.y), q: a.queue.length, lift: a.lift ? a.lift.ticket.state : null, key: a.key, placed: a.placed, segEnd: a.segEnd }; } return o; }
+  return { update, relayout, reset, target, debug };
 })();
