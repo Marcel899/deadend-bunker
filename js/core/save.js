@@ -179,6 +179,7 @@ DE.Save = (function () {
         s.defense.turretLevel = Math.min(50, NN(d.turretLevel, 0)); s.defense.breachStreak = Math.min(20, NN(d.breachStreak, 0)); s.defense.winStreak = Math.min(1000, NN(d.winStreak, 0));
         s.defense.nextWaveAt = N(d.nextWaveAt, now + C().FIRST_WAVE_SEC * 1000);
         s.defense.wave = Math.max(1, N(d.wave, 1)); s.defense.shock = NN(d.shock, 0); s.defense.calmUntil = NN(d.calmUntil, 0);
+        s.defense.waveMult = U().clamp(N(d.waveMult, 1), 0.3, 3);
         if (Array.isArray(d.log)) s.defense.log = d.log.filter(U().isObj).slice(-20);
         if (U().isObj(d.lastResult)) s.defense.lastResult = d.lastResult;
       }
@@ -220,7 +221,9 @@ DE.Save = (function () {
       if (U().isObj(src.rep)) for (const f in DE.Data.FACTIONS) s.rep[f] = U().clamp(N(src.rep[f], 0), -5, 5);
       if (U().isObj(src.bus)) s.bus.level = U().clamp(N(src.bus.level, 1), 1, DE.Data.BUS.length);
       if (U().isObj(src.goals) && U().isObj(src.goals.done)) for (const id in src.goals.done) if (DE.Data.GOALS.some(g => g.id === id)) s.goals.done[id] = true;
-      if (Array.isArray(src.buffs)) s.buffs = src.buffs.filter(b => U().isObj(b) && DE.Data.ROOMS[b.room]).map(b => ({ room: b.room, mult: U().clamp(N(b.mult, 0), 0, 2), until: NN(b.until, 0) }));
+      if (Array.isArray(src.buffs)) s.buffs = src.buffs.filter(b => U().isObj(b) && (b.room === '*' || DE.Data.ROOMS[b.room])).map(b => ({ room: b.room, mult: U().clamp(N(b.mult, 0), -0.9, 2), until: NN(b.until, 0) }));
+      if (Array.isArray(src.eventChains)) s.eventChains = src.eventChains.filter(c => U().isObj(c) && typeof c.def === 'string' && DE.Data.BUNKER_EVENTS.some(e => e.id === c.def)).slice(0, 8)
+        .map(c => ({ def: c.def, at: NN(c.at, 0), ctx: U().isObj(c.ctx) ? { A: typeof c.ctx.A === 'string' ? c.ctx.A : undefined, B: typeof c.ctx.B === 'string' ? c.ctx.B : undefined, aId: typeof c.ctx.aId === 'string' ? c.ctx.aId : undefined, bId: typeof c.ctx.bId === 'string' ? c.ctx.bId : undefined, D: typeof c.ctx.D === 'string' ? c.ctx.D : undefined, R: typeof c.ctx.R === 'string' ? c.ctx.R : undefined, room: typeof c.ctx.room === 'string' && DE.Data.ROOMS[c.ctx.room] ? c.ctx.room : undefined } : {} }));
       s.nextEventAt = NN(src.nextEventAt, 0);
       if (U().isObj(src.defense) && typeof src.defense.nextMut === 'string' && DE.Data.MUTATIONS.some(m => m.id === src.defense.nextMut)) s.defense.nextMut = src.defense.nextMut;
       if (U().isObj(src.overworld) && DE.Data.OVERWORLD) for (const k in DE.Data.OVERWORLD) s.overworld[k] = U().clamp(N(src.overworld[k], 0), 0, DE.Data.OVERWORLD[k].levels.length - 1);

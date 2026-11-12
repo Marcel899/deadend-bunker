@@ -154,7 +154,7 @@ DE.Effects = (function () {
     // artifacts, factions and temporary buffs
     if (state.artifacts && DE.Data.ARTIFACTS) for (const id in state.artifacts) { const a = DE.Data.ARTIFACTS[id]; if (a) a.effects.forEach(e => applyEffect(fx, e, 1)); }
     if (state.rep && DE.Data.FACTIONS) for (const f in DE.Data.FACTIONS) { const r = state.rep[f] || 0; if (r >= 3) { const b = DE.Data.FACTIONS[f].bonus; for (const t in b) { if (t === 'roomMult') applyEffect(fx, { type: 'roomMult', room: b.roomMult, value: b.value }, 1); else if (t !== 'value') applyEffect(fx, { type: t, value: b[t] }, 1); } } }
-    if (state.buffs) state.buffs.forEach(b => applyEffect(fx, { type: 'roomMult', room: b.room, value: b.mult }, 1));
+    if (state.buffs) state.buffs.forEach(b => applyEffect(fx, b.room === '*' ? { type: 'globalMult', value: b.mult } : { type: 'roomMult', room: b.room, value: b.mult }, 1));
     // overworld structures
     if (state.overworld && DE.Data.OVERWORLD) for (const k in DE.Data.OVERWORLD) {
       const def = DE.Data.OVERWORLD[k]; const lvl = state.overworld[k] || 0;

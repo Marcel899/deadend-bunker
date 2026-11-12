@@ -270,7 +270,7 @@ DE.UI = (function () {
  function eventModal(ev) {
  DE.Audio.sfx('event');
  const s = state(); const buttons = ev.choices.map((c, i) => {
- const tr = c.trade; const can = DE.Events.canChoose(s, ev, i).ok;
+ const tr = c.trade ? DE.Events.tradeAmounts(s, c.trade) : null; const can = DE.Events.canChoose(s, ev, i).ok;
  const label = tr ? `Give ${U().costText(tr.give)} for ${U().costText(tr.get)}` : esc(c.label);
  const chips = consequences(s, c).map(x => `<i class="cq ${x.cls}">${x.ic || ''}${x.t}</i>`).join('');
  return `<button class="btn choice ${i === 0 ? 'primary' : ''} ${can ? '' : 'cant'}" data-action="eventChoice" data-id="${ev.id}" data-i="${i}" ${can ? '' : 'disabled'}><kbd>${i + 1}</kbd><span><b>${label}</b>${c.desc ? `<small>${esc(c.desc)}</small>` : ''}<span class="cqs">${chips}</span></span></button>`; }).join('');
@@ -287,9 +287,10 @@ DE.UI = (function () {
  /** What a choice will do, as small coloured chips: gains green, costs red (dim when you cannot
   *  pay), gambles orange, rare finds gold. Built from the same effect keys DE.Events applies. */
  function consequences(s, c) {
- const out = [], fx = c.effects || {}, R = DE.Data.RESOURCES, im = (k) => DE.Icons.img(k, 'ico-inline');
- const res = (k, n) => { if (!n) return; const short = n < 0 && s.resources[k] + 1e-6 < -n; out.push({ cls: n > 0 ? 'good' : short ? 'bad short' : 'bad', ic: DE.Icons.res(k, 'ico-inline'), t: (n > 0 ? '+' : '−') + U().fmt(Math.abs(n)) + (short ? ' · have ' + U().fmt(s.resources[k]) : '') }); };
- if (c.trade) { for (const k in c.trade.give) res(k, -c.trade.give[k]); for (const k in c.trade.get) res(k, c.trade.get[k]); out.push({ cls: 'good', ic: im('people'), t: 'Traders +1' }); }
+ const out = [], fx = DE.Events.resolve(s, c.effects || {}), R = DE.Data.RESOURCES, im = (k) => DE.Icons.img(k, 'ico-inline');
+ const pct = (c.effects && c.effects.cost) || {};   // costs that are a share of the stock say so
+ const res = (k, n) => { if (!n) return; const short = n < 0 && s.resources[k] + 1e-6 < -n; out.push({ cls: n > 0 ? 'good' : short ? 'bad short' : 'bad', ic: DE.Icons.res(k, 'ico-inline'), t: (n > 0 ? '+' : '−') + U().fmt(Math.abs(n)) + (n < 0 && pct[k] ? ' (' + Math.round(pct[k] * 100) + '%)' : '') + (short ? ' · have ' + U().fmt(s.resources[k]) : '') }); };
+ if (c.trade) { const t = DE.Events.tradeAmounts(s, c.trade); for (const k in t.give) res(k, -t.give[k]); for (const k in t.get) res(k, t.get[k]); out.push({ cls: 'good', ic: im('people'), t: 'Traders +1' }); }
  for (const k in fx) {
    const v = fx[k];
    if (R[k]) { res(k, v); continue; }
@@ -300,7 +301,7 @@ DE.UI = (function () {
      case 'heal': out.push({ cls: 'good', ic: im('medkit'), t: 'Heal all +' + v }); break;
      case 'rescue': case 'recruit': if (v) { const bed = DE.Bunker.population(s) < DE.Bunker.housingCapacity(s); out.push({ cls: bed ? 'good' : 'warn', ic: im('pop'), t: bed ? '+1 survivor' : 'No free bed!' }); } break;
      case 'artifact': out.push({ cls: 'gold', ic: im('artifacts'), t: 'Artifact' }); break;
-     case 'artifactOrScrap': out.push({ cls: 'gold', ic: im('artifacts'), t: '40% artifact, else +' + v + ' scrap' }); break;
+     case 'artifactOrScrap': out.push({ cls: 'gold', ic: im('artifacts'), t: '40% artifact, else +' + U().fmt(v) + ' scrap' }); break;
      case 'morale': out.push({ cls: v >= 0 ? 'good' : 'bad', ic: im('morale'), t: (v > 0 ? '+' : '−') + Math.abs(v) + ' morale' }); break;
      case 'shock': out.push({ cls: 'bad', ic: im('morale'), t: 'Morale shaken' }); break;
      case 'rep': for (const f in v) out.push({ cls: v[f] >= 0 ? 'good' : 'bad', ic: im('people'), t: DE.Data.FACTIONS[f].name.split(' ').pop() + ' ' + (v[f] > 0 ? '+' : '') + v[f] }); break;
@@ -311,7 +312,12 @@ DE.UI = (function () {
      case 'waterPct': case 'electricityPct': out.push({ cls: 'bad', ic: DE.Icons.res(k === 'waterPct' ? 'water' : 'electricity', 'ico-inline'), t: '−' + Math.round(-v * 100) + '% stored' }); break;
      case 'traps': out.push({ cls: 'good', ic: im('traps'), t: '+' + v + ' traps' }); break;
      case 'risk': out.push({ cls: 'risk', ic: im('biohazard'), t: Math.round(v[0] * 100) + '% infected' }); break;
-     case 'buff': out.push({ cls: 'good', ic: DE.Icons.room(v[0], 'ico-inline'), t: DE.Data.ROOMS[v[0]].name + ' +' + Math.round(v[1] * 100) + '% for ' + Math.round(v[2] / 60) + 'm' }); break;
+     case 'buff': { const all = v[0] === '*'; if (!all && !DE.Data.ROOMS[v[0]]) break; out.push({ cls: v[1] >= 0 ? 'good' : 'bad', ic: all ? im('chart') : DE.Icons.room(v[0], 'ico-inline'), t: (all ? 'All production' : DE.Data.ROOMS[v[0]].name) + ' ' + (v[1] >= 0 ? '+' : '−') + Math.round(Math.abs(v[1]) * 100) + '% for ' + Math.round(v[2] / 60) + 'm' }); break; }
+     case 'levelA': out.push({ cls: 'good', ic: im('star'), t: '+' + (v >= 1 ? v : Math.round(v * 100) + '% of a') + ' level' }); break;
+     case 'injureA': out.push({ cls: 'bad', ic: im('medkit'), t: 'Someone hurt' }); break;
+     case 'recruitN': { const free = Math.max(0, DE.Bunker.housingCapacity(s) - DE.Bunker.population(s)); const n = Math.min(v, free); out.push({ cls: n ? 'good' : 'warn', ic: im('pop'), t: n ? '+' + n + ' survivor' + (n > 1 ? 's' : '') : 'No free beds!' }); break; }
+     case 'waveHp': out.push({ cls: v > 1 ? 'bad' : 'good', ic: im('wave'), t: 'Next wave ' + (v > 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + '%' }); break;
+     case 'chain': out.push({ cls: 'risk', ic: im('warning'), t: v[4] || 'This may come back' }); break;
      case 'noiseCalm': out.push({ cls: 'good', ic: im('noise'), t: 'Horde quieter ' + Math.round(v / 60) + 'm' }); break;
      case 'delay': out.push({ cls: 'bad', ic: im('timer'), t: '+' + U().fmtTime(v) + ' trip' }); break;
      case 'hurry': out.push({ cls: 'good', ic: im('timer'), t: '−' + U().fmtTime(v) + ' trip' }); break;

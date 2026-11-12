@@ -141,6 +141,53 @@ t('events: a cost you cannot pay blocks that choice, never the whole card', () =
   const ev3 = { id: 'ex3', kind: 'bunker', title: 'Toll', text: '', ctx: {}, choices: [{ label: 'Pay', effects: { scrap: -80 } }, { label: 'Pay more', effects: { scrap: -200 } }] };
   E.events.push(ev3); assert(DE.Events.canChoose(E, ev3, 0).ok && DE.Events.choose(E, 'ex3', 0).ok);
 });
+t('events: costs are a share of what you have; rewards keep pace with the economy', () => {
+  const E = DE.State.create(null, now); DE.Events.ensure(E); E._rates = DE.Economy.computeRates(E);
+  E.resources.scrap = 1000; assert(DE.Events.resolve(E, { cost: { scrap: 0.1 } }).scrap === -100, '10% of 1000');
+  E.resources.scrap = 20000; E._fx = null; assert(DE.Events.resolve(E, { cost: { scrap: 0.1 } }).scrap === -2000, '10% of 20000');
+  E.resources.scrap = 0; assert(!DE.Events.resolve(E, { cost: { scrap: 0.1 } }).scrap, 'nothing to pay from an empty store');
+  const early = DE.Events.worth(E, 'food', 3); assert(early > 0, 'a reward early on');
+  for (const id in E.rooms) E.rooms[id].level = 30; DE.Bunker.placeRoom(E, 'storage', 1, 12, 50); E._fx = null; E._rates = DE.Economy.computeRates(E);
+  const late = DE.Events.worth(E, 'food', 3); assert(late > early * 5, 'rewards grow with output: ' + early + ' → ' + late);
+  assert(DE.Events.worth(E, 'concrete', 3) > 0, 'concrete rewards before any mixer exists');
+});
+t('every bunker event and road encounter can be drawn and every choice taken', () => {
+  const E = DE.State.create(null, now); DE.Events.ensure(E);
+  for (let d = 2; d <= 5; d++) E.floors.push(DE.State.emptyFloor(d));
+  for (const k in E.resources) E.resources[k] = 5000; E.defense.wave = 12; E.rep.traders = 2; E.rep.militia = 2; E.rep.growers = 2;
+  for (let i = 0; i < 6; i++) DE.Survivors.spawn(E); E.rooms[Object.keys(E.rooms)[0]].level = 6; E._fx = null; E._rates = DE.Economy.computeRates(E);
+  const snap = JSON.stringify(E);
+  DE.Data.BUNKER_EVENTS.forEach(def => {
+    const probe = JSON.parse(snap); probe._rates = E._rates; const ev = DE.Events.makeEvent(probe, def);
+    assert(ev.choices.length >= 1, def.id + ' has choices');
+    ev.choices.forEach((c, i) => {
+      const T = JSON.parse(snap); T._rates = E._rates; DE.Events.ensure(T); T.events = [Object.assign({}, ev, { id: 'eX' })];
+      const r = DE.Events.choose(T, 'eX', i); assert(r.ok, def.id + ' choice ' + i + ': ' + r.reason);
+      for (const k in T.resources) assert(T.resources[k] >= 0 && isFinite(T.resources[k]), def.id + ' left ' + k + ' at ' + T.resources[k]);
+      assert(!/\{[ABDR]\}/.test(ev.title + ev.text + c.label + c.desc), def.id + ' has unfilled names');
+    });
+  });
+  DE.Data.ENCOUNTERS.forEach(def => def.choices.forEach(c => { const fx = DE.Events.resolve(E, c.effects); for (const k in fx) if (DE.Data.RESOURCES[k]) assert(isFinite(fx[k]), def.id + ' ' + k); }));
+});
+t('choices have consequences: chained events come back later; refusing raiders feeds the next wave', () => {
+  const E = DE.State.create(null, now); DE.Events.ensure(E); E.resources.food = 2000; E._rates = DE.Economy.computeRates(E);
+  const rats = DE.Data.BUNKER_EVENTS.find(e => e.id === 'rats');
+  const ev = DE.Events.makeEvent(E, rats); ev.choices[2].effects = Object.assign({}, ev.choices[2].effects, { chain: ['rats2', 10, 10, 1] }); E.events = [Object.assign(ev, { id: 'eR' })];
+  assert(DE.Events.choose(E, 'eR', 2).ok && E.eventChains.length === 1, 'consequence scheduled');
+  let t0 = now; for (let i = 0; i < 40 && !E.events.some(x => x.def === 'rats2'); i++) { t0 += 1000; DE.Sim.tick(E, 1, t0); }
+  assert(E.events.some(x => x.def === 'rats2') && !E.eventChains.length, 'the rats came back');
+  const before = DE.Defense.waveHp(E); DE.Events.applyEffects(E, { waveHp: 1.35 }, {});
+  approx(DE.Defense.waveHp(E) / before, 1.35, 0.02, 'next wave is bigger');
+  DE.Defense.resolveWave(E, t0); assert(E.defense.waveMult === 1, 'only that wave');
+  const L = DE.Save.sanitize(JSON.parse(JSON.stringify(Object.assign(E, { eventChains: [{ def: 'envoy2', at: 99, ctx: { A: 'Ann' } }] }))), now);
+  assert(L.eventChains.length === 1 && L.eventChains[0].ctx.A === 'Ann', 'pending consequences survive a save');
+});
+t('trades give a share of one stock for its value in another, better with a good name', () => {
+  const E = DE.State.create(null, now); E.resources.scrap = 1000; const tr = { give: 'scrap', pct: 0.15, get: 'fuel', rate: 1.2 };
+  const a = DE.Events.tradeAmounts(E, tr); assert(a.give.scrap === 150 && a.get.fuel > 0, 'offer');
+  E.rep.traders = 3; assert(DE.Events.tradeAmounts(E, tr).get.fuel > a.get.fuel, 'reputation helps');
+  assert(DE.Events.tradeAmounts(E, { give: { scrap: 500 }, get: { fuel: 60 } }).give.scrap === 500, 'old fixed offers still work');
+});
 t('bus upgrade raises team capacity and expedition speed', () => {
   const E = DE.State.create(null, now); E.research.done.construction = true; E._fx = null; E.resources.scrap = 1e5; E.resources.concrete = 1e5; E.resources.fuel = 1e5; E.resources.research = 1e5;
   assert(DE.Events.bus(E).capacity === 3);

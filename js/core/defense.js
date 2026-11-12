@@ -79,7 +79,9 @@ DE.Defense = (function () {
     const mut = n === state.defense.wave ? DE.Events.mutation(state) : null; const noise = 1 + Math.min(0.6, DE.Events.noise(state) * 0.012);
     // after breaches the horde regroups: each consecutive breach weakens the next wave (min 60%)
     const regroup = Math.max(0.6, Math.pow(0.85, state.defense.breachStreak || 0));
-    return Math.floor(C().WAVE_BASE_HP * Math.pow(C().WAVE_GROWTH, n - 1) * (1 + 0.08 * (state.floors.length - 1)) * weaken * (mut ? mut.hp : 1) * noise * regroup);
+    // choices in events can make the next horde bigger (refusing raiders) or smaller
+    const provoked = n === state.defense.wave ? (state.defense.waveMult || 1) : 1;
+    return Math.floor(C().WAVE_BASE_HP * Math.pow(C().WAVE_GROWTH, n - 1) * (1 + 0.08 * (state.floors.length - 1)) * weaken * (mut ? mut.hp : 1) * noise * regroup * provoked);
   }
   function isBossWave(n) { return n % DE.Data.BOSS_EVERY === 0; }
 
@@ -178,7 +180,7 @@ DE.Defense = (function () {
     for (const r in result.reward) { state.resources[r] = Math.min(DE.Economy.storageCap(state, r), state.resources[r] + result.reward[r]); state.stats.produced[r] += result.reward[r]; state.stats.runScore += result.reward[r] * DE.Data.RESOURCES[r].value; }
     // guards gain experience
     DE.Survivors.guards(state).forEach(g => { g.xp += 40 * fx.xpMult; });
-    state.defense.wave = n + 1;
+    state.defense.wave = n + 1; state.defense.waveMult = 1;
     state.defense.lastResult = result;
     state.defense.log.push(result);
     if (state.defense.log.length > 20) state.defense.log.shift();
