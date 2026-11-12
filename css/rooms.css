@@ -110,7 +110,7 @@ body.no-anim .scene * { animation: none !important; }
 #actors { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; z-index: 4; overflow: visible; }
 /* what a room makes: drawn over the survivors (see placeTags in ui-bunker.js) */
 #room-tags { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; z-index: 5; overflow: visible; }
-#room-tags .rtag { position: absolute; transform: translateY(-100%); }
+#room-tags .rtag { position: absolute; }
 #room-tags .rtag:empty { display: none; }
 .actor { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
 .actor .rig { position: absolute; left: -17px; bottom: 0; height: 54px; width: 34px; pointer-events: auto; cursor: pointer; }
@@ -341,4 +341,5 @@ body.no-anim .site * { animation: none !important; }
 .actor.saying .bubble { opacity: 0 !important; }
 .actor.saying { z-index: 2; }
 body.no-anim .actor .say { transition: none; }
-.say .sr { visibility: hidden; }
+.say .sr { display: none; }   /* the bubble grows with the typed text */
+.actor .say, .room .builder .say { max-width: 170px; padding: 3px 8px 4px; }

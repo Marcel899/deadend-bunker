@@ -125,7 +125,9 @@ DE.UI.Bunker = (function () {
       const el = document.getElementById('room-' + id), t = tags[id];
       if (!el) { t.remove(); delete tags[id]; continue; }
       const r = el.getBoundingClientRect();
-      t.style.left = Math.round(r.left - base.left + 14) + 'px'; t.style.top = Math.round(r.bottom - base.top - 5) + 'px';
+      // under the room's name, in the upper part of the room: survivors walk and work along the floor,
+      // so the badge never covers anyone
+      t.style.left = Math.round(r.left - base.left + 12) + 'px'; t.style.top = Math.round(r.top - base.top + 32) + 'px';
     }
   }
 
