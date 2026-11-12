@@ -78,6 +78,7 @@ DE.UI.Bunker = (function () {
         data-action="selectRoom" data-id="${room.id}" id="room-${room.id}" data-sig="">
       <div class="door"></div>
       <div class="room-scene"></div>
+      <div class="sel-frame" aria-hidden="true"><i></i><i></i><i></i><i></i></div>
       <div class="builder">${DE.Chars.crew('engineer', { anim: 'repair', h: 48 })}</div>
       <div class="room-head"><span class="room-name">${esc(def.name)}</span><span class="room-lvl"></span><span class="room-flag"></span></div>
       <div class="room-foot"></div>
@@ -148,7 +149,7 @@ DE.UI.Bunker = (function () {
         for (const r in info.produces) parts.push('+' + U().fmt(info.produces[r], info.produces[r] < 10 ? 2 : undefined) + Ic().res(r, 'ico-inline'));
         rate = parts.join(' ');
         if (!rate && def.effects) {
-          if (def.effects.housing) rate = Ic().img('housing', 'ico-inline') + ' ' + (def.effects.housing + (room.type === 'quarters' ? s._fx.housingPerLevel : 0)) * room.level;
+          if (def.effects.housing) rate = Ic().img('housing', 'ico-inline') + ' ' + (def.effects.housing + (room.type === 'quarters' ? DE.Effects.get(s).housingPerLevel : 0)) * room.level;
           else if (def.effects.storage) rate = '+' + U().fmt(def.effects.storage * room.level) + ' storage';
           else if (def.effects.morale) rate = '+' + def.effects.morale * room.level + ' morale';
           else if (def.effects.guardDmg) rate = '+' + Math.round(def.effects.guardDmg * room.level * 100) + '% guard dmg';
@@ -162,7 +163,13 @@ DE.UI.Bunker = (function () {
       // counter box: a label tab above a UI-sheet slot holding the value
       const label = room.level > 0 && info && Object.keys(info.produces || {}).length ? 'Makes /s' : def.effects && def.effects.housing ? 'Housing' : def.effects && def.effects.storage ? 'Storage' : 'Bonus';
       setHtml(tagFor(id), rate ? `<span class="rc-label">${label}</span><span class="rc-box">${rate}</span>` : '');
-      setText(el.querySelector('.room-flag'), flag);
+      // status flag: words on wide rooms, a warning icon on narrow ones (the name and level come first)
+      const fl = el.querySelector('.room-flag'), narrow = def.size <= 2, fk = flag ? flag + (narrow ? ':n' : '') : '';
+      if (fl.dataset.k !== fk) {
+        fl.dataset.k = fk; fl.classList.toggle('icon', narrow && !!flag);
+        fl.innerHTML = !flag ? '' : narrow ? Ic().img('alert', 'ico-inline') : esc(flag);
+        el.title = flag ? def.name + ' · ' + flag.charAt(0) + flag.slice(1).toLowerCase() : '';
+      }
       const prog = el.querySelector('.room-progress');
       if (c) {
         const pct = Math.min(100, 100 * (1 - (c.endsAt - now) / (c.duration * 1000)));

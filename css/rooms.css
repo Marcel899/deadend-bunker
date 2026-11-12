@@ -227,8 +227,28 @@ body.placing { cursor: grabbing; user-select: none; }
 .bc-actions { display: flex; flex-direction: column; gap: 6px; }
 /* selection is drawn INSIDE the room; the room itself never moves or changes layer, so the shared side pillars stay identical */
 .room, .room:hover, .room.selected { transform: none !important; z-index: 1 !important; box-shadow: none !important; border: 0 !important; }
-.room.selected .room-scene { box-shadow: inset 0 0 0 3px #ffc531, inset 0 0 22px rgba(255, 197, 49, .45); }
-.room:hover:not(.selected) .room-scene { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .25); }
+/* selection: a gold frame on the room's boundaries (above the artwork), an outer glow, pulsing corner
+   brackets and a gold name tag; the selected room sits above its neighbours so the glow shows */
+.room .sel-frame { display: none; position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.floor .room.selected { z-index: 2 !important; }
+.room.selected .sel-frame { display: block; }
+.room.selected .sel-frame::before { content: ''; position: absolute; inset: 0; border: 4px solid #ffc531; border-radius: 3px;
+  box-shadow: inset 0 0 0 2px rgba(28, 16, 32, .85), inset 0 0 26px rgba(255, 197, 49, .45), 0 0 0 2px #1c1020, 0 0 18px 3px rgba(255, 197, 49, .6); animation: selGlow 1.8s ease-in-out infinite; }
+.sel-frame i { position: absolute; width: 24px; height: 24px; border: 0 solid #fff8dc; filter: drop-shadow(0 0 1.5px #1c1020) drop-shadow(0 0 5px rgba(255, 197, 49, .95)); animation: selCorner 1.8s ease-in-out infinite; }
+.sel-frame i:nth-child(1) { left: 8px; top: 8px; border-left-width: 5px; border-top-width: 5px; --cx: -3px; --cy: -3px; }
+.sel-frame i:nth-child(2) { right: 8px; top: 8px; border-right-width: 5px; border-top-width: 5px; --cx: 3px; --cy: -3px; }
+.sel-frame i:nth-child(3) { left: 8px; bottom: 8px; border-left-width: 5px; border-bottom-width: 5px; --cx: -3px; --cy: 3px; }
+.sel-frame i:nth-child(4) { right: 8px; bottom: 8px; border-right-width: 5px; border-bottom-width: 5px; --cx: 3px; --cy: 3px; }
+@keyframes selCorner { 50% { transform: translate(var(--cx), var(--cy)); } }
+@keyframes selGlow { 50% { box-shadow: inset 0 0 0 2px rgba(28, 16, 32, .85), inset 0 0 40px rgba(255, 197, 49, .62), 0 0 0 2px #1c1020, 0 0 28px 6px rgba(255, 197, 49, .8); } }
+.room.selected .room-name { background: #ffc531; color: #1c1020; border-color: #1c1020; text-shadow: none; }
+body.no-anim .sel-frame::before, body.no-anim .sel-frame i { animation: none; }
+/* hover (mouse only): a quiet white frame */
+@media (hover: hover) {
+  .room:hover:not(.selected) .sel-frame { display: block; }
+  .room:hover:not(.selected) .sel-frame::before { content: ''; position: absolute; inset: 0; border: 2px solid rgba(255, 255, 255, .4); border-radius: 3px; }
+  .room:hover:not(.selected) .sel-frame i { display: none; }
+}
 .room .door::after { display: none; }
 
 /* ============ DIG SITE (js/ui/digsite.js) ============
@@ -304,3 +324,8 @@ body.no-anim .site * { animation: none !important; }
 .ow-burst i { position: absolute; width: 10px; height: 10px; margin: -5px; background: #ffd76a; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: owStar .9s ease-out forwards; }
 @keyframes owStar { 0% { transform: rotate(var(--a)) translateX(0) scale(.4); opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(1); opacity: 0; } }
 .ow-burst em { position: absolute; left: var(--x); top: 0; width: 46px; height: 32px; margin: -16px -23px; border-radius: 50%; background: radial-gradient(circle, rgba(220, 210, 190, .8), rgba(220, 210, 190, 0) 70%); animation: rcDust 1.1s ease-out forwards; opacity: 0; }
+/* room header: the level badge never wraps; long names shorten first; narrow rooms show the status as an icon */
+.room .room-head .room-lvl { white-space: nowrap; flex: none; }
+.room .room-head .room-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+.room-head .room-flag.icon { padding: 0 3px; max-width: none; flex: none; line-height: 1; display: inline-flex; align-items: center; height: 18px; }
+.room-head .room-flag.icon .ico-inline { width: 13px; height: 13px; }

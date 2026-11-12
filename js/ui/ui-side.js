@@ -79,7 +79,7 @@ DE.UI.Side = (function () {
  };
  function effectRows(s, def, level) {
  let h = '';
- for (const k in def.effects) { const L = EFFECT_LABELS[k]; if (!L) continue; let v = def.effects[k] * level; if (k === 'housing' && def.id === 'quarters') v += s._fx.housingPerLevel * level; h += `<div class="row"><span>${L[0]}</span><b class="pos">${L[1](v)}</b></div>`; }
+ for (const k in def.effects) { const L = EFFECT_LABELS[k]; if (!L) continue; let v = def.effects[k] * level; if (k === 'housing' && def.id === 'quarters') v += DE.Effects.get(s).housingPerLevel * level; h += `<div class="row"><span>${L[0]}</span><b class="pos">${L[1](v)}</b></div>`; }
  return h;
  }
  function nextEffects(def, from, to) {
@@ -110,7 +110,7 @@ DE.UI.Side = (function () {
  <div class="row"><span>Workers (${room.workers.length}/${def.workers})</span><b>×${info.workerMult.toFixed(2)}</b></div>
  <div class="row"><span>Adjacency</span><b>×${(1 + info.adjacency).toFixed(2)}</b></div>
  <div class="row"><span>Research</span><b>×${info.research.toFixed(2)}</b></div>
- <div class="row"><span>Legacy & global</span><b>×${(1 + s._fx.globalMult).toFixed(2)}</b></div>
+ <div class="row"><span>Legacy & global</span><b>×${(1 + DE.Effects.get(s).globalMult).toFixed(2)}</b></div>
  <div class="row"><span>Morale</span><b>×${DE.Economy.moraleMult(s.morale).toFixed(2)}</b></div>
  ${info.power < 1 ? `<div class="row neg"><span>Brownout</span><b>×${info.power.toFixed(2)}</b></div>` : ''}
  ${info.starve < 1 ? `<div class="row neg"><span>Missing input</span><b>×${info.starve.toFixed(2)}</b></div>` : ''}
@@ -179,7 +179,8 @@ DE.UI.Side = (function () {
  Object.keys(tiers).sort().forEach(t => {
  const defs = tiers[t]; const unlockedCount = defs.filter(d => DE.Bunker.isUnlocked(s, d.id)).length;
  const gate = defs.find(d => d.unlock && d.unlock.startsWith('blueprints'));
- html += `<details class="tier-group" ${unlockedCount ? 'open' : ''}><summary><span class="tag tier-${t}">Tier ${t}</span> ${esc(DE.Data.TIER_LABELS[t])} <small class="muted">${unlockedCount}/${defs.length} unlocked${!unlockedCount && gate ? ' · ' + esc(DE.Bunker.lockReason(s, gate.id) || '') : ''}</small></summary>`;
+ const lock = !unlockedCount && gate ? DE.Bunker.lockReason(s, gate.id) : '';
+ html += `<details class="tier-group" ${unlockedCount ? 'open' : ''}><summary><span class="tag tier-${t}">Tier ${t}</span><span class="tg-name">${esc(DE.Data.TIER_LABELS[t])}</span><small class="tg-count">${unlockedCount}/${defs.length} unlocked</small>${lock ? `<small class="tg-lock">${DE.Icons.img('lock', 'ico-inline')} ${esc(lock)}</small>` : ''}</summary>`;
  defs.forEach(def => {
  const type = def.id; const unlocked = DE.Bunker.isUnlocked(s, type);
  const place = DE.Bunker.canPlace(s, type, depth, slot); const cost = DE.Bunker.buildCost(s, type); const rareOk = DE.Expeditions.hasRare(s, def.rare); const afford = U().canAfford(s.resources, cost) && rareOk;
@@ -194,7 +195,7 @@ DE.UI.Side = (function () {
  html += `<div class="build-card cat-${def.category} ${unlocked ? '' : 'locked'} ${fits ? '' : 'nofit'}" data-fp="${def.size}" data-fok="${place.ok ? 1 : 0}" data-depth="${depth}" data-slot="${slot}"><div class="bc-icon">${DE.Icons.room(def.id, 'ico-inline')}</div>
  <div class="bc-body"><b>${esc(def.name)}</b><div class="bc-chips">${chips}</div>
  <div class="bc-desc">${esc(def.desc)}</div>${outputs ? `<div class="bc-out">${outputs}</div>` : ''}${reason ? `<div class="bc-reason">${esc(reason)}</div>` : ''}</div>
- <div class="bc-actions"><button class="btn primary small ${ok ? '' : 'cant'}" data-action="build" data-type="${type}" data-depth="${depth}" data-slot="${slot}" ${ok ? '' : 'disabled'}>Build here<span class="cost">${U().costText(cost)}${DE.Icons.rare(def.rare, s.materials)}</span><small>${U().fmtTime(DE.Bunker.buildTime(s, type))}</small></button>${unlocked ? `<button class="btn small drag-handle" data-place="${type}" title="Drag onto the bunker">${DE.Icons.img('move4', 'ico-inline')} Drag</button>` : ''}</div></div>`;
+ <div class="bc-actions"><button class="btn primary small bc-build ${ok ? '' : 'cant'}" data-action="build" data-type="${type}" data-depth="${depth}" data-slot="${slot}" ${ok ? '' : 'disabled'}><span class="bc-bl">Build here</span><span class="cost">${U().costText(cost)}${DE.Icons.rare(def.rare, s.materials)}</span><small>${U().fmtTime(DE.Bunker.buildTime(s, type))}</small></button>${unlocked ? `<button class="btn small drag-handle bc-drag" data-place="${type}" title="Drag onto the bunker">${DE.Icons.img('move4', 'ico-inline')} Drag</button>` : ''}</div></div>`;
  });
  html += `</details>`;
  });
