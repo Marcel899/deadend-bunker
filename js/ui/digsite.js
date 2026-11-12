@@ -38,29 +38,117 @@ DE.UI.DigSite = (function () {
   }
 
   /* Machines are drawn relative to the face (x = 0) and travel with it. */
+  const f1 = (v) => (+v).toFixed(1);
+  /** A tracked undercarriage: track belt with tread lugs, road wheels with hubs, an idler and a toothed sprocket. */
+  function tracks(x, w, h) {
+    const y = G - h; let o = `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="${h / 2}" fill="#2e2c38" ${S3}/>`;
+    for (let k = x + 8; k < x + w - 6; k += 9) o += `<path d="M${k} ${y + 1} v4 M${k} ${G - 1} v-4" stroke="#55536a" stroke-width="3"/>`;
+    const n = Math.max(3, Math.floor((w - 24) / 20));
+    for (let i = 0; i < n; i++) { const cx = x + 14 + i * (w - 28) / (n - 1); o += `<circle cx="${f1(cx)}" cy="${G - h / 2}" r="${h / 2 - 5}" fill="#5a5866" ${S2}/><circle cx="${f1(cx)}" cy="${G - h / 2}" r="2.6" fill="#a9adb8"/>`; }
+    o += `<circle cx="${x + w - 12}" cy="${G - h / 2}" r="${h / 2 - 3}" fill="#46444f" stroke="${INK}" stroke-width="2" stroke-dasharray="3 2"/>`;
+    return o;
+  }
+  /** Diagonal hazard stripes on a strip. */
+  function hazard(x, y, w, h) {
+    let o = `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#ffd34a" ${S2}/>`;
+    for (let k = x + 2; k < x + w - 2; k += 8) o += `<path d="M${k} ${y + h - 1} l${Math.min(5, x + w - k - 1)} ${-(h - 2)}" stroke="${INK}" stroke-width="3"/>`;
+    return o;
+  }
+  /** Exhaust stack with smoke puffs. */
+  function stack(x, y, hgt) {
+    return `<rect x="${x}" y="${y - hgt}" width="7" height="${hgt}" fill="#5a5866" ${S2}/><rect x="${x - 2}" y="${y - hgt - 4}" width="11" height="5" rx="1" fill="#3a3845" ${S2}/>`
+      + `<g class="dig-smoke">${[0, 1, 2].map(i => `<circle cx="${x + 3}" cy="${y - hgt - 9}" r="${5 + i}" fill="#8a8494" style="animation-delay:${(i * .8).toFixed(1)}s"/>`).join('')}</g>`;
+  }
+  /** A drill boom from a pivot to the face, with its hydraulic cylinder, hose, headlight and a fluted bit. */
+  function boom(px, py, tipX, tipY, c, big, k) {
+    const ang = Math.atan2(tipY - py, tipX - px), len = Math.hypot(tipX - px, tipY - py) - 34, ex = px + Math.cos(ang) * len, ey = py + Math.sin(ang) * len;
+    const mx = px + Math.cos(ang) * len * .55, my = py + Math.sin(ang) * len * .55, deg = (ang * 180 / Math.PI).toFixed(1), wB = big ? 15 : 12;
+    let o = `<g class="dig-boom" style="animation-delay:${(k * .7).toFixed(1)}s">`;
+    // hydraulic cylinder under the boom: barrel and a polished rod
+    o += `<path d="M${px + 8} ${py + 16} L${f1(mx)} ${f1(my + 7)}" stroke="${INK}" stroke-width="9" stroke-linecap="round"/><path d="M${px + 8} ${py + 16} L${f1((px + mx) / 2)} ${f1((py + 16 + my + 7) / 2)}" stroke="#5a5f6a" stroke-width="5" stroke-linecap="round"/><path d="M${f1((px + mx) / 2)} ${f1((py + 16 + my + 7) / 2)} L${f1(mx)} ${f1(my + 7)}" stroke="#d0d3dc" stroke-width="3" stroke-linecap="round"/>`;
+    // the boom: outlined beam, a darker web and two bolt plates
+    o += `<path d="M${px} ${py} L${f1(ex)} ${f1(ey)}" stroke="${INK}" stroke-width="${wB + 5}" stroke-linecap="round"/><path d="M${px} ${py} L${f1(ex)} ${f1(ey)}" stroke="${c}" stroke-width="${wB}" stroke-linecap="round"/><path d="M${px + 6} ${py + 3} L${f1(ex - 4)} ${f1(ey + 3)}" stroke="#000" stroke-width="2" opacity=".22"/>`;
+    o += `<circle cx="${px}" cy="${py}" r="${wB / 2 + 2}" fill="#5a5866" ${S2}/><circle cx="${px}" cy="${py}" r="2.5" fill="#d0d3dc"/><circle cx="${f1(mx)}" cy="${f1(my)}" r="3" fill="#3a3845"/>`;
+    // hose along the boom to the drill motor
+    o += `<path d="M${px - 6} ${py + 6} Q${f1(mx)} ${f1(my + 22)} ${f1(ex - 10)} ${f1(ey + 9)}" fill="none" stroke="${INK}" stroke-width="4"/><path d="M${px - 6} ${py + 6} Q${f1(mx)} ${f1(my + 22)} ${f1(ex - 10)} ${f1(ey + 9)}" fill="none" stroke="#c93a3a" stroke-width="2"/>`;
+    // headlight and its beam on the face
+    o += `<path d="M${f1(mx + 6)} ${f1(my - 9)} L${tipX + 4} ${tipY - 34} L${tipX + 4} ${tipY + 30} Z" fill="#fff6c0" opacity=".14"/><rect x="${f1(mx)}" y="${f1(my - 13)}" width="9" height="7" rx="2" fill="#fff6c0" ${S2}/>`;
+    // drill motor and bit, rotated along the boom; the flutes run (spinning) and the bit chatters
+    o += `<g transform="translate(${f1(ex)} ${f1(ey)}) rotate(${deg})"><rect x="-6" y="-9" width="22" height="18" rx="3" fill="#6e717b" ${S3}/><path d="M-2 -9 v18 M4 -9 v18" stroke="${INK}" stroke-width="1.5" opacity=".5"/>`
+      + `<g class="dig-bit"><rect x="16" y="-4" width="10" height="8" fill="#a9adb8" ${S2}/><path d="M26 -8 L44 0 L26 8 Z" fill="#c9ccd4" ${S3}/><path class="dig-flute" d="M28 -6 L40 -1 M28 6 L40 1 M27 0 L43 0" stroke="${INK}" stroke-width="1.6" stroke-dasharray="3 2.5"/></g></g>`;
+    return o + '</g>';
+  }
+  function jumbo(L, big) {
+    // a drilling jumbo on tracks: engine house with stack, cab with an operator, one boom (two in basalt)
+    const c = big ? '#d6a43a' : '#f0a020', cd = big ? '#9a7426' : '#c07a10', x = big ? -262 : -232, w = 118, th = 24, deck = G - th - 11;
+    let o = `<g class="dig-rig">` + tracks(x, w, th);
+    o += `<g class="dig-shake"><rect x="${x + 4}" y="${deck}" width="${w - 8}" height="12" rx="3" fill="${cd}" ${S3}/>${hazard(x + w - 40, deck + 2, 30, 8)}`;
+    // engine house with louvres and a fuel cap, the exhaust stack behind
+    o += stack(x + 14, deck - 30, 18) + `<rect x="${x + 6}" y="${deck - 34}" width="44" height="34" rx="4" fill="${c}" ${S3}/>` + [0, 1, 2, 3].map(i => `<path d="M${x + 12} ${deck - 27 + i * 7} h20" stroke="${INK}" stroke-width="2" opacity=".55"/>`).join('') + `<circle cx="${x + 41}" cy="${deck - 24}" r="3.5" fill="#3a3845" ${S2}/>`;
+    // cab: frame, glass with a glare, the operator in a hard hat
+    const cx = x + 54; o += `<path d="M${cx} ${deck} V${deck - 44} q0 -6 6 -6 h28 q6 0 6 6 V${deck} Z" fill="${c}" ${S3}/><rect x="${cx + 5}" y="${deck - 42}" width="30" height="24" rx="3" fill="#9fe3ff" ${S2}/>`
+      + `<circle cx="${cx + 18}" cy="${deck - 27}" r="5" fill="#e8b48a" stroke="${INK}" stroke-width="1.5"/><path d="M${cx + 12} ${deck - 29} q6 -9 12 0 z" fill="#ffd34a" stroke="${INK}" stroke-width="1.5"/><path d="M${cx + 13} ${deck - 21} h10 v3 h-10 z" fill="#3a6aa8"/>`
+      + `<path d="M${cx + 9} ${deck - 40} l8 0 l-10 14 l-4 0 z" fill="#fff" opacity=".45"/><circle class="dig-beacon" cx="${cx + 20}" cy="${deck - 54}" r="4" fill="#ff7a2a" ${S2}/><rect x="${cx + 16}" y="${deck - 51}" width="8" height="3" fill="#3a3845"/></g>`;
+    // booms
+    const px = x + w - 14, py = deck - 4;
+    o += boom(px, py, -6, G - (big ? 150 : 128), c, big, 0);
+    if (big) o += boom(px - 6, py + 4, -6, G - 70, c, big, 1);
+    return o + '</g>';
+  }
+  function airDrill(L) {
+    // a compressor on wheels feeds an air-leg rock drill set against the face
+    const x = -250, ty = G - 44;
+    let o = `<g class="dig-rig"><g class="dig-shake">`;
+    o += `<path d="M${x - 20} ${G - 16} l-16 6" ${S3}/><circle cx="${x - 38}" cy="${G - 9}" r="4" fill="#3a3845" ${S2}/>`;   // tow bar
+    o += `<rect x="${x - 22}" y="${ty}" width="82" height="30" rx="15" fill="#d8443a" ${S3}/><path d="M${x - 10} ${ty + 6} h58" stroke="#fff" stroke-width="2.5" opacity=".35"/><path d="M${x - 2} ${ty} v30 M${x + 40} ${ty} v30" stroke="${INK}" stroke-width="2" opacity=".45"/>`;
+    o += `<rect x="${x + 4}" y="${ty - 22}" width="36" height="22" rx="3" fill="#4a4f63" ${S3}/>` + [0, 1, 2].map(i => `<path d="M${x + 9} ${ty - 17 + i * 6} h18" stroke="#8a8e98" stroke-width="2"/>`).join('');
+    o += `<circle cx="${x + 50}" cy="${ty - 8}" r="8" fill="#f4efe2" ${S2}/><path class="dig-gauge" d="M${x + 50} ${ty - 8} l0 -6" stroke="#c93a3a" stroke-width="2" stroke-linecap="round"/>`;
+    o += stack(x + 30, ty - 22, 10) + `</g>`;
+    o += [x - 6, x + 44].map(cx => `<circle cx="${cx}" cy="${G - 9}" r="10" fill="#2e2c38" ${S3}/><circle cx="${cx}" cy="${G - 9}" r="3.5" fill="#a9adb8"/>`).join('');
+    // hose along the floor to the drill
+    const hy = G - 78;
+    o += `<path d="M${x + 60} ${ty + 14} C${x + 120} ${G + 2}, -140 ${G + 2}, -78 ${hy + 6}" fill="none" stroke="${INK}" stroke-width="5"/><path d="M${x + 60} ${ty + 14} C${x + 120} ${G + 2}, -140 ${G + 2}, -78 ${hy + 6}" fill="none" stroke="#3a3845" stroke-width="2.5"/>`;
+    // the air leg (telescopic support), then the drill body and its steel, chattering against the rock
+    o += `<path d="M-104 ${G} L-70 ${hy + 8}" stroke="${INK}" stroke-width="9" stroke-linecap="round"/><path d="M-104 ${G} L-86 ${(G + hy) / 2 + 2}" stroke="#5a5f6a" stroke-width="5" stroke-linecap="round"/><path d="M-86 ${(G + hy) / 2 + 2} L-70 ${hy + 8}" stroke="#d0d3dc" stroke-width="3" stroke-linecap="round"/><rect x="-112" y="${G - 4}" width="16" height="4" fill="#3a3845" ${S2}/>`;
+    o += `<g class="dig-bit"><rect x="-86" y="${hy - 8}" width="46" height="16" rx="4" fill="#ffd34a" ${S3}/><path d="M-78 ${hy - 8} v16 M-70 ${hy - 8} v16" stroke="${INK}" stroke-width="1.6" opacity=".5"/>`
+      + `<path d="M-96 ${hy - 4} h10 M-96 ${hy + 4} h10 M-96 ${hy - 8} v16" stroke="${INK}" stroke-width="3" stroke-linecap="round"/><rect x="-40" y="${hy - 2.5}" width="34" height="5" fill="#a9adb8" ${S2}/><path d="M-6 ${hy - 4} l6 4 l-6 4 z" fill="#c9ccd4" ${S2}/></g>`;
+    return o + '</g>';
+  }
+  function borer(L) {
+    // a thermal borer: riveted steel drum on long tracks, cooling fins, pipes and a gauge; the cutter
+    // head spins and glows white-hot at the face
+    const x = -300, w = 248, th = 26, cy = G - th - 44, r = 36, ex = -38;
+    let o = `<g class="dig-rig">` + tracks(x + 6, w - 40, th);
+    o += `<g class="dig-shake"><rect x="${x}" y="${cy - r}" width="${ex - x}" height="${2 * r}" rx="18" fill="#8a8e98" ${S3}/>`
+      + `<rect x="${x + 8}" y="${cy - r + 6}" width="${ex - x - 16}" height="9" rx="4" fill="#c9ccd4" opacity=".75"/><rect x="${x + 8}" y="${cy + r - 14}" width="${ex - x - 16}" height="8" rx="4" fill="#000" opacity=".2"/>`;
+    for (let bx = x + 46; bx < ex - 20; bx += 52) { o += `<rect x="${bx}" y="${cy - r}" width="8" height="${2 * r}" fill="#6e717b" ${S2}/>`; for (let k = 0; k < 4; k++) o += `<circle cx="${bx + 4}" cy="${cy - r + 10 + k * 17}" r="1.8" fill="#d0d3dc"/>`; }
+    for (let k = 0; k < 6; k++) o += `<path d="M${x + 10 + k * 5} ${cy - r + 16} v${2 * r - 32}" stroke="${INK}" stroke-width="2" opacity=".55"/>`;   // cooling fins
+    o += `<path d="M${x + 30} ${cy - r - 6} H${ex - 30}" stroke="${INK}" stroke-width="7" stroke-linecap="round"/><path d="M${x + 30} ${cy - r - 6} H${ex - 30}" stroke="#c93a3a" stroke-width="4" stroke-linecap="round"/>`
+      + [x + 60, x + 140].map(px => `<rect x="${px}" y="${cy - r - 9}" width="6" height="9" fill="#3a3845"/>`).join('');
+    o += `<circle cx="${x + 100}" cy="${cy}" r="10" fill="#f4efe2" ${S2}/><path class="dig-gauge" d="M${x + 100} ${cy} l0 -7" stroke="#c93a3a" stroke-width="2.2" stroke-linecap="round"/>`
+      + `<path d="M${x + 150} ${cy + 8} l9 -16 l9 16 z" fill="#ffd34a" ${S2}/><path d="M${x + 159} ${cy - 3} v5 M${x + 159} ${cy + 5} v1" stroke="${INK}" stroke-width="2"/>`
+      + stack(x + 24, cy - r, 14) + `</g>`;
+    // cutter head: a cone of segments with teeth, glowing
+    o += `<g class="dig-heat"><path d="M${ex} ${cy - r + 2} L${ex + 34} ${cy} L${ex} ${cy + r - 2} Z" fill="${L.glow}" ${S3}/><path d="M${ex + 3} ${cy - r + 14} L${ex + 24} ${cy} L${ex + 3} ${cy + r - 14} Z" fill="#fff1a8" stroke="none"/></g>`
+      + `<path class="dig-flute" d="M${ex} ${cy - r + 2} L${ex + 34} ${cy} M${ex} ${cy + r - 2} L${ex + 34} ${cy} M${ex} ${cy - 12} L${ex + 30} ${cy} M${ex} ${cy + 12} L${ex + 30} ${cy}" stroke="${INK}" stroke-width="2" stroke-dasharray="5 3" fill="none"/>`
+      + `<g class="dig-sparks">${[0, 1, 2, 3].map(i => `<circle cx="${ex + 30 - i * 4}" cy="${cy - 22 + i * 15}" r="${2.4 - i * .3}" fill="${i % 2 ? '#ffd34a' : '#ff9a3a'}"/>`).join('')}</g>`;
+    return o + '</g>';
+  }
+  function handTools(L) {
+    // topsoil / clay: shovels in a dirt heap, a wheelbarrow, a bucket and a sieve
+    const x = -96, y = G;
+    return `<path d="M${x - 50} ${y} q22 -26 44 0 z" fill="${L.face}" ${S2}/>` + img('shovel', x - 30, y - 6, 34) + img('spade', x - 14, y - 4, 30, true)
+      + `<g transform="translate(${x + 40} ${y})"><path d="M-18 -26 h36 l-6 16 h-24 z" fill="#5a6f3a" ${S3}/><path d="M-14 -22 h28" stroke="#7a9a52" stroke-width="2"/><circle cx="12" cy="-6" r="6" fill="#3a3845" ${S2}/><circle cx="12" cy="-6" r="2" fill="#a9adb8"/><path d="M-18 -24 l-12 -6" ${S3}/><path d="M-6 -10 l-3 10 M8 -10 l2 4" ${S2}/>${rock(-4, -26, 7, L.rock, true)}${rock(8, -27, 6, L.rock, true)}</g>`
+      + `<g transform="translate(${x - 70} ${y})"><path d="M-9 -16 h18 l-3 16 h-12 z" fill="#8a8e98" ${S2}/><path d="M-9 -16 q9 -10 18 0" fill="none" ${S2}/></g>`
+      + `<g transform="translate(${x + 82} ${y})"><ellipse cx="0" cy="-6" rx="13" ry="4" fill="#a06a3a" ${S2}/><path d="M-11 -6 h22" stroke="${INK}" stroke-width="1" stroke-dasharray="2 2"/></g>`;
+  }
   function machine(L, layer) {
-    // machines stand back from the face so the crew works under the boom
-    const fx = 0, x = fx - (layer === 'topsoil' || layer === 'clay' ? 96 : 168), y = G;
     switch (layer) {
-      case 'limestone':   // compressor with a hose to the face, chugging
-        return `<g class="dig-shake">${img('gascylinders', x, y, 46)}</g><path d="M${x + 12} ${y - 30} q40 30 ${fx - x - 46} 6" fill="none" stroke="${INK}" stroke-width="5"/><path d="M${x + 12} ${y - 30} q40 30 ${fx - x - 46} 6" fill="none" stroke="#c93a3a" stroke-width="2.5"/>`;
-      case 'granite': case 'basalt': {   // tracked drill rig, boom reaching the face, the bit chattering
-        const big = layer === 'basalt', c = big ? '#c9a24a' : '#f0a020', bx = fx - 30;
-        return `<g class="dig-rig"><rect x="${x - 44}" y="${y - 22}" width="84" height="22" rx="11" fill="#3a3845" ${S3}/>${[0, 1, 2, 3].map(i => `<circle cx="${x - 32 + i * 20}" cy="${y - 11}" r="7" fill="#5a5866" ${S2}/>`).join('')}
-          <g class="dig-shake"><rect x="${x - 36}" y="${y - 58}" width="40" height="38" rx="5" fill="${c}" ${S3}/><rect x="${x - 30}" y="${y - 54}" width="18" height="16" rx="2" fill="#9fe3ff" ${S2}/><rect x="${x + 2}" y="${y - 48}" width="30" height="26" rx="3" fill="${c}" ${S3}/>
-          <circle class="dig-beacon" cx="${x - 16}" cy="${y - 62}" r="4" fill="#ff7a2a" ${S2}/></g>
-          <path d="M${x + 16} ${y - 44} L${bx - 26} ${y - (big ? 104 : 92)}" stroke="${INK}" stroke-width="${big ? 16 : 13}" stroke-linecap="round"/><path d="M${x + 16} ${y - 44} L${bx - 26} ${y - (big ? 104 : 92)}" stroke="${c}" stroke-width="${big ? 10 : 7}" stroke-linecap="round"/>
-          <g class="dig-bit"><path d="M${bx - 30} ${y - (big ? 116 : 102)} h22 l${big ? 18 : 14} ${big ? 12 : 10} l${big ? -18 : -14} ${big ? 12 : 10} h-22 z" fill="#8a8e98" ${S3}/><path d="M${bx - 22} ${y - (big ? 112 : 99)} l6 16 M${bx - 14} ${y - (big ? 112 : 99)} l6 16" ${S2} fill="none"/></g>
-          <g class="dig-sparks"><circle cx="${bx - 4}" cy="${y - (big ? 98 : 88)}" r="2.5" fill="#ffd34a"/><circle cx="${bx - 10}" cy="${y - (big ? 112 : 100)}" r="2" fill="#fff4a8"/><circle cx="${bx - 6}" cy="${y - (big ? 88 : 80)}" r="1.8" fill="#ffd34a"/></g></g>`;
-      }
-      case 'magma': {     // thermal borer: a heavy cylinder whose cone glows white-hot
-        const bx = fx - 6;
-        return `<g class="dig-rig"><rect x="${x - 50}" y="${y - 24}" width="96" height="24" rx="12" fill="#3a3845" ${S3}/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${x - 38 + i * 20}" cy="${y - 12}" r="7" fill="#5a5866" ${S2}/>`).join('')}
-          <g class="dig-shake"><rect x="${x - 40}" y="${y - 96}" width="${bx - x + 14}" height="66" rx="14" fill="#8a8e98" ${S3}/><path d="M${x - 30} ${y - 82} h${bx - x - 20} M${x - 30} ${y - 46} h${bx - x - 20}" ${S2}/></g>
-          <g class="dig-heat"><path d="M${bx - 26} ${y - 100} l30 37 l-30 37 z" fill="${L.glow}" ${S3}/><path d="M${bx - 22} ${y - 86} l16 23 l-16 23 z" fill="#fff1a8" stroke="none"/></g></g>`;
-      }
-      default:            // topsoil / clay: hand tools, a wheelbarrow and a bucket
-        return img('shovel', x - 10, y, 34) + img('spade', x + 20, y, 30, true) + `<g transform="translate(${x + 54} ${y})"><path d="M-18 -26 h36 l-6 16 h-24 z" fill="#5a6f3a" ${S3}/><circle cx="12" cy="-6" r="6" fill="#3a3845" ${S2}/><path d="M-18 -24 l-12 -6" ${S3}/>${rock(-4, -26, 7, L.rock, true)}${rock(8, -27, 6, L.rock, true)}</g>`;
+      case 'limestone': return airDrill(L);
+      case 'granite': return jumbo(L, false);
+      case 'basalt': return jumbo(L, true);
+      case 'magma': return borer(L);
+      default: return handTools(L);
     }
   }
 

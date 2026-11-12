@@ -156,15 +156,16 @@ DE.UI.Anim = (function () {
     P.b2y = 4 + 2.5 * hit - 2 * up; P.lL = 14; P.sL = 12; P.lR = -18; P.sR = 16;
   }
   function farm(st, P) {
-    // crouched over the beds working the soil with a trowel; now and then up to stretch and wipe the brow
+    // standing at the bed, bent over the plants: the trowel works the soil in short strokes, the other
+    // hand parts the leaves; now and then up straight to stretch and wipe the brow
     const t = st.t, c = frac(t / 8 + st.seed * .07) * 8;
     const up = c < 6 ? 0 : c < 6.5 ? smooth((c - 6) / .5) : c < 7.5 ? 1 : 1 - smooth((c - 7.5) / .5), down = 1 - up;
-    const jab = down * Math.pow(max(0, sin(TAU * t / .9 + st.seed)), 3);
-    P.b2y = 12 * down; P.lL = -44 * down; P.sL = 82 * down; P.lR = -22 * down + 3 * up; P.sR = 54 * down;
-    P.tr = 17 * down + 1 * up; P.hr = 12 * down - 8 * up + 2 * wander(t * .7, st.seed);
-    P.aF = -16 * down - 8 * jab - 4 * up; P.fF = -34 * down + 22 * jab - 12 * up;
-    const wipe = up * sin(TAU * t * 1.6) * 8;
-    P.aB = -34 * down - 128 * up; P.fB = -32 * down - 96 * up + wipe;
+    const jab = down * Math.pow(max(0, sin(TAU * t / 1.1 + st.seed)), 3), sway = wander(t * .6, st.seed);
+    P.tr = 22 * down + 1 * up + 1.5 * sway * down; P.hr = 10 * down - 8 * up + 2 * sway;
+    P.b2y = 2 * down; P.lL = 6; P.sL = 5 * down; P.lR = -9; P.sR = 7 * down + 2;
+    P.aF = -34 * down - 10 * jab - 4 * up; P.fF = -26 * down + 18 * jab - 12 * up;
+    const wipe = up * sin(TAU * t * 1.6) * 8, part = down * 6 * wander(t * 1.4, st.seed + 3);
+    P.aB = (-26 + part) * down - 128 * up; P.fB = -30 * down - 96 * up + wipe;
   }
   function study(st, P) {
     // over the bench (samples, microscope), then notes on the clipboard; every third time a "got it!" finger

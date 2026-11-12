@@ -362,3 +362,14 @@ body.no-anim .site * { animation: none !important; }
 body.no-anim .actor .say { transition: none; }
 .say .sr { display: none; }   /* the bubble grows with the typed text */
 .actor .say, .room .builder .say { max-width: 170px; padding: 3px 8px 4px; }
+/* smaller speech bubbles */
+.actor .say, .room .builder .say { max-width: 128px; padding: 2px 6px 3px; font-size: 9.5px; line-height: 1.18; border-width: 1.5px; border-radius: 9px; bottom: 58px; left: -14px; box-shadow: 0 1.5px 0 rgba(0, 0, 0, .35); transform-origin: 14px 100%; }
+.actor .say::after, .room .builder .say::after { left: 10px; bottom: -5px; width: 7px; height: 7px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+.room .builder .say { bottom: 52px; left: calc(50% - 14px); }
+/* machine details (js/ui/digsite.js): exhaust smoke, spinning bit flutes, a pecking boom, a twitching gauge */
+.dig-smoke circle { opacity: 0; transform-box: fill-box; transform-origin: center; animation: dig-smoke 2.4s ease-out infinite; }
+@keyframes dig-smoke { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 20% { opacity: .5; } 100% { opacity: 0; transform: translate(-16px, -30px) scale(1.9); } }
+.dig-site.active .dig-flute { animation: dig-flute .22s linear infinite; } @keyframes dig-flute { to { stroke-dashoffset: -11; } }
+.dig-site.active .dig-boom { transform-box: fill-box; transform-origin: 2% 92%; animation: dig-peck 2.4s ease-in-out infinite; } @keyframes dig-peck { 50% { transform: rotate(-1.2deg); } }
+.dig-gauge { transform-box: fill-box; transform-origin: 50% 100%; animation: dig-gauge 1.7s ease-in-out infinite; } @keyframes dig-gauge { 0%, 100% { transform: rotate(-30deg); } 50% { transform: rotate(40deg); } }
+.dig-site:not(.active) .dig-smoke { display: none; }
