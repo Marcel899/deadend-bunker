@@ -1282,3 +1282,21 @@ img.ico-face.ava { width: 40px; height: 40px; border-width: 2.5px; box-shadow: 0
 /* scrolling lists stay cheap: portraits carry their own dark outline, no per-image shadow filter */
 .cport img { filter: none; }
 .rv-fig .cport img, .ev-stage .cport img, .d3-z .cport img { filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, .5)); }
+
+/* ---- Excavation drawer: the dig, the mining crew, the rock layers ---- */
+.xv-head { display: flex; gap: 10px; align-items: flex-start; margin-bottom: 6px; } .xv-head h4 { margin: 0 0 2px; }
+.xv-swatch { flex: 0 0 auto; width: 26px; height: 26px; border-radius: 6px; border: 3px solid var(--ink); box-shadow: inset 0 3px 0 rgba(255, 255, 255, .25), inset 0 -4px 0 rgba(0, 0, 0, .25); }
+.xv-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr)); gap: 6px; margin: 8px 0; }
+.xv-stats span { display: flex; flex-direction: column; gap: 1px; padding: 5px 8px; border-radius: 8px; background: rgba(0, 0, 0, .25); font-size: 11px; color: var(--muted); }
+.xv-stats b { font-family: var(--display); font-weight: 400; font-size: 14px; color: #fff; display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.xv-reqs { display: flex; flex-direction: column; gap: 4px; margin: 6px 0; }
+.xv-req { display: flex; align-items: center; gap: 7px; padding: 5px 8px; border-radius: 8px; background: rgba(0, 0, 0, .22); font-weight: 800; font-size: 12.5px; }
+.xv-req span { flex: 1; } .xv-req.ok { color: #b9e08a; } .xv-req.no { color: #ffb4a8; box-shadow: inset 3px 0 0 #e8392f; }
+.xv-crew-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; } .xv-crew-head h4 { margin: 0; display: flex; align-items: center; gap: 6px; }
+.xv-crew h5 { margin: 10px 0 4px; font-family: var(--display); font-weight: 400; color: var(--muted); letter-spacing: .3px; }
+.xv-layer { display: flex; align-items: center; gap: 10px; padding: 7px 8px; border-radius: 10px; margin-bottom: 4px; background: rgba(0, 0, 0, .18); }
+.xv-layer > div { flex: 1; min-width: 0; } .xv-layer.done { opacity: .62; } .xv-layer.here { background: rgba(255, 197, 49, .12); box-shadow: inset 0 0 0 2px rgba(255, 197, 49, .55); }
+.xv-tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 3px; }
+.xv-tags i { font-style: normal; display: inline-flex; align-items: center; gap: 3px; padding: 1px 7px 1px 4px; border-radius: 8px; background: rgba(0, 0, 0, .3); font-size: 11px; font-weight: 800; color: #d8d0e8; }
+.xv-tags i.ok { color: #b9e08a; }
+.xv-st { font-family: var(--display); font-size: 11px; color: var(--muted); white-space: nowrap; } .xv-st.here { color: var(--gold); }

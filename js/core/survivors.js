@@ -76,7 +76,7 @@ DE.Survivors = (function () {
     return { ok: true, survivor: s };
   }
 
-  /** Assign to {kind:'room', id} | {kind:'guard'} | {kind:'expedition', id} | null. */
+  /** Assign to {kind:'room', id} | {kind:'guard'} | {kind:'dig'} (mining crew) | {kind:'expedition', id} | null. */
   function assign(state, survivorId, target) {
     const s = state.survivors[survivorId];
     if (!s) return { ok: false, reason: 'No such survivor' };
@@ -91,6 +91,7 @@ DE.Survivors = (function () {
       if (room.workers.length >= def.workers) return { ok: false, reason: 'Room is full' };
     }
     if (target && target.kind === 'guard' && !(s.assignment && s.assignment.kind === 'guard') && guards(state).length >= DE.Effects.get(state).guardCap) return { ok: false, reason: 'All guard posts are taken (build Guard Barracks)' };
+    if (target && target.kind === 'dig' && !(s.assignment && s.assignment.kind === 'dig') && DE.Excavation.miners(state).length >= DE.Excavation.minerCap(state)) return { ok: false, reason: 'All mining posts are taken (upgrade the Mining Station)' };
     // remove from current
     if (s.assignment && s.assignment.kind === 'room') {
       const old = state.rooms[s.assignment.id];

@@ -14,10 +14,12 @@ DE.CONFIG = {
   OFFLINE_MAX_STEPS: 400,        // simulation granularity for long absences
   OFFLINE_MAX_WAVES: 3,          // zombie waves resolved while away (rest are deferred)
   /* Bunker */
-  FLOOR_SLOTS: 16,            // base grid cells per floor (one cell = 100px); rooms are 2 or 4 cells wide
+  FLOOR_SLOTS: 12,            // grid cells of a newly dug floor (one cell = 100px); rooms are 2 or 4 cells wide
+  START_FLOOR_SLOTS: 16,      // the first floor, inherited from the pre-war shelter, is wider
   MAX_COLS: 24,               // a floor can be dug out sideways up to this many cells
   WING_CELLS: 4,              // cells added per sideways excavation
-  BASE_MAX_FLOOR: 3,
+  BASE_MAX_FLOOR: 2,          // deeper layers need excavation research (see DE.Data.STRATA)
+  MINERS_BASE: 2,             // mining posts without a Mining Station
   MAX_FLOORS: 12,
   BASE_STORAGE: 1000,
   /* Economy */

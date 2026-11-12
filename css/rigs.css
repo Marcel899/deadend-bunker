@@ -8,9 +8,10 @@
 
 /* props per animation: hands are free for work, talk, meals and sleep; a crate when hauling,
    a hammer when repairing */
-.rig .crate, .rig .hammer, .rig .eyes-shut { display: none; }
-.rig.a-carry .crate, .rig.a-repair .hammer { display: inline; }
-.rig.a-work .item, .rig.a-carry .item, .rig.a-interact .item, .rig.a-eat .item, .rig.a-sleep .item, .rig.a-heal .item, .rig.a-repair .item { display: none; }
+.rig .crate, .rig .hammer, .rig .pick, .rig .rocks, .rig .barrow, .rig .eyes-shut { display: none; }
+.rig.a-carry .crate, .rig.a-repair .hammer, .rig.a-dig .pick, .rig.a-haul .rocks, .rig.a-push .barrow { display: inline; }
+.rig.a-work .item, .rig.a-carry .item, .rig.a-interact .item, .rig.a-eat .item, .rig.a-sleep .item, .rig.a-heal .item, .rig.a-repair .item,
+.rig.a-dig .item, .rig.a-haul .item, .rig.a-push .item { display: none; }
 
 /* eyes blink now and then; closed while asleep, treated or dead */
 .rig .eyes { transform-box: fill-box; transform-origin: 50% 55%; animation: ri-blink 5.3s linear infinite; animation-delay: var(--ph, 0s); }

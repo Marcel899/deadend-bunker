@@ -85,6 +85,7 @@ SIG = {
     'geothermal': [('generator', .78, .34, .40), ('f3_lava', .38, .54, .52)],
     'aquifer': [('f3_crystal', .81, .26, .42), ('f3_water', .40, .46, .62)],
     'orevein': [('f3_minecart', .74, .40, .40), ('f3_ore', .32, .40, .52)],
+    'minehead': [('f3_minecart', .66, .44, .36), ('pickaxe', .30, .34, .50), ('drill', .82, .22, .34)],
     'server': [('serverrack', .70, .30, .62), ('serverrack', .36, .32, .68)],
     'cache': [('supplyshelf', .70, .42, .52), ('boxes', .30, .34, .40)],
 }

@@ -109,8 +109,10 @@ DE.Save = (function () {
       if (Array.isArray(src.floors)) {
         src.floors.forEach((f, i) => {
           if (!U().isObj(f)) return;
-          const cols = U().clamp(Array.isArray(f.slots) ? f.slots.length : C().FLOOR_SLOTS, C().FLOOR_SLOTS, C().MAX_COLS);
-          const floor = DE.State.emptyFloor(N(f.depth, i + 1), cols);
+          // floors from older versions were all dug 16 cells wide; newer ones remember their width
+          const base = U().clamp(N(f.base, C().START_FLOOR_SLOTS), 4, C().MAX_COLS);
+          const cols = U().clamp(Array.isArray(f.slots) ? f.slots.length : base, base, C().MAX_COLS);
+          const floor = DE.State.emptyFloor(N(f.depth, i + 1), cols); floor.base = base;
           if (Array.isArray(f.slots)) for (let k = 0; k < cols; k++) floor.slots[k] = typeof f.slots[k] === 'string' ? f.slots[k] : null;
           if (U().isObj(f.expansion)) floor.expansion = { endsAt: N(f.expansion.endsAt, now), duration: NN(f.expansion.duration, 1), cells: C().WING_CELLS };
           floor.facility = typeof f.facility === 'string' && DE.Data.FACILITIES.some(x => x.id === f.facility) ? f.facility : null;
@@ -148,6 +150,7 @@ DE.Save = (function () {
           const a = v.assignment;
           if (a.kind === 'room' && s.rooms[a.id]) sv.assignment = { kind: 'room', id: a.id };
           else if (a.kind === 'guard') sv.assignment = { kind: 'guard' };
+          else if (a.kind === 'dig') sv.assignment = { kind: 'dig' };
           else if (a.kind === 'expedition' && typeof a.id === 'string') sv.assignment = { kind: 'expedition', id: a.id };
         }
         s.survivors[id] = sv;
@@ -170,7 +173,12 @@ DE.Save = (function () {
           s.research.current = { id: cur.id, endsAt: N(cur.endsAt, now), duration: NN(cur.duration, 1) };
       }
       // excavation
-      if (U().isObj(src.excavation)) s.excavation = { depth: N(src.excavation.depth, s.floors.length + 1), endsAt: N(src.excavation.endsAt, now), duration: NN(src.excavation.duration, 1) };
+      if (U().isObj(src.excavation)) {
+        const e = src.excavation; const ex = { depth: s.floors.length + 1, startedAt: N(e.startedAt, now) };
+        if (e.need != null) { ex.need = Math.max(1, N(e.need, 1)); ex.work = U().clamp(N(e.work, 0), 0, ex.need); }
+        else { ex.endsAt = N(e.endsAt, now); ex.duration = NN(e.duration, 1); DE.Excavation.upgradeOld(ex, now); delete ex.endsAt; delete ex.duration; }
+        s.excavation = ex;
+      }
       // defense
       if (U().isObj(src.defense)) {
         const d = src.defense;

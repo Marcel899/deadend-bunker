@@ -20,7 +20,7 @@ DE.UI.Placement = (function () {
     floors.appendChild(ghost); floors.appendChild(tip);
     mode = { type, roomId: opts.roomId || null, size: def.size, ghost, tip, floor: null, slot: null, valid: false, moved: false, startX: ev ? ev.clientX : 0, startY: ev ? ev.clientY : 0, sticky: !ev };
     document.body.classList.add('placing');
-    document.querySelectorAll('.floor .cells').forEach(c => c.classList.add('placing'));
+    document.querySelectorAll('.floor:not(.dig) .cells').forEach(c => c.classList.add('placing'));
     if (ev) track(ev);
     window.addEventListener('pointermove', onMove); window.addEventListener('pointerup', onUp); window.addEventListener('keydown', onKey); window.addEventListener('contextmenu', onCtx);
     DE.UI.toast(opts.roomId ? 'Drag the room to a new spot. Esc cancels.' : 'Drag ' + def.name + ' onto the bunker. Esc cancels.', 'ok', 2500, 'home');
@@ -41,7 +41,7 @@ DE.UI.Placement = (function () {
   function track(ev) {
     const s = DE.UI.state(); const floors = document.getElementById('floors'); const base = floors.getBoundingClientRect();
     let hit = null;
-    document.querySelectorAll('.floor[data-depth] .cells').forEach(c => { const r = c.getBoundingClientRect(); if (ev.clientY >= r.top - 20 && ev.clientY <= r.bottom + 20 && ev.clientX >= r.left - 40 && ev.clientX <= r.right + 40) hit = { el: c, r, depth: +c.closest('.floor').dataset.depth }; });
+    document.querySelectorAll('.floor[data-depth]:not(.dig) .cells').forEach(c => { const r = c.getBoundingClientRect(); if (ev.clientY >= r.top - 20 && ev.clientY <= r.bottom + 20 && ev.clientX >= r.left - 40 && ev.clientX <= r.right + 40) hit = { el: c, r, depth: +c.closest('.floor').dataset.depth }; });
     if (!hit) { mode.ghost.style.display = 'none'; mode.tip.style.display = 'none'; mode.valid = false; return; }
     const floor = DE.Bunker.getFloor(s, hit.depth); const cols = floor.slots.length;
     let slot = Math.round((ev.clientX - hit.r.left) / CELL - mode.size / 2); slot = Math.max(0, Math.min(cols - mode.size, slot));

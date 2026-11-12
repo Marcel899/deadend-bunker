@@ -5,7 +5,7 @@
  *
  *   sv.energy  100 → 0 while awake (~7 min of work), restored while sleeping
  *   sv.hunger  0 → 100 (~9 min), reset by eating
- *   sv.act     { kind, until, room }   kind ∈ work | sleep | eat | rest | heal | guard | away | idle | build */
+ *   sv.act     { kind, until, room }   kind ∈ work | sleep | eat | rest | heal | guard | mine | away | idle | build */
 var DE = globalThis.DE = globalThis.DE || {};
 
 DE.Needs = (function () {
@@ -86,6 +86,7 @@ DE.Needs = (function () {
         else if (sv.hunger > 85 && foodOk) { kind = 'eat'; const r = findRoom(state, EAT_ROOMS); room = r ? r.id : null; a.until = t + eatTime; sv.hunger = 0; }
         else if (assign && assign.kind === 'room' && state.rooms[assign.id]) { kind = state.rooms[assign.id].construction ? 'build' : 'work'; room = assign.id; }
         else if (assign && assign.kind === 'guard') { kind = 'guard'; room = null; }
+        else if (assign && assign.kind === 'dig') { kind = 'mine'; room = null; }
         else { kind = 'rest'; const r = findRoom(state, REST_ROOMS); room = r ? r.id : (findRoom(state, BED_ROOMS) || {}).id || null; }
       }
       if (kind === 'eat' && a.kind !== 'eat') { a.until = t + eatTime; sv.hunger = 0; }
@@ -97,7 +98,7 @@ DE.Needs = (function () {
   /** Short human text for the UI. */
   function describe(sv) {
     const k = sv.act ? sv.act.kind : 'idle';
-    return { work: 'Working', sleep: 'Sleeping', eat: 'Eating', rest: 'Resting', heal: 'In treatment', guard: 'On guard duty', away: 'On expedition', idle: 'Idle', build: 'Helping construction' }[k] || k;
+    return { work: 'Working', sleep: 'Sleeping', eat: 'Eating', rest: 'Resting', heal: 'In treatment', guard: 'On guard duty', away: 'On expedition', idle: 'Idle', build: 'Helping construction', mine: 'Mining' }[k] || k;
   }
 
   return { init, tick, needsMult, presence, describe, findRoom, freeBed, BED_ROOMS, EAT_ROOMS, HEAL_ROOMS, REST_ROOMS };

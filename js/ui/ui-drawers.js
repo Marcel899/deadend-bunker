@@ -12,6 +12,7 @@ DE.UI.Drawers = (function () {
  function assignmentText(s, sv) {
  const a = sv.assignment; if (!a) return '<span class="muted"> Idle</span>';
  if (a.kind === 'guard') return ' Guard duty';
+ if (a.kind === 'dig') return DE.Icons.img('dig', 'ico-inline') + ' Mining crew';
  if (a.kind === 'expedition') { const e = s.expeditions.active.find(x => x.id === a.id); const loc = e && DE.Expeditions.location(e.location); return '' + (loc ? DE.Icons.img('location', 'ico-inline') + '' + esc(loc.name) : 'Away'); }
  const room = s.rooms[a.id]; return room ? DE.Icons.room(room.type, 'ico-inline') + '' + esc(DE.Data.ROOMS[room.type].name) + ' B' + room.floor : 'Working';
  }
@@ -202,23 +203,52 @@ DE.UI.Drawers = (function () {
  };
 
  /* ================= EXCAVATE ================= */
+ /* The dig site: the dig in progress or the next floor (what the rock asks for and what it gives
+  * back), the mining crew (posts, who is on them, the best picks), the ladder of rock layers down to
+  * the mantle, and what digging has turned up. */
  const excavate = {
- title: (s) => `Excavation <small>${s.floors.length} floor${s.floors.length > 1 ? 's' : ''} · max B${DE.Excavation.maxDepth(s)}</small>`,
+ title: (s) => `Excavation <small>${s.floors.length} floor${s.floors.length > 1 ? 's' : ''} · ${esc(DE.Excavation.faceLayer(s).name)}</small>`,
  render(s) {
- const d = DE.Excavation.nextDepth(s); const now = Date.now(); const max = DE.Excavation.maxDepth(s);
+ const X = DE.Excavation, d = X.nextDepth(s), L = X.layer(d), crew = X.miners(s), cap = X.minerCap(s), sp = X.speed(s), mh = X.mineLevel(s);
+ const I = (k, c) => DE.Icons.img(k, c || 'ico-inline'), look = (id) => (DE.UI.DigSite.LOOK[id] || {}).face || '#777';
+ const mhRoom = Object.values(s.rooms).filter(r => r.type === 'minehead').sort((a, b) => b.level - a.level)[0];
  let html = '';
- if (s.excavation) { const ex = s.excavation; html += `<div class="card"><h4>Digging floor B${ex.depth}</h4>${bar(100 * (1 - (ex.endsAt - now) / (ex.duration * 1000)), 'brown')}<small class="muted">${U().fmtTime((ex.endsAt - now) / 1000)} left</small></div>`; }
- else if (d > DE.CONFIG.MAX_FLOORS) html += `<div class="card"><p>⬛ You have reached bedrock. The bunker is as deep as it can go.</p></div>`;
+ // ---- the dig ----
+ if (s.excavation) {
+   const p = X.progress(s);
+   html += `<div class="card xv-now"><div class="xv-head"><i class="xv-swatch" style="background:${look(L.id)}"></i><div><h4>Digging B${s.excavation.depth} · ${esc(L.name)}</h4><small class="muted">${esc(L.desc)}</small></div></div>
+     ${bar(100 * p, 'brown')}<div class="xv-stats"><span><b>${Math.floor(100 * p)}%</b>dug</span><span><b>${U().fmtTime(X.remaining(s))}</b>left</span><span><b>×${sp.toFixed(1)}</b>pace</span><span><b>${U().costText(X.spoils(s, s.excavation.depth)) || '—'}</b>rubble when done</span></div>
+     ${crew.length ? '' : `<p class="neg">Nobody is on the mining crew — the dig crawls along. Post miners below.</p>`}</div>`;
+ } else if (d > DE.CONFIG.MAX_FLOORS) html += `<div class="card"><p>You have reached the mantle. The bunker is as deep as it can go.</p></div>`;
  else {
- const c = DE.Excavation.canStart(s); const cost = DE.Excavation.cost(s, d);
- html += `<div class="card"><h4>Next floor: B${d}</h4><p class="muted">Each floor is a ${DE.CONFIG.FLOOR_SLOTS}-cell grid you can widen by digging sideways. Costs grow with depth. From B3 down you may uncover abandoned facilities with unique rooms.</p>
- <div class="row"><span>Cost</span><b>${U().costText(cost)}</b></div><div class="row"><span>Time</span><b>${U().fmtTime(DE.Excavation.time(s, d))}</b></div>
- ${d > max ? `<p class="neg"> Floor B${d} needs more excavation research (Engineering branch).</p>` : ''}
- <button class="btn primary ${c.ok ? '' : 'cant'}" data-action="excavate" ${c.ok ? '' : 'disabled'}> Excavate B${d}</button>${c.ok ? '' : `<small class="neg">${c.reason}</small>`}</div>`;
+   const c = X.canStart(s), req = X.requirements(s, d);
+   const reqRow = (r) => `<div class="xv-req ${r.ok ? 'ok' : 'no'}">${I(r.ok ? 'check' : 'lock')}<span>${esc(r.text)}${r.tool ? ` <small class="muted">· ${esc(r.tool)}</small>` : ''}</span>${r.ok ? '' : r.kind === 'research' ? `<button class="btn tiny" data-action="openDrawer" data-drawer="research">Research</button>` : mhRoom ? `<button class="btn tiny" data-action="selectRoom" data-id="${mhRoom.id}">Upgrade</button>` : `<small class="muted">build it in an empty cell</small>`}</div>`;
+   html += `<div class="card xv-now"><div class="xv-head"><i class="xv-swatch" style="background:${look(L.id)}"></i><div><h4>Next floor: B${d} · ${esc(L.name)}</h4><small class="muted">${esc(L.desc)}</small></div></div>
+     ${req.length ? `<div class="xv-reqs">${req.map(reqRow).join('')}</div>` : ''}
+     <div class="xv-stats"><span><b>${U().costText(X.cost(s, d))}</b>cost</span><span><b>${U().fmtTime(X.time(s, d))}</b>with ${crew.length || 'no'} miner${crew.length === 1 ? '' : 's'}</span><span><b>×${L.hardness}</b>rock hardness</span><span><b>${U().costText(X.spoils(s, d)) || '—'}</b>rubble</span></div>
+     <p class="muted">A new floor has ${DE.CONFIG.FLOOR_SLOTS} cells (rooms take 2 or 4) and can be widened sideways — plan what goes where. From B3 down you may break into abandoned facilities.</p>
+     <button class="btn primary ${c.ok ? '' : 'cant'}" data-action="excavate" ${c.ok ? '' : 'disabled'}>${I('dig', 'ico-btn')} Excavate B${d}</button>${c.ok ? '' : `<small class="neg">${esc(c.reason)}</small>`}</div>`;
  }
+ // ---- the crew ----
+ const free = cap - crew.length, fxs = s._fx || DE.Effects.get(s);
+ const q = (s._rates && s._rates.quarry) || {}, qs = Object.keys(q).filter(r => q[r] > 0).map(r => '+' + U().fmt(q[r], 2) + ' ' + DE.Icons.res(r, 'ico-inline') + '/s').join(' ');
+ const line = (sv, on) => { const e = on ? X.minerEff(s, sv, fxs) : X.minerSkill(s, sv); const where = !on && sv.assignment ? ' · leaves ' + assignmentText(s, sv) : !on ? ' · idle' : ' · ' + esc(DE.Needs.describe(sv).toLowerCase());
+   return `<div class="dk-line${on ? ' on' : ''}">${DE.Icons.prof(sv.profession, 'ava')}<span><b>${esc(sv.name)}</b><small>${esc(P()[sv.profession].name)} · Lv${sv.level} · ${Math.round(e * 100)}% miner${where}</small></span>${on ? `<button class="btn small" data-action="unassign" data-sid="${sv.id}">Off duty</button>` : `<button class="btn small ${sv.assignment ? '' : 'primary'}" data-action="assignMiner" data-sid="${sv.id}">Dig</button>`}</div>`; };
+ const cands = Object.values(s.survivors).filter(v => !(v.assignment && (v.assignment.kind === 'dig' || v.assignment.kind === 'expedition')) && v.hp >= 40)
+   .sort((a, b) => (a.assignment ? 1 : 0) - (b.assignment ? 1 : 0) || X.minerSkill(s, b) - X.minerSkill(s, a)).slice(0, 6);
+ html += `<div class="card xv-crew"><div class="xv-crew-head"><h4>${I('dig', 'ico-h4')} Mining crew <span class="cost">${crew.length}/${cap} posts</span></h4>${free > 0 && DE.Survivors.idle(s).length ? `<button class="btn small primary" data-action="fillMiners">Fill posts</button>` : ''}</div>
+   <p class="muted">Miners do the digging: each one adds pace (engineers and mechanics best, rested and fed miners more). ${mh ? `Mining Station Lv ${mh}: ${cap} posts, +${Math.round((fxs.digSpeed || 0) * 100)}% pace.` : 'A Mining Station adds posts and pace — and the deeper layers require one.'}${qs ? ' Between digs the crew quarries the face: ' + qs + '.' : ''}</p>
+   ${crew.map(sv => line(sv, true)).join('') || '<p class="neg">Nobody is digging.</p>'}
+   ${free > 0 && cands.length ? `<h5>Best picks for the ${free} free post${free > 1 ? 's' : ''}</h5>${cands.map(sv => line(sv, false)).join('')}` : ''}</div>`;
+ // ---- the layers ----
+ html += `<div class="card xv-layers"><h4>${I('floors', 'ico-h4')} Down through the rock</h4>${DE.Data.STRATA.map(st => {
+   const done = s.floors.length >= Math.min(st.to, DE.CONFIG.MAX_FLOORS), here = d >= st.from && d <= st.to, n = st.research && DE.Data.RESEARCH[st.research];
+   const resOk = !st.research || X.maxDepth(s) >= st.from, mineOk = mh >= (st.mine || 0);
+   return `<div class="xv-layer ${done ? 'done' : here ? 'here' : ''}"><i class="xv-swatch" style="background:${look(st.id)}"></i><div><b>${esc(st.name)}</b> <small class="muted">B${st.from}–B${Math.min(st.to, DE.CONFIG.MAX_FLOORS)} · hardness ×${st.hardness} · ${esc(st.tool)}</small>
+     <div class="xv-tags">${n ? `<i class="${resOk ? 'ok' : ''}">${I(resOk ? 'check' : 'research')}${esc(n.name)}</i>` : ''}${st.mine ? `<i class="${mineOk ? 'ok' : ''}">${I(mineOk ? 'check' : 'dig')}Mining Station Lv ${st.mine}</i>` : ''}<i>${I('chest')}rubble: ${Object.keys(st.spoils || {}).map(r => DE.Data.RESOURCES[r].name.toLowerCase()).join(', ')}</i></div></div>${done ? `<span class="xv-st">${I('check')}</span>` : here ? '<span class="xv-st here">YOU ARE HERE</span>' : ''}</div>`; }).join('')}</div>`;
  const found = s.floors.filter(f => f.facility);
  html += `<div class="card"><h4>Discoveries ${found.length}/${DE.Data.FACILITIES.length}</h4>${DE.Data.FACILITIES.map(f => { const fl = found.find(x => x.facility === f.id); return `<div class="fac ${fl ? 'found' : ''}"><span class="fac-icon">${DE.Icons.img('facility', 'ico-inline')}</span><div><b>${fl ? esc(f.name) : '???'}</b> <small class="muted">${fl ? 'B' + fl.depth : 'from B' + f.minDepth}</small><div class="muted">${fl ? esc(f.lore) : 'Unique room: ' + esc(DE.Data.ROOMS[f.room].name)}</div></div></div>`; }).join('')}</div>`;
- html += `<div class="card"><h4>Floors</h4>${s.floors.map(f => `<div class="row"><span>B${f.depth} ${f.facility ? DE.Icons.img('facility', 'ico-inline') : ''}</span><span>${DE.Bunker.roomsOnFloor(s, f.depth).length} rooms · ${f.slots.filter(x => !x).length} free slots</span><button class="btn small ghost" data-action="scrollFloor" data-depth="${f.depth}">Show</button></div>`).join('')}</div>`;
+ html += `<div class="card"><h4>Floors</h4>${s.floors.map(f => `<div class="row"><span>B${f.depth} ${f.facility ? DE.Icons.img('facility', 'ico-inline') : ''} <small class="muted">${esc(DE.Data.stratumAt(f.depth).name)}</small></span><span>${DE.Bunker.roomsOnFloor(s, f.depth).length} rooms · ${f.slots.filter(x => !x).length}/${f.slots.length} cells free</span><button class="btn small ghost" data-action="scrollFloor" data-depth="${f.depth}">Show</button></div>`).join('')}</div>`;
  return html;
  },
  };

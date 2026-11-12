@@ -31,6 +31,7 @@ DE.Effects = (function () {
       expeditionSpeed: 0, expeditionSafety: 0, waterSave: 0, defenseFlat: 0, bossWeaken: 0, cryoSlots: 0,
       allLocations: false, autoAssign: 0, toxicResist: 0, sleepSpeed: 0, eatSpeed: 0, hungerSlow: 0,
       noiseMult: 1,
+      minerSlots: C().MINERS_BASE, digSpeed: 0,
     };
   }
 
@@ -147,6 +148,8 @@ DE.Effects = (function () {
           case 'offlineCap': fx.offlineCapHours += per * room.level; break;
           case 'workerEff': fx.workerEff += per * room.level; break;
           case 'digBonus': fx.excavationCostMult -= per * room.level; fx.excavationTimeMult -= per * room.level; break;
+          case 'minerSlots': fx.minerSlots = Math.min(12, fx.minerSlots + Math.floor(per * room.level)); break;
+          case 'digSpeed': fx.digSpeed += per * room.level; break;
           default: break;
         }
       }

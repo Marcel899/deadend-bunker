@@ -71,6 +71,10 @@ DE.Economy = (function () {
       perRoom[room.id] = info;
     });
 
+    // the mining crew quarries the rock face between digs
+    const quarry = DE.Excavation ? DE.Excavation.quarryRates(state, fx) : {};
+    for (const r in quarry) production[r] += quarry[r];
+
     // turrets draw power
     const turretPower = state.defense.turrets * C().TURRET_POWER + ((state.overworld && state.overworld.missile) || 0) * 1;
     powerUse += turretPower;
@@ -107,7 +111,7 @@ DE.Economy = (function () {
 
     const net = {};
     DE.Data.RESOURCE_ORDER.forEach(r => net[r] = production[r] - consumption[r]);
-    return { production, consumption, net, perRoom, powerGen, powerUse, powerFactor, survivorFood: food, survivorWater: water };
+    return { production, consumption, net, perRoom, powerGen, powerUse, powerFactor, survivorFood: food, survivorWater: water, quarry };
   }
 
   /** Apply rates for dt seconds, clamp to caps, track statistics. */

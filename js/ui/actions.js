@@ -98,6 +98,7 @@ DE.Actions = (function () {
  const s = S(); const sv = s.survivors[p.sid]; if (!sv) return;
  const rooms = Object.values(s.rooms).filter(r => r.level > 0 && DE.Data.ROOMS[r.type].workers > r.workers.length).sort((a, b) => a.floor - b.floor || a.slot - b.slot);
  let html = `<div class="row"><span> Guard duty <small class="muted">${U().fmt(DE.Survivors.guardPower(sv, s._fx), 1)} dmg/s</small></span><button class="btn small primary" data-action="assignGuard" data-sid="${sv.id}">Post</button></div>`;
+ html += `<div class="row"><span>${DE.Icons.img('dig', 'ico-inline')} Mining crew <small class="muted">${DE.Excavation.miners(s).length}/${DE.Excavation.minerCap(s)} posts · ${Math.round(DE.Excavation.minerSkill(s, sv) * 100)}% as a miner</small></span><button class="btn small" data-action="assignMiner" data-sid="${sv.id}">Dig</button></div>`;
  html += rooms.map(r => { const def = DE.Data.ROOMS[r.type]; const best = def.profession === sv.profession; return `<div class="row"><span>${DE.Icons.room(def.id, 'ico-inline')} ${esc(def.name)} B${r.floor} <small class="muted">${r.workers.length}/${def.workers}${best ? ' ·  matches profession' : ''}</small></span><button class="btn small ${best ? 'primary' : ''}" data-action="assignTo2" data-sid="${sv.id}" data-room="${r.id}">Assign</button></div>`; }).join('');
  if (!rooms.length) html += '<p class="muted">No room has a free work station.</p>';
  UI().modal({ title: 'Assign ' + esc(sv.name), html, buttons: [{ label: 'Close', action: 'closeModal' }] });
@@ -105,6 +106,15 @@ DE.Actions = (function () {
  A.assignTo2 = (p) => { const r = DE.Survivors.assign(S(), p.sid, { kind: 'room', id: p.room }); if (!r.ok) return fail(r); UI().closeModal(); done(); };
  A.assignGuard = (p) => { const r = DE.Survivors.assign(S(), p.sid, { kind: 'guard' }); if (!r.ok) return fail(r); UI().closeModal(); done(); };
  A.unassign = (p) => { const r = DE.Survivors.assign(S(), p.sid, null); if (!r.ok) return fail(r); done(); };
+ A.assignMiner = (p) => { const r = DE.Survivors.assign(S(), p.sid, { kind: 'dig' }); if (!r.ok) return fail(r); UI().closeModal(); DE.Audio.sfx('done'); done(); };
+ /** Fill the free mining posts: idle survivors first (best miners first), then nobody else. */
+ A.fillMiners = () => {
+ const s = S(); let free = DE.Excavation.minerCap(s) - DE.Excavation.miners(s).length, n = 0;
+ const cands = DE.Survivors.idle(s).filter(sv => sv.hp >= 40).sort((a, b) => DE.Excavation.minerSkill(s, b) - DE.Excavation.minerSkill(s, a));
+ for (const sv of cands) { if (free <= 0) break; if (DE.Survivors.assign(s, sv.id, { kind: 'dig' }).ok) { free--; n++; } }
+ if (!n) return fail({ reason: free <= 0 ? 'Every mining post is taken — upgrade the Mining Station' : 'Nobody is idle — pick miners from the list' });
+ UI().toast(n + (n > 1 ? ' miners' : ' miner') + ' sent to the dig site', 'ok', 2400, 'dig', { key: 'fillminers' }); DE.Audio.sfx('done'); done();
+ };
  /** Put every idle survivor to work where they do best: matching profession first, then efficiency. */
  A.assignIdle = () => {
  const s = S(), fx = s._fx || DE.Effects.get(s); let n = 0;
@@ -148,7 +158,10 @@ DE.Actions = (function () {
  A.cancelResearch = () => { DE.Research.cancel(S()); done(); };
 
  /* ---- excavation ---- */
- A.excavate = () => { const r = DE.Excavation.start(S()); if (!r.ok) return fail(r); DE.Audio.sfx('dig'); UI().toast('Excavation started'); done(); };
+ A.excavate = (p, el) => {
+ const s = S(), d = DE.Excavation.nextDepth(s), cost = DE.Excavation.cost(s, d); const r = DE.Excavation.start(s); if (!r.ok) return fail(r);
+ DE.Audio.sfx('dig'); UI().purchased(el, cost, 'Digging B' + d + (DE.Excavation.miners(s).length ? '' : ' — post miners to speed it up')); done();
+ };
 
  /* ---- defense ---- */
  A.wallUpgrade = (p, el) => { const cost = DE.Defense.wallUpgradeCost(S()); const r = DE.Defense.upgradeWall(S()); if (!r.ok) return fail(r); UI().purchased(el, cost, 'Wall reinforced'); done(); };

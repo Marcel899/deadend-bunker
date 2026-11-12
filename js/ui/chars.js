@@ -253,7 +253,9 @@ DE.Chars = (function () {
     if (c.claws) s += `<path d="M-8 ${len + 4} l-5 11 M-2 ${len + 8} l-1 12 M5 ${len + 7} l4 11" ${thin(INK, 3.5)}/><path d="M-8 ${len + 4} l-5 11 M-2 ${len + 8} l-1 12 M5 ${len + 7} l4 11" ${thin('#efe6d0', 1.8)}/>`;
     if (c.glowHands) s += `<circle class="orb" cx="0" cy="${len + 2}" r="16" fill="${F(id, 'glow')}" stroke="none"/><circle cx="0" cy="${len + 2}" r="7" fill="#c9ffb8" stroke="#2f8a2a" stroke-width="2"/><circle cx="-2" cy="${len}" r="2" fill="#fff"/>`;
     if (it) s += `<g class="item">${item(it, len)}</g>`;
-    if (side === 'F' && c.kind === 'crew') s += `<g class="hammer" transform="translate(0 ${len})"><rect x="-3.5" y="-4" width="7" height="32" rx="3" fill="#8a5a32" ${sw3}/><path d="M-14 24 h24 q5 0 5 5 v5 q0 5 -5 5 h-24 z" fill="#6e717b" ${sw3}/><path d="M-11 28 h19" ${thin('#b9bcc6', 2)}/></g>`;
+    if (side === 'F' && c.kind === 'crew') s += `<g class="hammer" transform="translate(0 ${len})"><rect x="-3.5" y="-4" width="7" height="32" rx="3" fill="#8a5a32" ${sw3}/><path d="M-14 24 h24 q5 0 5 5 v5 q0 5 -5 5 h-24 z" fill="#6e717b" ${sw3}/><path d="M-11 28 h19" ${thin('#b9bcc6', 2)}/></g>`
+      // a pickaxe for the mining crew (shown by .a-dig): long haft through the fist, a curved double pick
+      + `<g class="pick" transform="translate(0 ${len})"><rect x="-3.5" y="-10" width="7" height="60" rx="3" fill="#8a5a32" ${sw3}/><path d="M-1.5 -6 v50" ${thin('#b07a42', 1.8)}/><path d="M-32 52 q32 -24 64 0 l-4 6 q-28 -15 -56 0 z" fill="#8a8e98" ${sw3}/><path d="M-7 45 h14 v11 h-14 z" fill="#5a5f6a" ${sw3}/><path d="M-22 47 q22 -12 44 0" ${thin('#d0d3dc', 2)}/></g>`;
     return s;
   }
   // thigh: pivot at the hip, knee at (0,len)
@@ -327,6 +329,13 @@ DE.Chars = (function () {
   // a crate carried in both arms (shown by .a-carry), in the torso's frame
   const CRATE = `<g class="crate"><rect x="8" y="-46" width="42" height="34" rx="3" fill="#b0824e" ${sw}/><path d="M10 -29 h38 M29 -45 v32" stroke="#7a5230" stroke-width="3"/><path d="M12 -43 l34 28" stroke="#7a5230" stroke-width="2.5" opacity=".6"/><path d="M11 -43 h36" ${thin('#dcb27c', 2)} opacity=".8"/><rect x="22" y="-38" width="14" height="6" rx="1" fill="#e9dcc0" opacity=".85"/></g>`;
 
+  // mining loads: a basket of rocks carried in both arms (.a-haul), and a wheelbarrow pushed along (.a-push)
+  const ROCKS = `<g class="rocks"><path d="M8 -50 l6 -14 l12 -4 l6 10 l-2 10 z" fill="#9a9caa" ${sw}/><path d="M26 -52 l8 -16 l14 2 l6 14 z" fill="#7c7e8a" ${sw}/><path d="M40 -50 l6 -10 l10 3 l2 8 z" fill="#a9abb6" ${sw3}/><path d="M14 -60 l6 -2 M32 -64 l6 1" ${thin('#e0e2ea', 2.2)}/>`
+    + `<path d="M4 -50 h56 l-7 34 h-42 z" fill="#9a7442" ${sw}/><path d="M7 -39 h50 M9 -27 h46" stroke="#6a4a2a" stroke-width="3"/><path d="M8 -48 h48" ${thin('#c9a26a', 2)}/></g>`;
+  const BARROW = `<g class="barrow"><path d="M22 -60 L56 -40" stroke="${INK}" stroke-width="9" stroke-linecap="round"/><path d="M22 -60 L56 -40" stroke="#8a5a32" stroke-width="4.5" stroke-linecap="round"/>`
+    + `<path d="M46 -48 h64 l-12 28 h-40 z" fill="#5a6f3a" ${sw}/><path d="M52 -40 h50" ${thin('#7a9a52', 2.5)}/><path d="M58 -50 q4 -12 16 -9 q8 -9 18 0 q8 2 6 9 z" fill="#8a8c98" ${sw3}/>`
+    + `<path d="M62 -20 l-5 19 M90 -20 l-3 6" ${sw3}/><circle cx="94" cy="-12" r="12" fill="#3a3845" ${sw}/><circle cx="94" cy="-12" r="4" fill="#8a8e98" ${sw3}/></g>`;
+
   /* ---------- assemble ---------- */
   const BODY = { hip: -56, neck: -110, sh: 25, shY: 6, hipOff: 11.5, thigh: 28, shin: 26, upper: 23, fore: 22 };
   function rig(id, o) {
@@ -338,8 +347,8 @@ DE.Chars = (function () {
     const P = pose(hold);
     const leg = (side, x) => `<g transform="translate(${x} ${B.hip})"><g class="j j-leg${side}">${thigh(c, B.thigh, id)}<g transform="translate(0 ${B.thigh})"><g class="j j-shin${side}">${shin(c, B.shin, id)}</g></g></g></g>`;
     const arm = (side, x, held) => `<g transform="translate(${x} ${-L + B.shY})"><g class="j j-arm${side}" transform="rotate(${P['ua' + side]})">${upperArm(c, B.upper, id)}<g transform="translate(0 ${B.upper})"><g class="j j-fore${side}" transform="rotate(${P['fa' + side]})">${foreArm(c, B.fore, held, id, side)}</g></g></g></g>`;
-    const parts = leg('L', -B.hipOff) + leg('R', B.hipOff)
-      + `<g transform="translate(0 ${B.hip})"><g class="j j-torso" transform="rotate(${P.lean})">${arm('B', B.shB != null ? B.shB : -B.sh, null)}${torso(c, L, id)}${c.kind === 'crew' ? CRATE : ''}<g transform="translate(0 ${-L})"><g class="j j-head">${head(c, id)}</g></g>${arm('F', B.sh, it)}</g></g>`;
+    const parts = leg('L', -B.hipOff) + leg('R', B.hipOff) + (c.kind === 'crew' ? BARROW : '')
+      + `<g transform="translate(0 ${B.hip})"><g class="j j-torso" transform="rotate(${P.lean})">${arm('B', B.shB != null ? B.shB : -B.sh, null)}${torso(c, L, id)}${c.kind === 'crew' ? CRATE + ROCKS : ''}<g transform="translate(0 ${-L})"><g class="j j-head">${head(c, id)}</g></g>${arm('F', B.sh, it)}</g></g>`;
     const h = o.h || 48, w = Math.round(h * 140 / 225);
     const v = c.vars || {}, num = (k, d) => (v[k] != null ? parseFloat(v[k]) : d);
     const phase = o.phase != null ? Math.abs(+o.phase || 0) : 0;

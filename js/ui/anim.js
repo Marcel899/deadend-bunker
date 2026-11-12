@@ -7,7 +7,8 @@
  *    few frames a second, which keeps scrolling on an iPad smooth;
  *  - it behaves identically in every browser (no var()/calc() inside @keyframes).
  * The animation is still picked with a class on the <svg> (a-idle, a-walk, a-run, a-work, a-repair,
- * a-carry, a-interact, a-eat, a-sleep, a-heal, a-guard, a-shoot, a-attack, a-hit, a-die); the rig's
+ * a-carry, a-interact, a-eat, a-sleep, a-heal, a-guard, a-shoot, a-attack, a-hit, a-die, and for the
+ * mining crew a-dig, a-haul (walking with a basket of rocks), a-push (a wheelbarrow)); the rig's
  * build and gait come from its data-* attributes, its arm rest pose from DE.Chars.pose(hold). */
 var DE = globalThis.DE = globalThis.DE || {};
 DE.UI = DE.UI || {};
@@ -141,6 +142,16 @@ DE.UI.Anim = (function () {
     if (moving) { legs(P, p, A, 40, false); P.b2y = -st.bob * .7 * (1 - cos(2 * TAU * p)) / 2; }
     P.tr = -3; P.aF = -30; P.fF = -78; P.aB = -36; P.fB = -70; P.hr = moving ? -1.2 * cos(2 * TAU * p) : 3;
   }
+  function dig(st, P) {
+    // pickaxe: wind up over the shoulder, swing down into the rock face, a jolt, wrench it free
+    const T = 1.3, c = frac(st.t / T + st.seed * .13);
+    const up = c < .52 ? smooth(c / .52) : c < .64 ? 1 - easeIn((c - .52) / .12) : 0;
+    const hit = c >= .64 ? exp(-(((c - .64) / .05) ** 2)) : 0, pull = c > .72 ? smooth((c - .72) / .28) : 0;
+    P.aF = -50 - 106 * up + 6 * pull; P.fF = -12 - 66 * up + 8 * hit;
+    P.aB = -40 - 108 * up + 6 * pull; P.fB = -22 - 34 * up + 6 * hit;
+    P.tr = 18 - 26 * up + 4 * hit - 4 * pull; P.hr = 8 - 14 * up;
+    P.b2y = 4 + 2.5 * hit - 2 * up; P.lL = 14; P.sL = 12; P.lR = -18; P.sR = 16;
+  }
   function interact(st, P) {
     // talking: two gestures at chest height per phrase, nods, the other hand on the hip
     const t = st.t, c = frac(t / 5.6 + st.seed * .1), b = (1 - cos(TAU * t / 3.9)) / 2;
@@ -224,6 +235,9 @@ DE.UI.Anim = (function () {
       case 'work': work(st, P); break;
       case 'repair': repair(st, P); break;
       case 'carry': carry(st, P); break;
+      case 'dig': dig(st, P); break;
+      case 'haul': walk(st, P, dt); P.aF = -30; P.fF = -80; P.aB = -38; P.fB = -72; P.tr += 3; break;
+      case 'push': walk(st, P, dt); P.aF = -40 + 2 * sin(TAU * st.p); P.fF = -16; P.aB = -48; P.fB = -12; P.tr = 13 + 1.5 * cos(2 * TAU * st.p); P.hr = -6; break;
       case 'interact': interact(st, P); break;
       case 'eat': eat(st, P); break;
       case 'sleep': case 'heal': sleep(st, P); break;

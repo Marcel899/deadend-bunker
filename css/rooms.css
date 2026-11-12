@@ -230,3 +230,40 @@ body.placing { cursor: grabbing; user-select: none; }
 .room.selected .room-scene { box-shadow: inset 0 0 0 3px #ffc531, inset 0 0 22px rgba(255, 197, 49, .45); }
 .room:hover:not(.selected) .room-scene { box-shadow: inset 0 0 0 2px rgba(255, 255, 255, .25); }
 .room .door::after { display: none; }
+
+/* ============ DIG SITE (js/ui/digsite.js) ============
+   The level under the deepest floor: a tunnel carved into the rock as the dig progresses. The rock
+   beyond the face is the geology layer behind (the floor itself is transparent). */
+.floor.dig { background: none !important; min-height: 0 !important; cursor: default; grid-template-columns: 80px auto !important; box-shadow: none !important; }
+.floor.dig .dig-cells { padding: 14px 0 52px; }
+.floor.dig .dig-row { grid-row: 1; height: 200px; }
+.floor.dig .dig-site { position: absolute; left: 0; top: 0; bottom: 0; cursor: pointer; z-index: 1; }
+.dig-art, .dig-art svg { position: absolute; left: 0; top: 0; display: block; }
+.floor.dig .corridor.dig-ground { background: none !important; border: 0 !important; box-shadow: none !important; pointer-events: none; }
+.floor.dig .corridor.dig-ground::before, .floor.dig .corridor.dig-ground::after { display: none !important; }
+.dig-hud { position: absolute; left: 10px; top: 8px; max-width: 290px; display: flex; flex-direction: column; gap: 3px; padding: 7px 11px 8px; border-radius: 10px;
+  background: rgba(20, 14, 24, .82); border: 3px solid var(--ink); box-shadow: 0 3px 0 rgba(0, 0, 0, .4); color: #e9e2d0; font-size: 11.5px; font-weight: 800; line-height: 1.25; pointer-events: none; }
+.dig-hud b { font-family: var(--display); font-weight: 400; font-size: 14px; color: #ffd98a; display: flex; align-items: center; gap: 5px; }
+.dig-hud span { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.dig-hud .dig-prog { width: 100%; height: 10px; }
+.dig-hud .dh-crew { color: #b9e08a; } .dig-hud .dh-go { color: var(--gold); font-family: var(--display); font-weight: 400; letter-spacing: .3px; }
+.dig-hud .neg { color: #ff8a7a; font-style: normal; }
+.dig-site:hover .dig-hud { border-color: var(--gold); }
+.dig-dust circle { opacity: 0; transform-box: fill-box; transform-origin: center; animation: dig-dust 1.8s ease-out infinite; }
+@keyframes dig-dust { 0% { opacity: 0; transform: scale(.4); } 25% { opacity: .5; } 100% { opacity: 0; transform: translate(-20px, -12px) scale(1.7); } }
+.dig-pebbles circle { animation: dig-peb 1.9s ease-in infinite; }
+@keyframes dig-peb { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(160px); opacity: 0; } }
+.dig-bit { animation: dig-vib .14s linear infinite; }
+@keyframes dig-vib { 50% { transform: translate(1.6px, -1px); } }
+.dig-heat, .dig-ember { animation: dig-heat 1.3s ease-in-out infinite; }
+@keyframes dig-heat { 50% { opacity: .6; } }
+.dig-sparks circle { animation: dig-spark .45s steps(2) infinite; } @keyframes dig-spark { 50% { opacity: 0; } }
+.dig-lamp { animation: dig-flicker 7s ease-in-out infinite; } @keyframes dig-flicker { 0%, 100% { opacity: 1; } 47% { opacity: 1; } 49% { opacity: .55; } 51% { opacity: 1; } }
+.dig-site:not(.crewed) .dig-dust, .dig-site:not(.crewed) .dig-pebbles { display: none; }
+body.no-anim .dig-site *, body.no-anim .wing-mine * { animation: none !important; }
+/* a wing being dug out sideways: a tunnel mouth, rubble and a miner at work */
+.wing.digging { position: relative; overflow: hidden; animation: none !important; border-style: solid; }
+.wing-mine { position: absolute; inset: 0; pointer-events: none; }
+.wing-mine svg { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; }
+.wing-mine .rig { position: absolute; left: 22px; bottom: 6px; height: 46px; width: 30px; }
+.wing.digging .wing-body { position: relative; z-index: 1; background: rgba(20, 14, 24, .72); border-radius: 8px; margin-top: -60px; }

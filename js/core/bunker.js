@@ -38,11 +38,14 @@ DE.Bunker = (function () {
 
   /* ---- sideways expansion: dig a wing of extra cells onto a floor ---- */
   function expansionCost(state, depth) {
-    const floor = getFloor(state, depth); const wings = Math.round((floor.slots.length - C().FLOOR_SLOTS) / C().WING_CELLS);
-    const fx = DE.Effects.get(state);
-    return { scrap: Math.ceil(160 * Math.pow(1.6, wings) * Math.pow(1.25, depth - 1) * fx.excavationCostMult), concrete: Math.ceil(30 * Math.pow(1.6, wings) * Math.pow(1.25, depth - 1) * fx.excavationCostMult) };
+    const floor = getFloor(state, depth); const wings = wingCount(floor);
+    const fx = DE.Effects.get(state), hard = DE.Data.stratumAt(depth).hardness;
+    // harder rock deeper down makes widening a floor dearer too
+    return { scrap: Math.ceil(160 * Math.pow(1.7, wings) * Math.pow(1.3, depth - 1) * hard * fx.excavationCostMult), concrete: Math.ceil(30 * Math.pow(1.7, wings) * Math.pow(1.3, depth - 1) * hard * fx.excavationCostMult) };
   }
-  function expansionTime(state, depth) { const floor = getFloor(state, depth); const wings = Math.round((floor.slots.length - C().FLOOR_SLOTS) / C().WING_CELLS); return Math.max(8, 45 * Math.pow(1.3, wings) * DE.Effects.get(state).excavationTimeMult); }
+  function baseCols(floor) { return floor.base || C().START_FLOOR_SLOTS; }
+  function wingCount(floor) { return Math.max(0, Math.round((floor.slots.length - baseCols(floor)) / C().WING_CELLS)); }
+  function expansionTime(state, depth) { const floor = getFloor(state, depth); return Math.max(8, 45 * Math.pow(1.35, wingCount(floor)) * DE.Data.stratumAt(depth).hardness * DE.Effects.get(state).excavationTimeMult / Math.max(.5, DE.Excavation.speed(state))); }
   function canExpand(state, depth) {
     const floor = getFloor(state, depth); if (!floor) return { ok: false, reason: 'No such floor' };
     if (floor.expansion) return { ok: false, reason: 'Already digging' };
@@ -227,6 +230,6 @@ DE.Bunker = (function () {
   function roomCount(state) { return Object.values(state.rooms).filter(r => r.level >= 1).length; }
   function totalLevels(state) { return Object.values(state.rooms).reduce((s, r) => s + r.level, 0); }
 
-  return { demolishRefund, getFloor, roomsOnFloor, isUnlocked, lockReason, expansionCost, expansionTime, canExpand, expand, moveCost, move, canPlace, buildCost, buildTime, upgradeCost, upgradeTime, affordableLevels,
+  return { demolishRefund, getFloor, baseCols, wingCount, roomsOnFloor, isUnlocked, lockReason, expansionCost, expansionTime, canExpand, expand, moveCost, move, canPlace, buildCost, buildTime, upgradeCost, upgradeTime, affordableLevels,
     placeRoom, build, upgrade, demolish, tickConstruction, adjacencyBonus, housingCapacity, population, roomCount, totalLevels };
 })();

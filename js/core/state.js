@@ -4,8 +4,11 @@ var DE = globalThis.DE = globalThis.DE || {};
 DE.State = (function () {
   const C = () => DE.CONFIG;
 
+  /** A floor of `cols` cells (default: the first floor is wider than the ones dug later). `base`
+   *  remembers the width it was dug with, so sideways wings are counted from there. */
   function emptyFloor(depth, cols) {
-    return { depth, slots: new Array(cols || C().FLOOR_SLOTS).fill(null), facility: null, expansion: null };
+    cols = cols || (depth === 1 ? C().START_FLOOR_SLOTS : C().FLOOR_SLOTS);
+    return { depth, slots: new Array(cols).fill(null), facility: null, expansion: null, base: cols };
   }
 
   function blank(now) {

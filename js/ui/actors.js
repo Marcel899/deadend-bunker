@@ -29,6 +29,7 @@ DE.UI.Actors = (function () {
     let roomId = a.room;
     const anim = { work: 'work', build: 'repair', sleep: 'sleep', eat: 'eat', rest: 'interact', heal: 'heal', idle: 'idle' }[kind] || 'idle';
     const stationKind = kind === 'build' ? 'work' : kind === 'heal' ? 'heal' : kind;
+    if (kind === 'mine') return mineTarget(state, sv);
     if (roomId && state.rooms[roomId]) {
       const room = state.rooms[roomId], def = DE.Data.ROOMS[room.type];
       // sleeping / treated survivors lie on the berth the simulation allocated to them
@@ -54,6 +55,25 @@ DE.UI.Actors = (function () {
     return { room: null, kind, anim: 'idle', floor: 1, sx: null };
   }
   function hash(s) { let h = 0; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xffff; return h; }
+  /** The mining crew: two of every three swing picks at the rock face; the rest haul the rubble to
+   *  the mine cart by the lift and walk back (the first hauler pushes a wheelbarrow), turning round
+   *  on a timer long enough for the walk plus a few seconds of loading. */
+  function mineTarget(state, sv) {
+    const L = DE.UI.DigSite.layout();
+    const crew = Object.values(state.survivors).filter(o => o.act && o.act.kind === 'mine').map(o => o.id).sort();
+    const i = Math.max(0, crew.indexOf(sv.id)), hauler = i % 3 === 2;
+    if (!hauler) { const k = i - Math.floor((i + 1) / 3); return { site: true, kind: 'mine', anim: 'dig', sx: Math.max(70, L.faceX - 24 - 26 * (k % 4) - (k >= 4 ? 13 : 0)) }; }
+    const k = Math.floor(i / 3), far = Math.max(L.cartX + 70, L.faceX - 44 - 10 * k), near = L.cartX + 36 + 8 * k, trip = (far - near) / WALK + 4.5;
+    const back = Math.floor((Date.now() / 1000 + (hash(sv.id) % 9)) / trip) % 2 === 1;
+    return { site: true, kind: 'mine', anim: 'work', sx: back ? near : far, walk: k === 0 ? 'push' : back ? 'haul' : 'walk' };
+  }
+  /** Where a survivor stands at the dig site (scene x in site px, on the tunnel floor). */
+  function sitePoint(sx) {
+    const el = document.getElementById('dig-site'); if (!el || !layer) return null;
+    const fl = el.closest('.floor'), base = layer.getBoundingClientRect(), r = el.getBoundingClientRect();
+    const cor = fl && fl.querySelector('.corridor'), y = cor ? cor.getBoundingClientRect().bottom - base.top - 6 : r.bottom - base.top - 22;
+    return { x: r.left - base.left + sx, y, floor: fl ? +fl.dataset.depth : 0 };
+  }
   function roomAnim(def, room) {
     if (room.construction) return 'repair';
     if (def.category === 'housing' || ['cafeteria', 'kitchen', 'medbay', 'infirmary', 'hospital', 'radio', 'comms', 'quarantine', 'bioeng', 'medresearch'].includes(def.id)) return 'interact';
@@ -96,7 +116,7 @@ DE.UI.Actors = (function () {
     actors[sv.id] = a; return a;
   }
   function setAnim(a, anim) {
-    DE.UI.Anim.speed(a.rig, anim === 'walk' ? WALK : 0);
+    DE.UI.Anim.speed(a.rig, anim === 'walk' || anim === 'haul' || anim === 'push' ? WALK : 0);
     if (a.anim === anim) return; a.anim = anim;
     Array.from(a.rig.classList).forEach(c => { if (c.startsWith('a-')) a.rig.classList.remove(c); }); a.rig.classList.add('a-' + anim);
   }
@@ -124,7 +144,7 @@ DE.UI.Actors = (function () {
       queue.push({ x: wx, y: s1.y, floor: a.floor, dur: Math.hypot(wx - ax, s1.y - ay) / WALK });
       queue.push({ lift: true, from: a.floor, to: dest.floor, x: s2.x, y: s2.y, floor: dest.floor });
       queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: Math.hypot(dest.x - s2.x, dest.y - s2.y) / WALK });
-    } else queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: Math.abs(dest.x - ax) / WALK });
+    } else queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: Math.abs(dest.x - ax) / WALK, walk: a.walkAnim });
   }
 
   function update(now) {
@@ -141,15 +161,15 @@ DE.UI.Actors = (function () {
       if (a.prof !== sv.profession) { a.el.remove(); delete actors[id]; a = make(sv); }
       const t = target(s, sv);
       const key = (t.room || 'none') + ':' + t.kind + ':' + (t.sx | 0) + (t.bed ? ':' + t.bed.y : '');
-      const pointFor = () => t.room ? (t.bed ? bedPoint(t.room, t.bed) : roomPoint(t.room, t.sx)) : shaftPoint(t.floor || 1);
+      const pointFor = () => t.site ? sitePoint(t.sx) : t.room ? (t.bed ? bedPoint(t.room, t.bed) : roomPoint(t.room, t.sx)) : shaftPoint(t.floor || 1);
       // mid-ride survivors finish the ride before re-planning; ones still waiting just leave the queue
       const riding = a.lift && a.lift.ticket.state !== 'wait';
       if (key !== a.key && !riding) {
         if (a.lift) { DE.UI.Elevator.cancel(a.lift.ticket); a.lift = null; }
-        a.key = key;
+        a.key = key; a.walkAnim = t.walk || null;
         const dest = pointFor();
         if (dest) {
-          if (t.room == null) dest.x += 40 + (hash(id) % 50);
+          if (t.room == null && !t.site) dest.x += 40 + (hash(id) % 50);
           if (t.bed && a.placed) {
             // walk along the floor to the bed, then climb onto the berth
             const foot = roomPoint(t.room, t.bed.x); plan(a, foot || dest);
@@ -159,7 +179,7 @@ DE.UI.Actors = (function () {
         }
       } else if (!a.queue.length && a.segEnd === 0 && a.placed) {
         // standing at a station whose room may have moved (re-render): snap if far off
-        const dest = t.room ? pointFor() : null;
+        const dest = t.room || t.site ? pointFor() : null;
         if (dest && (Math.abs(dest.x - a.x) > 3 || Math.abs(dest.y - a.y) > 3)) moveTo(a, dest.x, dest.y, 0);
       }
       if (a.lift) liftStep(a, now);
@@ -179,7 +199,7 @@ DE.UI.Actors = (function () {
         const flip = seg.x < a.x - 1 ? true : seg.x > a.x + 1 ? false : null;
         if (seg.climb && seg.y < a.y) a.bedFloorY = a.y;
         a.el.classList.remove('riding');
-        setAnim(a, seg.climb ? 'idle' : seg.dur > 0.05 ? 'walk' : (a.pendingAnim || 'idle'));
+        setAnim(a, seg.climb ? 'idle' : seg.dur > 0.05 ? (seg.walk || 'walk') : (a.pendingAnim || 'idle'));
         moveTo(a, seg.x, seg.y, seg.dur, flip); a.floor = seg.floor; a.placed = true;
         a.segEnd = now + seg.dur * 1000;
         if (!a.queue.length) a.arriveAt = a.segEnd;

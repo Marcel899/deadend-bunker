@@ -117,7 +117,8 @@ t('floors expand sideways and rooms relocate', () => {
   S.resources.scrap = 1e5; S.resources.concrete = 1e5;
   const r = DE.Bunker.expand(S, 1, now); assert(r.ok, r.reason);
   now = run(S, DE.Bunker.getFloor(S, 1).expansion.duration + 1, now, 1);
-  assert(DE.Bunker.getFloor(S, 1).slots.length === DE.CONFIG.FLOOR_SLOTS + DE.CONFIG.WING_CELLS, 'cols ' + DE.Bunker.getFloor(S, 1).slots.length);
+  assert(DE.Bunker.getFloor(S, 1).slots.length === DE.CONFIG.START_FLOOR_SLOTS + DE.CONFIG.WING_CELLS, 'cols ' + DE.Bunker.getFloor(S, 1).slots.length);
+  assert(DE.Bunker.wingCount(DE.Bunker.getFloor(S, 1)) === 1, 'one wing');
   const b2 = DE.Bunker.build(S, 'workshop', 1, 12, now); assert(b2.ok, b2.reason); const ws = b2.room; ws.level = 1; ws.construction = null; const m = DE.Bunker.move(S, ws.id, 1, 16); assert(m.ok, m.reason); assert(ws.slot === 16);
   assert(DE.Bunker.getFloor(S, 1).slots[16] === ws.id && DE.Bunker.getFloor(S, 1).slots[12] === null);
   assert(!DE.Bunker.move(S, ws.id, 1, 0).ok, 'cannot move onto quarters');
@@ -258,19 +259,60 @@ t('research multiplier applies', () => {
 });
 
 console.log('Excavation');
-t('excavation costs scale and creates floors', () => {
-  S.resources.scrap = 1e6; S.resources.concrete = 1e6;
-  const c2 = DE.Excavation.cost(S, 2), c3 = DE.Excavation.cost(S, 3); assert(c3.scrap > c2.scrap && c3.concrete > 0);
+function digOut(state, t0) { for (let i = 0; i < 4000 && state.excavation; i++) t0 = run(state, 5, t0, 1); return t0; }
+const fill = (state) => { for (const k in state.resources) state.resources[k] = Math.max(state.resources[k], 1e7); };
+t('excavation: deeper layers cost more and are more work', () => {
+  const c2 = DE.Excavation.cost(S, 2), c3 = DE.Excavation.cost(S, 3), c5 = DE.Excavation.cost(S, 5), c9 = DE.Excavation.cost(S, 9);
+  assert(c3.scrap > c2.scrap && c3.concrete > 0 && !c2.concrete, 'concrete for shoring from B3');
+  assert(c5.fuel > 0 && !c3.fuel && c9.research > 0 && !c5.research, 'drill fuel from B5, deep surveys from B9');
+  assert(c9.scrap > c5.scrap * 10, 'B9 is a major milestone: ' + c5.scrap + ' → ' + c9.scrap);
+  assert(DE.Excavation.work(S, 7) > DE.Excavation.work(S, 6) * 1.6, 'granite is far more work than limestone');
+});
+t('excavation: a mining crew digs, faster with more and better miners', () => {
+  fill(S); S.flags.floorsSinceFacility = 0;
   let r = DE.Excavation.start(S, now); assert(r.ok, r.reason); assert(!DE.Excavation.start(S, now).ok, 'double dig');
-  now = run(S, S.excavation.duration + 1, now, 1); assert(S.floors.length === 2);
-  r = DE.Excavation.start(S, now); assert(r.ok); now = run(S, S.excavation.duration + 1, now, 1); assert(S.floors.length === 3);
-  r = DE.Excavation.start(S, now); assert(r.ok); now = run(S, S.excavation.duration + 1, now, 1); assert(S.floors.length === 4);
-  assert(!DE.Excavation.canStart(S).ok, 'max depth 4 without machinery');
+  const solo = DE.Excavation.speed(S);
+  const ids = Object.keys(S.survivors).filter(id => !S.survivors[id].assignment || S.survivors[id].assignment.kind !== 'expedition');
+  assert(DE.Survivors.assign(S, ids[0], { kind: 'dig' }).ok && DE.Survivors.assign(S, ids[1], { kind: 'dig' }).ok, 'two posts to start with');
+  assert(!DE.Survivors.assign(S, ids[2], { kind: 'dig' }).ok, 'no third post without a Mining Station');
+  S._fx = null; assert(DE.Excavation.speed(S) > solo * 2, 'two miners more than double the pace');
+  let t0 = now; run(S, 3, t0, 1); assert(S.survivors[ids[0]].act.kind === 'mine' || S.survivors[ids[0]].act.kind === 'sleep' || S.survivors[ids[0]].act.kind === 'eat', 'miners go to the dig site');
+  now = digOut(S, now); assert(S.floors.length === 2 && !S.excavation, 'B2 dug');
+  assert(DE.Bunker.getFloor(S, 2).slots.length === DE.CONFIG.FLOOR_SLOTS, 'new floors are ' + DE.CONFIG.FLOOR_SLOTS + ' cells');
+});
+t('excavation: the clay needs Excavation I and a Mining Station; limestone needs more', () => {
+  fill(S); delete S.research.done.excavation1; S._fx = null;
+  let c = DE.Excavation.canStart(S); assert(!c.ok && /Excavation I/.test(c.reason) && /Mining Station/.test(c.reason), c.reason);
+  S.research.done.excavation1 = true; S._fx = null; c = DE.Excavation.canStart(S); assert(!c.ok && /Mining Station/.test(c.reason), 'still needs the station');
+  const mh = DE.Bunker.build(S, 'minehead', 2, 10, now); assert(mh.ok, mh.reason); now = run(S, mh.room.construction.duration + 1, now, 1); S._fx = null;
+  assert(DE.Excavation.canStart(S).ok, 'clay open'); assert(DE.Excavation.minerCap(S) === 2, 'Lv1 adds no post yet');
+  mh.room.level = 4; S._fx = null; assert(DE.Excavation.minerCap(S) === 4, 'Lv4: two more posts');
+  DE.Excavation.start(S, now); const before = S.resources.concrete; now = digOut(S, now); assert(S.floors.length === 3, 'B3 dug');
+  fill(S); DE.Excavation.start(S, now); now = digOut(S, now); assert(S.floors.length === 4, 'B4 dug');
+  c = DE.Excavation.canStart(S); assert(!c.ok && /Heavy Machinery/.test(c.reason) && /Lv 5/.test(c.reason), c.reason);
+  S.research.done.machinery = true; S._fx = null; assert(!DE.Excavation.canStart(S).ok, 'machinery alone is not enough');
+  mh.room.level = 5; S._fx = null; fill(S); const c5 = DE.Excavation.canStart(S); assert(c5.ok, 'limestone open: ' + c5.reason);
+});
+t('excavation: rubble pays out in the layer material; the crew quarries between digs', () => {
+  const sp = DE.Excavation.spoils(S, 5); assert(sp.concrete > 0, 'limestone gives concrete');
+  assert(DE.Excavation.spoils(S, 9).research > 0, 'basalt gives research');
+  assert(!S.excavation && DE.Excavation.miners(S).length > 0, 'idle crew');
+  const q = DE.Economy.computeRates(S).quarry; assert(q && Object.values(q).some(v => v > 0), 'quarrying');
+  S.excavation = { depth: 5, work: 0, need: 100 }; assert(!Object.keys(DE.Economy.computeRates(S).quarry).length, 'no quarrying while digging'); S.excavation = null;
+});
+t('excavation: old saves with a timed dig keep their progress', () => {
+  const old = JSON.parse(JSON.stringify(S)); old.excavation = { depth: old.floors.length + 1, endsAt: Date.now() + 50000, duration: 100 };
+  const L = DE.Save.sanitize(old); assert(L.excavation && Math.abs(L.excavation.work / L.excavation.need - 0.5) < 0.05, 'half done');
+  const o2 = JSON.parse(JSON.stringify(S)); o2.floors.forEach(f => delete f.base);
+  const L2 = DE.Save.sanitize(o2); assert(L2.floors[1].base === 16 && DE.Bunker.wingCount(L2.floors[1]) === 0, 'old floors were 16 wide');
+  const o3 = JSON.parse(JSON.stringify(S)); const sid = Object.keys(o3.survivors)[0]; o3.survivors[sid].assignment = { kind: 'dig' };
+  assert(DE.Save.sanitize(o3).survivors[sid].assignment.kind === 'dig', 'miners stay miners');
 });
 t('facilities eventually appear (pity timer)', () => {
-  S.research.done.machinery = true; S.research.done.excavation2 = true; S.research.done.excavation3 = true; S._fx = null;
+  S.research.done.machinery = true; S.research.done.excavation2 = true; S.research.done.excavation3 = true; S.research.done.excavation4 = true; S._fx = null;
+  Object.values(S.rooms).filter(r => r.type === 'minehead').forEach(r => r.level = 40); S._fx = null;
   let found = S.floors.some(f => f.facility);
-  while (!found && S.floors.length < 12) { for (const k in S.resources) S.resources[k] = Math.max(S.resources[k], 1e6); const r = DE.Excavation.start(S, now); assert(r.ok, r.reason); now = run(S, S.excavation.duration + 1, now, 5); found = S.floors.some(f => f.facility); }
+  while (!found && S.floors.length < 12) { fill(S); const r = DE.Excavation.start(S, now); assert(r.ok, r.reason); now = digOut(S, now); found = S.floors.some(f => f.facility); }
   assert(found, 'no facility found by floor ' + S.floors.length);
   const fl = S.floors.find(f => f.facility); const room = Object.values(S.rooms).find(r => r.floor === fl.depth);
   assert(room && DE.Data.ROOMS[room.type].unique);
@@ -440,7 +482,8 @@ t('old saves without the new structures load with them at level 0', () => {
 console.log('Geology');
 t('every diggable depth belongs to a layer; deeper layers are harder', () => {
   for (let d = 1; d <= DE.CONFIG.MAX_FLOORS; d++) assert(DE.Data.stratumAt(d), 'layer at ' + d);
-  const ids = DE.Data.STRATA.map(x => x.id); assert(ids.join() === 'topsoil,dirt,stone,deeprock');
+  const ids = DE.Data.STRATA.map(x => x.id); assert(ids.join() === 'topsoil,clay,limestone,granite,basalt,magma');
+  for (let i = 1; i < DE.Data.STRATA.length; i++) assert(DE.Data.STRATA[i].mine > DE.Data.STRATA[i - 1].mine && DE.Data.RESEARCH[DE.Data.STRATA[i].research], 'each layer needs more');
   for (let i = 1; i < DE.Data.STRATA.length; i++) assert(DE.Data.STRATA[i].hardness > DE.Data.STRATA[i - 1].hardness);
 });
 

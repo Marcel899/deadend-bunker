@@ -334,6 +334,9 @@ DE.Data.SCENES = {
   /* ---- unique facilities ---- */
   geothermal: { theme: 'rock', props: [['lava', 100, 150, { w: 60 }], ['pipe', 100, null, { w: 190, y: -128, color: '#ff9a3c' }], ['generator', 60, 100, { w: 60, color: '#8a8e98' }], ['rock', 20, null, { w: 18 }], ['rock', 180, null, { w: 16 }], ['console', 160, null, { w: 50, screen: '#ff9a3c' }]], lv10: [['tank', 20, 96, { w: 22, h: 40, color: '#ff9a3c' }]], lv25: [['vent', 100, 40]], lv50: [['robotarm', 190, 96, { color: '#ff9a3c' }]], stations: { work: [160], rest: [40] } },
   aquifer: { theme: 'rock', props: [['water', 110, null, { w: 80 }], ['pump', 180], ['pipe', 100, null, { w: 190, y: -128, color: '#3a7fb8' }], ['railing', 110, null, { w: 120 }], ['rock', 20, null, { w: 16 }], ['crystal', 30, 100]], lv10: [['filtercol', 40, 100, { n: 1 }]], lv25: [['watertank', 40, null, { w: 30, h: 50 }]], lv50: [['neon', 100, 36, { w: 150, color: '#7fe3ff' }]], stations: { work: [180], rest: [40] } },
+  minehead: { theme: 'rock', props: [['locker', 24, null, { n: 2 }], ['toolboard', 70, 100, { w: 60 }], ['minecart', 110], ['pickaxe', 150, 96], ['rock', 178, null, { w: 18 }], ['lamp', 100, 14, { drop: 18, color: '#ffb070' }], ['sign', 150, 58, { text: 'MINING', color: '#c98a2a' }]],
+    lv10: [['drillrig', 60], ['lantern', 40, 80]], lv25: [['gascyl', 150], ['pulley', 120, 70]], lv50: [['ore', 180], ['robotarm', 30, null, { color: '#c9a24a' }]],
+    stations: { work: [80, 140], rest: [100] } },
   orevein: { theme: 'rock', props: [['ore', 60], ['ore', 140], ['minecart', 100], ['rock', 180, null, { w: 20 }], ['toolboard', 40, 100, { w: 50 }], ['lamp', 100, 14, { drop: 20, color: '#ffb070' }], ['railing', 100, 150, { w: 10 }]], lv10: [['conveyor', 150, 100, { w: 80 }]], lv25: [['crystal', 180, 100]], lv50: [['robotarm', 170, null, { color: '#c9a24a' }]], stations: { work: [60, 140], rest: [100] } },
   server: { theme: 'dark', props: [['serverrack', 60, null, { n: 3 }], ['desk', 150, null, { w: 50, screens: 2, col: '#4aa0e0' }], ['chair', 125], ['wire', 100, 20, { w: 180 }], ['vent', 180, 40], ['neon', 100, 36, { w: 140, color: '#4aa0e0' }]], lv10: [['serverrack', 190, null, { n: 1 }]], lv25: [['hologram', 190, 100]], lv50: [['monitorwall', 100, 80, { cols: 2, rows: 1, stand: false }]], stations: { work: [125, 60], rest: [180] } },
   cache: { theme: 'danger', props: [['crate', 50, null, { n: 3, color: '#4a5a3a' }], ['weaponrack', 120, null, { n: 4 }], ['ammobox', 180, null, { n: 4 }], ['sign', 100, 60, { text: 'MILITARY', color: '#4a5a3a' }], ['turretmodel', 20, 100]], lv10: [['locker', 190, 100, { n: 1 }]], lv25: [['cage', 100, 100, { w: 80, h: 40 }]], lv50: [['missile', 185, 100, { h: 60 }]], stations: { work: [100], rest: [60] } },
@@ -371,6 +374,8 @@ DE.Data.SPRITE_PROPS = {
   planter: { s: 'f3_planter', h: 34 }, sprinkler: { s: 'f3_sprinkler', h: 40 }, tree: { s: 'f3_plant', h: 46 }, lava: { s: 'f3_lava', h: 34 }, ore: { s: 'f3_ore', h: 34 },
   railing: { s: 'f3_railing', h: 30 }, benchseat: { s: 'chair', h: 32, pair: 42 }, cage: { s: 'f3_cage', h: 48 }, dish: { s: 'f3_dish', h: 44 }, drone: { s: 'f3_drone', h: 18, wall: true },
   punchbag: { s: 'f3_punchbag', h: 64 }, arcade: { s: 'f3_arcade', h: 62 }, dronepad: { s: 'f3_dronepad', h: 20 },
+  // mining gear (Mining Station, dig site)
+  pickaxe: { s: 'pickaxe', h: 32, wall: true }, drillrig: { s: 'drill', h: 40 }, lantern: { s: 'lantern', h: 28, wall: true }, pulley: { s: 'pulley', h: 40, wall: true }, gascyl: { s: 'gascylinders', h: 44 },
 };
 
 /* Room layout for sprite furniture: a pure function (no DOM) shared by the renderer and the bed

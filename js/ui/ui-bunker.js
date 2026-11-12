@@ -17,7 +17,7 @@ DE.UI.Bunker = (function () {
     s.floors.forEach(f => html += renderFloor(s, f));
     html += renderDigZone(s);
     root.querySelector('#floors').innerHTML = html;
-    tagsDirty = true;
+    tagsDirty = true; DE.UI.DigSite.relayout();
     DE.UI.Actors.relayout(); DE.UI.Elevator.relayout(); DE.UI.Geology.relayout();
     update();
   }
@@ -78,7 +78,15 @@ DE.UI.Bunker = (function () {
   function renderDigZone(s) {
     const d = DE.Excavation.nextDepth(s);
     if (d > DE.CONFIG.MAX_FLOORS) return `<div class="floor bedrock strata-bedrock"><div class="shaft-slot"></div><div class="bedrock-label">Bedrock. Nothing further down.</div></div>`;
-    return `<div class="floor dig ${strata(d)}" data-action="openDrawer" data-drawer="excavate" id="dig-floor"><div class="shaft-slot"></div><div class="dig-zone" id="dig-zone"></div></div>`;
+    // the dig site below the deepest floor: the lift reaches it, so miners ride down to work
+    const cols = DE.CONFIG.FLOOR_SLOTS;
+    return `<div class="floor dig ${strata(d)}" data-depth="${d}" id="dig-floor">
+      <div class="shaft-slot"><div class="floor-num">B${d}</div></div>
+      <div class="cells dig-cells" style="grid-template-columns: repeat(${cols}, 100px)"><div class="dig-row" style="grid-column: 1 / span ${cols}"></div>
+        <div class="dig-site" id="dig-site" data-action="openDrawer" data-drawer="excavate" style="width:${cols * 100}px" title="Dig site — open Excavation"><div class="dig-art" id="dig-art"></div><div class="dig-hud" id="dig-zone"></div></div>
+        <div class="corridor dig-ground"></div>
+      </div>
+    </div>`;
   }
 
   /* ---------- room output badges ----------
@@ -173,8 +181,12 @@ DE.UI.Bunker = (function () {
     s.floors.forEach(f => {
       const el = document.getElementById('wing-' + f.depth); if (!el) return;
       const body = el.querySelector('.wing-body');
-      if (f.expansion) { const pct = Math.min(100, 100 * (1 - (f.expansion.endsAt - now) / (f.expansion.duration * 1000))); setHtml(body, `<b>Digging…</b><div class="dig-prog"><i style="width:${pct}%"></i></div><small>${U().fmtTime((f.expansion.endsAt - now) / 1000)}</small>`); el.classList.add('digging'); }
-      else { const ok = DE.Bunker.canExpand(s, f.depth).ok; setHtml(body, `${Ic().img('dig', 'ico-inline')}<b>Dig wing</b><small>+${DE.CONFIG.WING_CELLS} cells</small><span class="cost">${U().costText(DE.Bunker.expansionCost(s, f.depth))}</span><small>${U().fmtTime(DE.Bunker.expansionTime(s, f.depth))}</small>`); el.classList.toggle('cant', !ok); el.classList.remove('digging'); }
+      if (f.expansion) {
+        const pct = Math.min(100, 100 * (1 - (f.expansion.endsAt - now) / (f.expansion.duration * 1000)));
+        if (!el.querySelector('.wing-mine')) el.insertAdjacentHTML('afterbegin', DE.UI.DigSite.wingScene(f.depth));
+        setHtml(body, `<b>Digging…</b><div class="dig-prog"><i style="width:${pct}%"></i></div><small>${U().fmtTime((f.expansion.endsAt - now) / 1000)}</small>`); el.classList.add('digging');
+      }
+      else { const old = el.querySelector('.wing-mine'); if (old) old.remove(); const ok = DE.Bunker.canExpand(s, f.depth).ok; setHtml(body, `${Ic().img('dig', 'ico-inline')}<b>Dig wing</b><small>+${DE.CONFIG.WING_CELLS} cells</small><span class="cost">${U().costText(DE.Bunker.expansionCost(s, f.depth))}</span><small>${U().fmtTime(DE.Bunker.expansionTime(s, f.depth))}</small>`); el.classList.toggle('cant', !ok); el.classList.remove('digging'); }
     });
   }
 
@@ -258,15 +270,7 @@ DE.UI.Bunker = (function () {
     for (const k in items) { if (!items[k]) continue; setTimeout(() => DE.UI.floatText(r.left + r.width / 2 + (i % 2 ? 30 : -30), r.top + 10, '+' + U().fmt(items[k]), 'good', Ic().src('res.' + k)), i * 180); i++; }
   }
 
-  function updateDig(s, now) {
-    const el = $('#dig-zone'); if (!el) return;
-    const d = DE.Excavation.nextDepth(s);
-    if (s.excavation) {
-      const ex = s.excavation; const pct = Math.min(100, 100 * (1 - (ex.endsAt - now) / (ex.duration * 1000)));
-      setHtml(el, `<div class="dig-prog"><i style="width:${pct}%"></i></div><span>Excavating B${ex.depth} · ${U().fmtTime((ex.endsAt - now) / 1000)}</span>`);
-    } else if (d > DE.Excavation.maxDepth(s)) setHtml(el, `<span>${Ic().img('dig', 'ico-inline')} B${d} locked — needs excavation research</span>`);
-    else setHtml(el, `<span>${Ic().img('dig', 'ico-inline')} Excavate B${d} · ${U().costText(DE.Excavation.cost(s, d))} · ${U().fmtTime(DE.Excavation.time(s, d))}</span>`);
-  }
+  function updateDig(s, now) { DE.UI.DigSite.update(s, now); }
 
   function scrollToFloor(depth) {
     const el = document.querySelector(`.floor[data-depth="${depth}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });

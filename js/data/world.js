@@ -123,13 +123,23 @@ DE.Data.LEGACY = {
 };
 DE.Data.LEGACY_ORDER = ['contacts', 'hands', 'stock', 'friends', 'tunnels', 'science', 'archive', 'autonomy', 'scars', 'prints', 'digger', 'patience'];
 
-/* Geology under the bunker, top to bottom. Every floor sits in one layer; harder layers take
- * longer to dig and need better excavation equipment (the research that raises maxFloor).
- * The cutaway (js/ui/geology.js) paints these as continuous bands behind the floors. */
+/* Geology under the bunker, top to bottom. Every floor sits in one layer. Deeper layers are
+ * harder (more work for the mining crew), need better equipment (research) and a bigger Mining
+ * Station (mine = its level) before digging can start, and their rubble pays out in a different
+ * material (spoils: share of the dig's cost value returned as that resource; miners also quarry
+ * it between digs). The cutaway (js/ui/geology.js) paints these as continuous bands. */
 DE.Data.STRATA = [
-  { id: 'topsoil', name: 'Topsoil', from: 1, to: 2, hardness: 1, tool: 'Shovels & picks', research: null },
-  { id: 'dirt', name: 'Dark earth', from: 3, to: 5, hardness: 1.15, tool: 'Excavation I', research: 'excavation1' },
-  { id: 'stone', name: 'Dense stone', from: 6, to: 8, hardness: 1.4, tool: 'Heavy Machinery', research: 'machinery' },
-  { id: 'deeprock', name: 'Deep bedrock', from: 9, to: 99, hardness: 1.75, tool: 'Deep Excavation drills', research: 'excavation2' },
+  { id: 'topsoil', name: 'Topsoil', from: 1, to: 2, hardness: 1, tool: 'Shovels & picks', research: null, mine: 0, spoils: { scrap: 0.12 },
+    desc: 'Loose earth, roots and old foundations. Anyone with a shovel can dig here.' },
+  { id: 'clay', name: 'Packed clay', from: 3, to: 4, hardness: 1.35, tool: 'Picks & timber shoring', research: 'excavation1', mine: 1, spoils: { scrap: 0.08, concrete: 0.12 },
+    desc: 'Heavy wet clay. Every metre has to be shored up as the crew goes.' },
+  { id: 'limestone', name: 'Limestone', from: 5, to: 6, hardness: 1.8, tool: 'Jackhammers', research: 'machinery', mine: 5, spoils: { concrete: 0.25 },
+    desc: 'Pale rock that breaks into good aggregate for concrete.' },
+  { id: 'granite', name: 'Granite', from: 7, to: 8, hardness: 2.4, tool: 'Hydraulic drill rig', research: 'excavation2', mine: 12, spoils: { concrete: 0.18, scrap: 0.1 },
+    desc: 'Hard grey stone. Drill bits wear out fast.' },
+  { id: 'basalt', name: 'Basalt', from: 9, to: 10, hardness: 3.2, tool: 'Deep-core drills', research: 'excavation3', mine: 20, spoils: { scrap: 0.12, research: 0.06 },
+    desc: 'Black volcanic rock laced with crystal geodes worth studying.' },
+  { id: 'magma', name: 'Magma rock', from: 11, to: 99, hardness: 4.2, tool: 'Thermal borer', research: 'excavation4', mine: 30, spoils: { fuel: 0.12, research: 0.08 },
+    desc: 'Hot glassy rock close to the mantle, with pockets of gas and rare minerals.' },
 ];
 DE.Data.stratumAt = function (depth) { return DE.Data.STRATA.find(s => depth >= s.from && depth <= s.to) || DE.Data.STRATA[DE.Data.STRATA.length - 1]; };

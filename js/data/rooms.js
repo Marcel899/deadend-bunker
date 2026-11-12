@@ -73,6 +73,10 @@ DE.Data = DE.Data || {};
       upgradeDesc: 'Raises concrete output',
       cost: { scrap: 150 }, buildTime: 60, workers: 2, profession: 'engineer', powerUse: 0.25,
       produces: { concrete: 0.25 }, consumes: { water: 0.1, scrap: 0.1 }, unlock: 'construction' }),
+    minehead: t1({ id: 'minehead', name: 'Mining Station', icon: '⛏️', category: 'support', size: 2,
+      desc: 'Hard hats, a tool crib and the winch for the spoil buckets. Runs the mining crew: more mining posts, faster digging, and the equipment the deeper rock layers demand (clay needs level 1, limestone 5, granite 12, basalt 20, magma rock 30).',
+      upgradeDesc: '+1 mining post every 2 levels, +4% digging speed per level',
+      cost: { scrap: 140 }, costGrowth: 1.17, buildTime: 40, workers: 0, powerUse: 0.15, effects: { minerSlots: 0.5, digSpeed: 0.04 }, maxLevel: 40 }),
 
     /* ================= TIER 2 — Improved Infrastructure ================= */
     kitchen: t2({ id: 'kitchen', name: 'Kitchen', icon: '🍳', category: 'support', size: 2,
@@ -265,7 +269,7 @@ DE.Data = DE.Data || {};
 
   DE.Data.ROOM_BUILD_ORDER = [
     // tier 1
-    'quarters', 'cafeteria', 'storage', 'generator', 'watertank', 'workshop', 'medbay', 'radio', 'farm', 'security', 'water', 'concrete',
+    'quarters', 'cafeteria', 'storage', 'generator', 'watertank', 'workshop', 'medbay', 'radio', 'farm', 'security', 'water', 'concrete', 'minehead',
     // tier 2
     'kitchen', 'hydroponics', 'purification', 'armory', 'barracks', 'advworkshop', 'infirmary', 'garage', 'training', 'comms',
     // tier 3

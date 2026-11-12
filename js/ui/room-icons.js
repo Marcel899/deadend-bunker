@@ -33,7 +33,7 @@ DE.UI.RoomIcons = (function () {
     aicommand: [['hologram', 50, .8, {}, 60], ['serverrack', 22, .45, { n: 1 }], ['serverrack', 80, .45, { n: 1 }]], autoplant: [['conveyor', 50, .55], ['robotarm', 50, .5]],
     warroom: [['mapscreen', 50, .75, {}, 56], ['flag', 86, .5], ['weaponrack', 16, .45, { n: 1 }]], uplink: [['dish', 50, 1.2]], medresearch: [['labbench', 44, .55], ['dnascreen', 76, .55, {}, 46]],
     silo: [['missile', 50, .42]], ark: [['tree', 32, .45, { h: 110 }], ['bunk', 72, .5, { color: '#4a8a3a', sheet: '#f3f0e8' }]], geothermal: [['lava', 50, .6, {}, 80], ['generator', 50, .5]],
-    aquifer: [['water', 50, .6, { w: 70 }], ['crystal', 80, .7]], orevein: [['ore', 34, .7], ['minecart', 70, .55]], server: [['serverrack', 36, .5, { n: 2 }], ['desk', 76, .45]],
+    aquifer: [['water', 50, .6, { w: 70 }], ['crystal', 80, .7]], orevein: [['ore', 34, .7], ['minecart', 70, .55]], minehead: [['minecart', 40, .6], ['rock', 76, .7, { w: 16 }]], server: [['serverrack', 36, .5, { n: 2 }], ['desk', 76, .45]],
     cache: [['crate', 32, .6, { n: 2, color: '#4a5a3a' }], ['weaponrack', 74, .5, { n: 2 }]],
   };
   const CAT = { production: '#7cc46a', support: '#5bb8f0', defense: '#e74c5a', housing: '#ffc531' };
