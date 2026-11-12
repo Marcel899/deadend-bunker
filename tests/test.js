@@ -223,7 +223,7 @@ t('excavation costs scale and creates floors', () => {
 t('facilities eventually appear (pity timer)', () => {
   S.research.done.machinery = true; S.research.done.excavation2 = true; S.research.done.excavation3 = true; S._fx = null;
   let found = S.floors.some(f => f.facility);
-  while (!found && S.floors.length < 12) { const r = DE.Excavation.start(S, now); assert(r.ok, r.reason); now = run(S, S.excavation.duration + 1, now, 5); found = S.floors.some(f => f.facility); }
+  while (!found && S.floors.length < 12) { for (const k in S.resources) S.resources[k] = Math.max(S.resources[k], 1e6); const r = DE.Excavation.start(S, now); assert(r.ok, r.reason); now = run(S, S.excavation.duration + 1, now, 5); found = S.floors.some(f => f.facility); }
   assert(found, 'no facility found by floor ' + S.floors.length);
   const fl = S.floors.find(f => f.facility); const room = Object.values(S.rooms).find(r => r.floor === fl.depth);
   assert(room && DE.Data.ROOMS[room.type].unique);
@@ -268,6 +268,30 @@ t('needs garage; sends and returns loot', () => {
   now = run(S, 241, now, 10);
   assert(S.expeditions.active.length === 0); assert(S.resources.scrap > scrap); assert(S.survivors[ids[0]].assignment === null);
   assert(S.expeditions.log.length === 1);
+});
+t('road encounters change the trip that is still out; finds and notes reach the report', () => {
+  Object.values(S.survivors).forEach(sv => sv.hp = 100);
+  const ids = Object.keys(S.survivors).filter(id => !S.survivors[id].assignment || S.survivors[id].assignment.kind !== 'expedition').slice(0, 2);
+  const r = DE.Expeditions.send(S, 'suburbs', ids, now); assert(r.ok, r.reason);
+  const trip = S.expeditions.active[S.expeditions.active.length - 1];
+  const ev = DE.Events.encounter(S, trip); assert(ev && ev.ctx.expId === trip.id, 'encounter tied to the trip');
+  assert(DE.Data.ENCOUNTERS.find(e => e.id === ev.def).tags.some(t => DE.Expeditions.location('suburbs').tags.includes(t) || t === 'suburbs'), 'matches the location');
+  assert(trip.seen.includes(ev.def), 'remembered so it does not repeat');
+  const ends = trip.endsAt, ctx = { members: ids, expId: trip.id };
+  DE.Events.applyEffects(S, { lootMult: 2, loot: { scrap: 100 }, delay: 60 }, ctx);
+  assert(trip.mult === 2 && trip.bonus.scrap > 0 && trip.endsAt === ends + 60000, 'haul doubled, scrap loaded, detour');
+  DE.Events.applyEffects(S, { gamble: [1, { loot: { food: 50 } }, { lootMult: 0 }] }, ctx); assert(trip.bonus.food > 0 && trip.mult === 2, 'a sure gamble pays the win');
+  DE.Events.applyEffects(S, { gamble: [0, { loot: { food: 50 } }, { lootMult: 0.5 }] }, ctx); assert(trip.mult === 1, 'a lost gamble pays the loss');
+  S.events = S.events.filter(e => e.id !== ev.id); S.events.push(ev);
+  assert(DE.Events.choose(S, ev.id, ev.choices.length - 1).ok); assert(trip.notes.length === 1, 'the choice is noted on the trip');
+  // the save keeps trip state
+  const L = DE.Save.sanitize(JSON.parse(JSON.stringify(S)), now); const t2 = L.expeditions.active.find(e => e.id === trip.id);
+  assert(t2 && t2.mult === trip.mult && t2.bonus.scrap === trip.bonus.scrap && t2.notes.length === 1 && t2.seen.length === 1, 'trip survives save/load');
+  const scrap = S.resources.scrap = 0;
+  now = run(S, (trip.endsAt - now) / 1000 + 2, now, 10);
+  const rep = S.expeditions.log[S.expeditions.log.length - 1];
+  assert(rep.id === trip.id && rep.loot.scrap >= trip.bonus.scrap && S.resources.scrap > scrap, 'loaded scrap comes home');
+  assert(Array.isArray(rep.finds) && rep.notes.length === 1, 'report has finds and notes');
 });
 
 console.log('Offline');

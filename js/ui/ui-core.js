@@ -254,7 +254,8 @@ DE.UI = (function () {
  const ids = ev.kind === 'expedition' ? (ev.ctx.members || []) : [ev.ctx.aId, ev.ctx.bId];
  const people = ids.map(id => s.survivors[id]).filter(Boolean).slice(0, 4);
  const cast = people.map((sv, i) => `<figure>${DE.Chars.crew(sv.profession, { anim: i % 2 ? 'interact' : 'idle', h: 74, flip: i % 2 === 1 })}<figcaption>${esc(sv.name.split(' ')[0])}</figcaption></figure>`).join('');
- const kind = ev.kind === 'expedition' ? 'Expedition report' : 'Bunker event';
+ const eloc = ev.kind === 'expedition' && ev.ctx && DE.Expeditions.location(ev.ctx.location);
+ const kind = ev.kind === 'expedition' ? 'On the road' + (eloc ? ' · ' + esc(eloc.name) : '') : 'Bunker event';
  modal({ title: `<span class="ev-kind">${kind}</span>${esc(ev.title)}`, icon: ev.kind === 'expedition' ? 'map' : 'scroll', cls: 'event ' + ev.kind, locked: true,
  html: `<div class="ev-stage ${ev.kind}">${cast || DE.Icons.img(ev.kind === 'expedition' ? 'map' : 'warning', 'ev-emblem')}</div><p class="story">${esc(ev.text)}</p><div class="choices">${buttons}</div>`, buttons: [] });
  }
@@ -287,6 +288,16 @@ DE.UI = (function () {
      case 'traps': out.push({ cls: 'good', ic: im('traps'), t: '+' + v + ' traps' }); break;
      case 'risk': out.push({ cls: 'risk', ic: im('biohazard'), t: Math.round(v[0] * 100) + '% infected' }); break;
      case 'buff': out.push({ cls: 'good', ic: DE.Icons.room(v[0], 'ico-inline'), t: DE.Data.ROOMS[v[0]].name + ' +' + Math.round(v[1] * 100) + '% for ' + Math.round(v[2] / 60) + 'm' }); break;
+     case 'noiseCalm': out.push({ cls: 'good', ic: im('noise'), t: 'Horde quieter ' + Math.round(v / 60) + 'm' }); break;
+     case 'delay': out.push({ cls: 'bad', ic: im('timer'), t: '+' + U().fmtTime(v) + ' trip' }); break;
+     case 'hurry': out.push({ cls: 'good', ic: im('timer'), t: '−' + U().fmtTime(v) + ' trip' }); break;
+     case 'gamble': {
+       out.push({ cls: 'risk', ic: im('star'), t: Math.round(v[0] * 100) + '% chance:' });
+       consequences(s, { effects: v[1] || {} }).forEach(x => out.push(x));
+       out.push({ cls: 'none', t: 'or else:' });
+       consequences(s, { effects: v[2] || {} }).forEach(x => out.push(x));
+       break;
+     }
      default: break;
    }
  }
@@ -323,6 +334,7 @@ DE.UI = (function () {
  const body = $('#drawer-body'); const st = body.scrollTop;
  body.innerHTML = html; body.scrollTop = st; ui.lastDrawerHtml = html;
  }
+ if (def.tick) def.tick(state());   // live bits (positions, timers) without rebuilding the HTML
  }
 
  /* ---------- full refresh ---------- */

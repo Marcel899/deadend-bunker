@@ -26,6 +26,7 @@ node tests/test.js
 - **Research** needs a Lab. One project at a time; cost is paid up front.
 - **Excavate** new floors from the dig zone at the bottom. Floors B3+ may hide abandoned facilities with unique rooms.
 - **Zombie waves** hit every 5 minutes. Guards + turrets + traps must out-damage the horde or the wall takes damage; a breach costs resources and injures survivors. Waves are never fatal — repair and rebuild.
+- **Expeditions** (needs a Garage): pick a destination on the wasteland map — 13 places, more revealed as you dig deeper — and a team. Scavengers find more, hunters and medics cut the injury risk, scouts are faster. On the road the team may hit an event at a checkpoint: your choice changes that trip (bigger or smaller haul, detours, short cuts, gambles). Every place has rare discoveries; the report lists what was found and what happened on the way.
 - **Offline**: production, timers and up to 3 waves are simulated when you come back (8h cap, extendable).
 - **Reconstruction** (prestige) from floor B3: reset for Legacy Points and buy permanent upgrades.
 

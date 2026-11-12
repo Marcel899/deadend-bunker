@@ -35,6 +35,7 @@ DE.Events = (function () {
     for (const id in state.rooms) { const r = state.rooms[id]; if (r.level < 1) continue; const base = ROOM_NOISE[r.type]; if (base) n += base * Math.pow(r.level, 0.35); }
     n += state.defense.turrets * 0.4 + state.expeditions.active.length * 1.5;
     const fx = DE.Effects.get(state); n *= fx.noiseMult != null ? fx.noiseMult : 1;
+    if (state.defense.calmUntil && state.playtime < state.defense.calmUntil) n *= 0.5;
     return Math.round(n * 10) / 10;
   }
   function noiseLevel(n) { return n < 6 ? 'quiet' : n < 14 ? 'noisy' : n < 26 ? 'loud' : 'deafening'; }
@@ -90,15 +91,18 @@ DE.Events = (function () {
     else ev.choices = def.choices.filter(c => !c.cond || c.cond(state)).map(c => ({ label: fill(c.label, ctx), desc: fill(c.desc || '', ctx), effects: c.effects }));
     push(state, ev);
   }
-  /** Expedition encounter for a resolved trip (called by DE.Expeditions.resolve). */
-  function encounter(state, exp, result) {
+  /** Expedition encounter on the road (called by DE.Expeditions.tick at a checkpoint). Picked from
+   *  the location's tags, never the same one twice on a trip; its effects land on the trip while it
+   *  is still out (ctx.expId). */
+  function encounter(state, exp) {
     ensure(state);
-    const pool = DE.Data.ENCOUNTERS.filter(e => e.tags.includes(exp.location));
-    const def = pool.length ? U().pick(pool) : null; if (!def) return;
-    const names = result.members || [];
-    const ev = { kind: 'expedition', def: def.id, title: def.title, text: def.text, ctx: { members: exp.survivors.slice(), location: exp.location }, choices: def.choices.map(c => ({ label: c.label, desc: c.desc || '', effects: c.effects })) };
-    push(state, ev);
-    result.encounter = def.title;
+    const loc = DE.Expeditions.location(exp.location); const tags = (loc && loc.tags) || [exp.location];
+    const seen = exp.seen || [];
+    const pool = DE.Data.ENCOUNTERS.filter(e => (e.tags.includes(exp.location) || e.tags.some(t => tags.includes(t))) && !seen.includes(e.id));
+    if (!pool.length) return null;
+    const def = U().pick(pool); exp.seen = seen.concat(def.id);
+    const ev = { kind: 'expedition', def: def.id, title: def.title, text: def.text, ctx: { members: exp.survivors.slice(), location: exp.location, expId: exp.id }, choices: def.choices.map(c => ({ label: c.label, desc: c.desc || '', effects: c.effects })) };
+    return push(state, ev);
   }
 
   /** Resolve a queued event with the chosen option; returns a summary for the UI. */
@@ -127,6 +131,11 @@ DE.Events = (function () {
       state.events.splice(i, 1); return { ok: true, summary: 'Traded. The traders will remember you.' };
     }
     const summary = applyEffects(state, ch.effects || {}, ev.ctx);
+    if (ev.kind === 'expedition' && ev.ctx && ev.ctx.expId) {
+      const note = ev.title + ': ' + ch.label + (summary ? ' (' + summary + ')' : '');
+      const trip = state.expeditions.active.find(e => e.id === ev.ctx.expId) || state.expeditions.log.find(e => e.id === ev.ctx.expId);
+      if (trip) (trip.notes = trip.notes || []).push(note);
+    }
     state.events.splice(i, 1);
     state.log.push({ t: Date.now(), msg: ev.title + ' — ' + ch.label + '.' });
     return { ok: true, summary };
@@ -136,12 +145,27 @@ DE.Events = (function () {
     const out = []; ctx = ctx || {};
     const members = (ctx.members || []).map(id => state.survivors[id]).filter(Boolean);
     const A = ctx.aId ? state.survivors[ctx.aId] : null, B = ctx.bId ? state.survivors[ctx.bId] : null;
+    const trip = ctx.expId ? state.expeditions.active.find(e => e.id === ctx.expId) : null;   // still on the road?
     for (const k in fx) {
       const v = fx[k];
       if (DE.Data.RESOURCES[k]) { gainRes(state, k, v); out.push((v > 0 ? '+' : '') + U().fmt(v) + ' ' + DE.Data.RESOURCES[k].name); continue; }
       switch (k) {
-        case 'loot': for (const r in v) { const n = Math.round(v[r] * bus(state).cargo); gainRes(state, r, n); out.push('+' + U().fmt(n) + ' ' + DE.Data.RESOURCES[r].name); } break;
-        case 'lootMult': { const last = state.expeditions.log[state.expeditions.log.length - 1]; if (last && last.loot) for (const r in last.loot) { const delta = Math.round(last.loot[r] * (v - 1)); gainRes(state, r, delta); } out.push('haul x' + v); break; }
+        case 'loot': for (const r in v) {
+          const n = Math.round(v[r] * bus(state).cargo);
+          if (trip) { trip.bonus = trip.bonus || {}; trip.bonus[r] = (trip.bonus[r] || 0) + n; out.push('+' + U().fmt(n) + ' ' + DE.Data.RESOURCES[r].name + ' loaded'); }
+          else { gainRes(state, r, n); out.push('+' + U().fmt(n) + ' ' + DE.Data.RESOURCES[r].name); }
+        } break;
+        case 'lootMult': {
+          const pct = (v >= 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + '%';
+          if (trip) { trip.mult = (trip.mult || 1) * v; out.push('haul ' + pct); break; }
+          const log = (ctx.expId && state.expeditions.log.find(e => e.id === ctx.expId)) || state.expeditions.log[state.expeditions.log.length - 1];
+          if (log && log.loot) for (const r in log.loot) { const delta = Math.round(log.loot[r] * (v - 1)); gainRes(state, r, delta); log.loot[r] = Math.max(0, log.loot[r] + delta); }
+          out.push('haul ' + pct); break;
+        }
+        case 'delay': if (trip) { trip.endsAt += v * 1000; trip.duration += v; out.push('trip +' + U().fmtTime(v)); } break;
+        case 'hurry': if (trip) { const cut = Math.min(v * 1000, Math.max(0, trip.endsAt - Date.now() - 5000)); trip.endsAt -= cut; trip.duration = Math.max(1, trip.duration - cut / 1000); if (cut > 0) out.push('home ' + U().fmtTime(cut / 1000) + ' sooner'); } break;
+        case 'gamble': { const win = U().chance(v[0]); out.push(win ? (v[3] || 'it worked') : (v[4] || 'it went wrong')); const sub = applyEffects(state, (win ? v[1] : v[2]) || {}, ctx); if (sub) out.push(sub); break; }
+        case 'noiseCalm': state.defense.calmUntil = Math.max(state.defense.calmUntil || 0, state.playtime + v); out.push('the horde is quieter for ' + Math.round(v / 60) + ' min'); break;
         case 'injure': { const pool = members.length ? members : Object.values(state.survivors); pool.forEach(s => { if (U().chance(v[0])) { DE.Survivors.injure(s, v[1]); out.push(s.name + ' injured'); } }); break; }
         case 'heal': Object.values(state.survivors).forEach(s => { s.hp = Math.min(100, s.hp + v); }); out.push('everyone healed +' + v); break;
         case 'rescue': case 'recruit': if (v && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state)) { const sv = DE.Survivors.spawn(state); state.stats.recruited++; out.push(sv.name + ' joined'); } else if (v) out.push('no free housing — they moved on'); break;

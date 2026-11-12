@@ -109,7 +109,7 @@ DE.Game = (function () {
  }
  case 'expedition': {
  const r = e.result; const loc = DE.Expeditions.location(r.location);
- DE.UI.toast('<b>Team back from ' + esc(loc.name) + '</b>' + (Object.keys(r.loot).length ? ' · ' + U().costText(r.loot) : '') + (r.rescued ? ' · rescued ' + esc(r.rescued) : '') + (r.injured.length ? ' · ' + r.injured.length + ' injured' : ''), 'ok', 5000, 'vehicle');
+ DE.UI.toast('<b>Team back from ' + esc(loc.name) + '</b>' + (Object.keys(r.loot).length ? ' · ' + U().costText(r.loot) : '') + (r.rescued ? ' · rescued ' + esc(r.rescued) : '') + (r.injured.length ? ' · ' + r.injured.length + ' injured' : '') + ((r.finds || []).length ? ' · found: ' + esc(r.finds[0].split(' — ')[0]) : ''), 'ok', 5000, 'vehicle');
  log('Expedition to ' + loc.name + ' returned.' + (r.rescued ? ' Rescued ' + r.rescued + '.' : ''));
  DE.UI.Bunker.collectAt('.hatch', r.loot);
  break;

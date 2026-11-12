@@ -300,25 +300,103 @@ DE.UI.Drawers = (function () {
  };
 
  /* ================= EXPEDITIONS ================= */
+ /* The expedition screen: a map of the wasteland (roads from the bunker to every destination,
+  * locked ones greyed, trucks driving out and back while a team is away), the selected
+  * destination's numbers for the chosen team (time, injury risk, loot, rescues, discoveries, road
+  * events), the team picker with seats, teams in the field and trip reports. Time-dependent bits
+  * (truck positions, ETAs, progress) are written by tick() so the drawer HTML stays stable and the
+  * trucks glide instead of being redrawn every second. */
+ const EM = { W: 1000, H: 380, HOME: [70, 318] };
+ function emRoute(loc) {
+ const [x, y] = loc.map, [hx, hy] = EM.HOME;
+ return { x0: hx, y0: hy, cx: (hx + x) / 2 + (y - hy) * 0.18, cy: (hy + y) / 2 - Math.abs(x - hx) * 0.1, x1: x, y1: y };
+ }
+ function emPoint(r, t) { const u = 1 - t; return [u * u * r.x0 + 2 * u * t * r.cx + t * t * r.x1, u * u * r.y0 + 2 * u * t * r.cy + t * t * r.y1]; }
+ const emLeg = (f) => f < 0.5 ? f * 2 : 2 - f * 2;      // out until halfway, then home
+ const PROF_TRIP = { scavenger: '+30% loot · −15% risk', hunter: '−20% risk', scout: '−20% trip time', medic: '−25% risk' };
+ function emMap(s, sel) {
+ const locs = DE.Data.LOCATIONS, active = s.expeditions.active;
+ const roads = locs.map(l => { const r = emRoute(l), open = DE.Expeditions.isOpen(s, l), on = active.some(e => e.location === l.id);
+   return `<path class="em-road ${open ? '' : 'locked'} ${l.id === sel.id ? 'sel' : ''} ${on ? 'active' : ''}" d="M${r.x0} ${r.y0} Q${r.cx.toFixed(0)} ${r.cy.toFixed(0)} ${r.x1} ${r.y1}"/>`; }).join('');
+ const pins = locs.map(l => { const open = DE.Expeditions.isOpen(s, l), [x, y] = l.map, on = active.some(e => e.location === l.id);
+   return `<g class="em-pin ${open ? '' : 'locked'} ${l.id === sel.id ? 'sel' : ''} ${on ? 'busy' : ''}" transform="translate(${x} ${y})" data-action="expLocation" data-id="${l.id}"><title>${esc(l.name)}</title><circle class="em-hit" r="40"/><circle class="em-halo" r="33"/><circle class="em-disc" r="25"/><image href="${DE.Icons.src(open ? l.icon : 'lock')}" x="-17" y="-17" width="34" height="34"/>
+   <text class="em-name" y="44">${esc(l.name)}</text>${open ? `<text class="em-risk r${l.danger >= 0.45 ? 3 : l.danger >= 0.25 ? 2 : 1}" y="59">${Math.round(l.danger * 100)}% risk</text>` : `<text class="em-risk" y="59">reach B${l.minDepth}</text>`}</g>`; }).join('');
+ const stops = active.map(e => { const r = emRoute(DE.Expeditions.location(e.location)); return (e.stops || []).map((f, i) => { const [x, y] = emPoint(r, emLeg(f)); return `<circle class="em-stop ${i < (e.stop || 0) ? 'past' : ''}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6"/>`; }).join(''); }).join('');
+ const trucks = active.map(e => `<g class="em-truck" data-trip="${e.id}" style="opacity:0"><g class="em-flip"><image href="${DE.Icons.src('vehicle')}" x="-22" y="-34" width="44" height="44"/></g><text class="em-eta" y="22" data-eta="${e.id}"></text></g>`).join('');
+ const hills = [[150, 60, 120, 40], [470, 350, 180, 50], [700, 40, 160, 45], [880, 360, 170, 40], [300, 200, 90, 30], [760, 180, 70, 26]].map(([x, y, rx, ry]) => `<ellipse cx="${x}" cy="${y}" rx="${rx}" ry="${ry}" class="em-hill"/>`).join('');
+ const blocks = [[560, 120], [585, 175], [615, 110], [680, 190], [470, 205], [500, 300], [870, 250]].map(([x, y], i) => `<rect x="${x}" y="${y}" width="${18 + (i % 3) * 6}" height="${14 + (i % 2) * 8}" class="em-block"/>`).join('');
+ return `<div class="exp-map"><svg viewBox="0 0 ${EM.W} ${EM.H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Expedition map">
+ <defs><radialGradient id="em-bg" cx=".3" cy=".75" r="1"><stop offset="0" stop-color="#5b5f45"/><stop offset=".6" stop-color="#3f4434"/><stop offset="1" stop-color="#2b2f25"/></radialGradient>
+ <pattern id="em-grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0 H0 V50" fill="none" stroke="#fff" stroke-opacity=".05" stroke-width="1"/></pattern></defs>
+ <rect width="${EM.W}" height="${EM.H}" fill="url(#em-bg)"/>${hills}
+ <path class="em-river" d="M520 -10 C 470 80, 560 140, 500 200 S 400 300, 455 390"/>
+ ${blocks}<rect width="${EM.W}" height="${EM.H}" fill="url(#em-grid)"/>
+ <g>${roads}</g><g>${stops}</g>
+ <g class="em-home" transform="translate(${EM.HOME[0]} ${EM.HOME[1]})"><circle r="30" class="em-disc home"/><image href="${DE.Icons.src('home')}" x="-20" y="-21" width="40" height="40"/><text class="em-name" y="48">Bunker</text></g>
+ <g>${pins}</g><g>${trucks}</g>
+ <text class="em-title" x="${EM.W - 16}" y="${EM.H - 14}">THE WASTELAND</text></svg></div>`;
+ }
  const expeditions = {
- title: (s) => `Expeditions <small>${s.expeditions.active.length}/${DE.Expeditions.slots(s)} teams out</small>`,
+ title: (s) => `Expeditions <small>${s.expeditions.active.length}/${DE.Expeditions.slots(s)} teams out · ${DE.Expeditions.availableLocations(s).length}/${DE.Data.LOCATIONS.length} places known</small>`,
  render(s) {
- const now = Date.now(); const ex = ui().expedition;
- if (!DE.Expeditions.unlocked(s)) return `<div class="card"><h4>No Garage</h4><p>Build a  <b>Garage</b> (needs research: Reinforced Construction) to send survivors to the surface for loot, fuel and new recruits.</p></div>`;
- let html = '';
- const bus = DE.Events.bus(s), nextBus = DE.Events.busNext(s);
- html += `<div class="card bus-card"><h4>${DE.Icons.img('truck', 'ico-inline')} Vehicle: ${esc(bus.name)} <small class="muted">${bus.capacity} seats · ${Math.round((1 - bus.speed) * 100)}% faster · ${Math.round(bus.safety * 100)}% safer · cargo x${bus.cargo}</small></h4><p class="muted">${esc(bus.desc)}</p>
- ${nextBus ? `<div class="row"><span><b>Next:</b> ${esc(nextBus.name)} <small class="muted">${esc(nextBus.desc)}</small></span><button class="btn primary small ${U().canAfford(s.resources, nextBus.cost) ? '' : 'cant'}" data-action="busUpgrade" ${U().canAfford(s.resources, nextBus.cost) ? '' : 'disabled'}>Upgrade <span class="cost">${U().costText(nextBus.cost)}</span></button></div>` : '<b class="gold">Fully upgraded</b>'}
- <div class="row small"><span>Factions</span><b>${DE.Data.OVERWORLD ? Object.values(DE.Data.FACTIONS).map(f => `<span class="tag" title="${esc(f.desc)}">${esc(f.name)} ${(s.rep && s.rep[f.id]) || 0 >= 0 ? '+' : ''}${(s.rep && s.rep[f.id]) || 0}</span>`).join(' ') : ''}</b></div></div>`;
- if (s.expeditions.active.length) html += `<div class="card"><h4>Teams in the field</h4>${s.expeditions.active.map(e => { const loc = DE.Expeditions.location(e.location); return `<div class="exp-active"><b>${DE.Icons.img('location', 'ico-inline')} ${esc(loc.name)}</b> <small class="muted">${e.survivors.map(id => s.survivors[id] ? esc(s.survivors[id].name) : '?').join(', ')}</small>${bar(100 * (1 - (e.endsAt - now) / (e.duration * 1000)), 'blue')}<small class="muted">${U().fmtTime((e.endsAt - now) / 1000)} left</small></div>`; }).join('')}</div>`;
- const locs = DE.Data.LOCATIONS; const sel = DE.Expeditions.location(ex.location) || locs[0];
- html += `<div class="card"><h4>Destination</h4><div class="loc-grid">${locs.map(l => { const ok = l.minDepth <= s.floors.length; return `<button class="loc ${ex.location === l.id ? 'active' : ''} ${ok ? '' : 'locked'}" data-action="expLocation" data-id="${l.id}" ${ok ? '' : 'disabled'}><span class="loc-icon">${DE.Icons.img('location', 'ico-inline')}</span><b>${esc(l.name)}</b><small>${ok ? U().fmtTime(l.duration) + ' · risk ' + Math.round(l.danger * 100) + '%' : ' needs B' + l.minDepth}</small></button>`; }).join('')}</div>
- <p class="muted">${esc(sel.desc)} Loot: ${Object.keys(sel.loot).map(r => `${DE.Icons.res(r, 'ico-inline')} ${sel.loot[r][0]}–${sel.loot[r][1]}`).join(', ')}${sel.rescue ? ` · ${Math.round(sel.rescue * 100)}% chance to rescue a survivor` : ''}. Loot ×${s._fx.lootBonus.toFixed(2)} (garage) ×${(1 + 0.3 * (s.floors.length - 1)).toFixed(2)} (depth), more with bigger teams and scavengers.</p></div>`;
+ const ex = ui().expedition;
+ if (!DE.Expeditions.unlocked(s)) return `<div class="card"><h4>No Garage</h4><p>Build a <b>Garage</b> (needs research: Reinforced Construction) to send survivors to the surface for loot, fuel and new recruits.</p></div>`;
+ const bus = DE.Events.bus(s), nextBus = DE.Events.busNext(s), locs = DE.Data.LOCATIONS;
+ const sel = DE.Expeditions.location(ex.location) || locs[0], open = DE.Expeditions.isOpen(s, sel);
+ ex.members = ex.members.filter(id => s.survivors[id] && !(s.survivors[id].assignment && s.survivors[id].assignment.kind === 'expedition'));
+ const plan = DE.Expeditions.plan(s, sel.id, ex.members.length ? ex.members : []);
+ let html = emMap(s, sel);
+ // ---- destination ----
+ const lootChips = Object.keys(sel.loot).map(r => `<i class="ex-chip">${DE.Icons.res(r, 'ico-inline')}${U().fmt(sel.loot[r][0] * plan.lootMult)}–${U().fmt(sel.loot[r][1] * plan.lootMult)}</i>`).join('');
+ const finds = (sel.finds || []).map(f => `<i class="ex-chip find">${DE.Icons.img('star', 'ico-inline')}${Math.round(f.chance * 100)}% ${esc(f.text)}</i>`).join('');
+ const risk = plan.danger, riskSev = risk >= 0.4 ? 'crit' : risk >= 0.2 ? 'warn' : 'ok';
+ const road = plan.stops.length > 1 ? '2 checkpoints · 60% chance of an event at each' : '1 checkpoint · 75% chance of an event';
+ html += `<div class="ex-grid"><div class="card ex-dest ${open ? '' : 'locked'}"><div class="ex-dh"><span class="ex-dico">${DE.Icons.img(open ? sel.icon : 'lock')}</span><div><h4>${esc(sel.name)}</h4><p>${esc(sel.desc)}</p></div></div>
+ ${open ? `<div class="ex-kv"><span>${DE.Icons.img('timer', 'ico-inline')} Trip time</span><b>${U().fmtTime(plan.duration)}</b></div>
+ <div class="ex-kv"><span>${DE.Icons.img('medkit', 'ico-inline')} Injury risk</span><span class="pd-bar ${riskSev}"><i style="width:${Math.min(100, risk * 100 / 0.6).toFixed(0)}%"></i></span><b>${Math.round(risk * 100)}%</b></div>
+ <div class="ex-kv"><span>${DE.Icons.img('pop', 'ico-inline')} Rescue chance</span><b>${Math.round(plan.rescue * 100)}%</b></div>
+ <div class="ex-kv"><span>${DE.Icons.img('scroll', 'ico-inline')} On the road</span><b>${road}</b></div>
+ <div class="ex-sub">Expected haul <small>×${plan.lootMult.toFixed(2)} with this team, depth and vehicle</small></div><div class="ex-chips">${lootChips}</div>
+ ${finds ? `<div class="ex-sub">Possible discoveries</div><div class="ex-chips">${finds}</div>` : ''}` : `<p class="ex-lock">${DE.Icons.img('lock', 'ico-inline')} Dig down to <b>B${sel.minDepth}</b> to learn the way there.</p>`}</div>`;
+ // ---- team ----
  const pool = DE.Survivors.available(s);
- html += `<div class="card"><h4>Team <small class="muted">${ex.members.length}/${bus.capacity} · scavengers find more and get hurt less</small></h4><div class="exp-team">${ex.members.map(id => s.survivors[id]).filter(Boolean).map(sv => `<span title="${esc(sv.name)}">${DE.Chars.crew(sv.profession, { anim: 'walk', h: 64 })}</span>`).join('') || `<span class="muted">Pick up to ${bus.capacity} survivors below.</span>`}</div>${pool.map(sv => { const on = ex.members.includes(sv.id); const hurt = sv.hp < 50; return `<div class="row"><span>${DE.Icons.prof(sv.profession, 'ico-inline')} ${esc(sv.name)} <small class="muted">Lv${sv.level}${hurt ? ' ·  injured' : ''}${sv.assignment ? ' · ' + assignmentText(s, sv) : ''}</small></span><button class="btn small ${on ? 'active' : ''}" data-action="expToggle" data-sid="${sv.id}" ${hurt ? 'disabled' : ''}>${on ? '✓ Going' : 'Add'}</button></div>`; }).join('')}
- ${(() => { const c = DE.Expeditions.canSend(s, ex.location, ex.members); return `<button class="btn primary ${c.ok ? '' : 'cant'}" data-action="expSend" ${c.ok ? '' : 'disabled'}> Send team to ${esc(sel.name)}</button>${c.ok ? '' : `<small class="neg">${c.reason}</small>`}`; })()}</div>`;
- if (s.expeditions.log.length) html += `<div class="card"><h4>Reports</h4>${s.expeditions.log.slice().reverse().slice(0, 8).map(r => { const loc = DE.Expeditions.location(r.location); return `<div class="log-row">${DE.Icons.img('location', 'ico-inline')} <b>${esc(loc.name)}</b>: ${Object.keys(r.loot).map(k => DE.Icons.res(k, 'ico-inline') + U().fmt(r.loot[k])).join('')}${r.rescued ? ' ·  rescued ' + esc(r.rescued) : ''}${r.injured.length ? ' ·  ' + r.injured.map(esc).join(', ') : ''}</div>`; }).join('')}</div>`;
+ const seats = Array.from({ length: bus.capacity }, (_, i) => { const sv = s.survivors[ex.members[i]]; return sv ? `<button class="ex-seat on" data-action="expToggle" data-sid="${sv.id}" title="Remove ${esc(sv.name)}">${DE.Chars.crew(sv.profession, { anim: 'idle', h: 58 })}<small>${esc(sv.name.split(' ')[0])}</small></button>` : `<span class="ex-seat"><small>empty seat</small></span>`; }).join('');
+ const cands = pool.filter(sv => !ex.members.includes(sv.id)).map(sv => { const hurt = sv.hp < 50; const prof = DE.Data.PROFESSIONS[sv.profession];
+   return `<button class="ex-cand ${hurt ? 'hurt' : ''}" data-action="expToggle" data-sid="${sv.id}" ${hurt ? 'disabled' : ''} title="${esc(sv.name)}${sv.assignment ? ' — leaves ' + esc(assignmentText(s, sv)) : ''}">${DE.Chars.crew(sv.profession, { anim: 'idle', h: 40 })}<span><b>${esc(sv.name)}</b><small>${esc(prof ? prof.name : sv.profession)} · Lv ${sv.level}${PROF_TRIP[sv.profession] ? ' · <em>' + PROF_TRIP[sv.profession] + '</em>' : ''}</small><span class="ex-hp"><i style="width:${Math.max(0, Math.min(100, sv.hp))}%" class="${hurt ? 'low' : ''}"></i></span></span></button>`; }).join('');
+ const c = DE.Expeditions.canSend(s, sel.id, ex.members);
+ html += `<div class="card ex-team"><h4>Team <small class="muted">${ex.members.length}/${bus.capacity} seats · ${esc(bus.name)}</small></h4><div class="ex-seats">${seats}</div>
+ <button class="btn primary ex-go ${c.ok ? '' : 'cant'}" data-action="expSend" ${c.ok ? '' : 'disabled'}>${DE.Icons.img('vehicle', 'ico-btn')} Send ${ex.members.length || ''} to ${esc(sel.name)}${c.ok ? `<small>back in ${U().fmtTime(plan.duration)}</small>` : ''}</button>${c.ok ? '' : `<small class="ex-why">${esc(c.reason)}</small>`}
+ <div class="ex-sub">Available survivors <small>tap to add · scavengers, hunters, scouts and medics have trip bonuses</small></div><div class="ex-cands">${cands || '<p class="muted">Everyone is busy or away.</p>'}</div></div></div>`;
+ // ---- teams in the field ----
+ if (s.expeditions.active.length) html += `<div class="card"><h4>Teams in the field</h4>${s.expeditions.active.map(e => { const l = DE.Expeditions.location(e.location); const wait = (s.events || []).some(v => v.ctx && v.ctx.expId === e.id);
+   return `<div class="ex-field">${DE.Icons.img(l.icon, 'ex-fico')}<div class="ex-fb"><div class="ex-ft"><b>${esc(l.name)}</b><span class="ex-crew">${e.survivors.map(id => s.survivors[id]).filter(Boolean).map(sv => DE.Chars.crew(sv.profession, { anim: 'walk', h: 30 })).join('')}</span>${wait ? `<button class="ex-wait" data-action="nextEvent">${DE.Icons.img('alert', 'ico-inline')} Decision waiting</button>` : ''}<small data-eta="${e.id}"></small></div>
+   <div class="ex-track"><i data-prog="${e.id}"></i>${(e.stops || []).map((f, i) => `<em class="${i < (e.stop || 0) ? 'past' : ''}" style="left:${(f * 100).toFixed(1)}%"></em>`).join('')}<span style="left:50%">turn back</span></div>
+   ${(e.notes || []).length ? `<div class="ex-notes">${e.notes.map(n => `<span>${esc(n)}</span>`).join('')}</div>` : ''}</div></div>`; }).join('')}</div>`;
+ // ---- vehicle & factions ----
+ html += `<div class="card bus-card"><h4>${DE.Icons.img('vehicle', 'ico-inline')} ${esc(bus.name)} <small class="muted">${bus.capacity} seats · ${Math.round((1 - bus.speed) * 100)}% faster · ${Math.round(bus.safety * 100)}% safer · cargo ×${bus.cargo}</small></h4>
+ ${nextBus ? `<div class="row"><span><b>Next:</b> ${esc(nextBus.name)} <small class="muted">${esc(nextBus.desc)}</small></span><button class="btn primary small ${U().canAfford(s.resources, nextBus.cost) ? '' : 'cant'}" data-action="busUpgrade" ${U().canAfford(s.resources, nextBus.cost) ? '' : 'disabled'}>Upgrade <span class="cost">${U().costText(nextBus.cost)}</span></button></div>` : '<p class="muted">The best vehicle there is.</p>'}
+ <div class="ex-chips">${Object.values(DE.Data.FACTIONS).map(f => { const v = (s.rep && s.rep[f.id]) || 0; return `<i class="ex-chip ${v > 0 ? 'good' : v < 0 ? 'bad' : ''}" title="${esc(f.desc)}">${DE.Icons.img('pop', 'ico-inline')}${esc(f.name)} ${v > 0 ? '+' : ''}${v}</i>`; }).join('')}</div></div>`;
+ // ---- reports ----
+ if (s.expeditions.log.length) html += `<div class="card"><h4>Reports</h4>${s.expeditions.log.slice().reverse().slice(0, 8).map(r => { const l = DE.Expeditions.location(r.location) || { name: r.location, icon: 'location' };
+   return `<div class="ex-rep">${DE.Icons.img(l.icon, 'ex-fico')}<div><b>${esc(l.name)}</b> <small class="muted">${esc((r.members || []).join(', '))}</small><div class="ex-chips">${Object.keys(r.loot || {}).filter(k => r.loot[k] > 0).map(k => `<i class="ex-chip good">${DE.Icons.res(k, 'ico-inline')}+${U().fmt(r.loot[k])}</i>`).join('')}${r.rescued ? `<i class="ex-chip good">${DE.Icons.img('pop', 'ico-inline')}${esc(r.rescued)} joined</i>` : ''}${(r.injured || []).length ? `<i class="ex-chip bad">${DE.Icons.img('medkit', 'ico-inline')}${r.injured.map(esc).join(', ')} hurt</i>` : ''}</div>
+   ${(r.finds || []).map(f => `<div class="ex-line find">${DE.Icons.img('star', 'ico-inline')}${esc(f)}</div>`).join('')}${(r.notes || []).map(n => `<div class="ex-line">${DE.Icons.img('scroll', 'ico-inline')}${esc(n)}</div>`).join('')}</div></div>`; }).join('')}</div>`;
  return html;
+ },
+ tick(s) {
+ const body = document.getElementById('drawer-body'); if (!body) return; const now = Date.now();
+ s.expeditions.active.forEach(e => {
+   const l = DE.Expeditions.location(e.location); if (!l) return;
+   const f = DE.Expeditions.progress(e, now), [x, y] = emPoint(emRoute(l), emLeg(f));
+   const g = body.querySelector(`.em-truck[data-trip="${e.id}"]`);
+   if (g) {
+     const tf = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+     if (!g.dataset.placed) { g.style.transition = 'none'; g.style.transform = tf; void g.getBoundingClientRect(); g.style.transition = ''; g.style.opacity = '1'; g.dataset.placed = '1'; }
+     else if (g.style.transform !== tf) g.style.transform = tf;
+     g.classList.toggle('back', f >= 0.5);
+   }
+   body.querySelectorAll(`[data-eta="${e.id}"]`).forEach(el => { const t = U().fmtTime((e.endsAt - now) / 1000); if (el.textContent !== t) el.textContent = t; });
+   body.querySelectorAll(`[data-prog="${e.id}"]`).forEach(el => { el.style.width = (f * 100).toFixed(1) + '%'; });
+ });
  },
  };
 

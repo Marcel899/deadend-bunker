@@ -178,7 +178,7 @@ DE.Save = (function () {
         s.defense.turrets = NN(d.turrets, 0); s.defense.traps = NN(d.traps, 0);
         s.defense.turretLevel = Math.min(50, NN(d.turretLevel, 0)); s.defense.breachStreak = Math.min(20, NN(d.breachStreak, 0)); s.defense.winStreak = Math.min(1000, NN(d.winStreak, 0));
         s.defense.nextWaveAt = N(d.nextWaveAt, now + C().FIRST_WAVE_SEC * 1000);
-        s.defense.wave = Math.max(1, N(d.wave, 1)); s.defense.shock = NN(d.shock, 0);
+        s.defense.wave = Math.max(1, N(d.wave, 1)); s.defense.shock = NN(d.shock, 0); s.defense.calmUntil = NN(d.calmUntil, 0);
         if (Array.isArray(d.log)) s.defense.log = d.log.filter(U().isObj).slice(-20);
         if (U().isObj(d.lastResult)) s.defense.lastResult = d.lastResult;
       }
@@ -188,7 +188,14 @@ DE.Save = (function () {
           if (!U().isObj(e) || !DE.Data.LOCATIONS.some(l => l.id === e.location)) return;
           const members = Array.isArray(e.survivors) ? e.survivors.filter(id => s.survivors[id]) : [];
           if (!members.length) return;
-          s.expeditions.active.push({ id: typeof e.id === 'string' ? e.id : 'x' + (s.nextId++), location: e.location, survivors: members, endsAt: N(e.endsAt, now), duration: NN(e.duration, 1) });
+          const trip = { id: typeof e.id === 'string' ? e.id : 'x' + (s.nextId++), location: e.location, survivors: members, endsAt: N(e.endsAt, now), duration: NN(e.duration, 1) };
+          trip.startedAt = N(e.startedAt, trip.endsAt - trip.duration * 1000);
+          trip.stops = Array.isArray(e.stops) ? e.stops.filter(x => typeof x === 'number' && x > 0 && x < 1).slice(0, 3) : [];
+          trip.stop = Math.min(trip.stops.length, NN(e.stop, 0)); trip.mult = Math.min(5, NN(e.mult, 1));
+          trip.bonus = {}; if (U().isObj(e.bonus)) for (const r in e.bonus) if (DE.Data.RESOURCES[r]) trip.bonus[r] = NN(e.bonus[r], 0);
+          trip.notes = Array.isArray(e.notes) ? e.notes.filter(x => typeof x === 'string').slice(0, 6) : [];
+          trip.seen = Array.isArray(e.seen) ? e.seen.filter(x => typeof x === 'string').slice(0, 10) : [];
+          s.expeditions.active.push(trip);
         });
         if (Array.isArray(src.expeditions.log)) s.expeditions.log = src.expeditions.log.filter(U().isObj).slice(-20);
       }
