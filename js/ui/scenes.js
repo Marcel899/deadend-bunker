@@ -213,9 +213,42 @@ DE.Scenes = (function () {
     for (let i = 0; i < lamps; i++) s += g('', P.lamp({ drop: tier >= 3 ? 6 : 10, color: t.lamp }), W * (i + 0.5) / lamps, 14);
     if (tier >= 2) s += g('', P.neon({ w: 60, color: t.lamp }), W - 50, 30);
     if (tier >= 4) s += g('', P.neon({ w: 60, color: t.lamp }), 50, 30);
-    return s;
+    return s + grade(W, level, t);
   }
   function tierOf(level) { return level >= 50 ? 4 : level >= 25 ? 3 : level >= 10 ? 2 : 1; }
+  /** Finer steps than the furniture tiers: every grade changes how the room itself looks. */
+  function gradeOf(level) { return level >= 100 ? 6 : level >= 50 ? 5 : level >= 25 ? 4 : level >= 10 ? 3 : level >= 5 ? 2 : level >= 3 ? 1 : 0; }
+  /** The room's finish by grade: a makeshift hole with cracks and stains (0), patched with riveted
+   *  plates (1), cleaned up with a cable tray and a vent (2), trimmed with a floor hazard stripe (3),
+   *  tiled with a brass rail (4), accent-lit with a polished floor (5), gold-trimmed (6); and a star
+   *  plaque on the wall from grade 1. */
+  function grade(W, level, t) {
+    const gr = gradeOf(level); let s = '';
+    const seed = (n) => (Math.sin(W * 12.9898 + n * 78.233) * 43758.5453) % 1;
+    if (gr <= 1) {
+      // cracks and damp stains in the bare concrete
+      for (let i = 0; i < Math.max(1, W / 140); i++) {
+        const x = 30 + Math.abs(seed(i)) * (W - 60), y = 30 + Math.abs(seed(i + 9)) * 40;
+        s += `<path d="M${x.toFixed(0)} ${y.toFixed(0)} l6 12 l-5 10 l8 14 l-3 9" fill="none" stroke="#000" stroke-width="2.2" opacity=".42"/><ellipse cx="${(x + 30).toFixed(0)}" cy="${(y + 50).toFixed(0)}" rx="14" ry="22" fill="#000" opacity=".1"/>`;
+        if (gr === 1) s += `<rect x="${(x - 9).toFixed(0)}" y="${(y + 4).toFixed(0)}" width="22" height="30" rx="2" fill="#7a7884" ${S2}/><circle cx="${(x - 5).toFixed(0)}" cy="${(y + 8).toFixed(0)}" r="1.6" fill="${INK}"/><circle cx="${(x + 9).toFixed(0)}" cy="${(y + 8).toFixed(0)}" r="1.6" fill="${INK}"/><circle cx="${(x - 5).toFixed(0)}" cy="${(y + 30).toFixed(0)}" r="1.6" fill="${INK}"/><circle cx="${(x + 9).toFixed(0)}" cy="${(y + 30).toFixed(0)}" r="1.6" fill="${INK}"/>`;
+      }
+    }
+    if (gr >= 2) {
+      // cable tray under the ceiling, a wall vent
+      s += `<rect x="4" y="16" width="${W - 8}" height="6" fill="#4a4856" ${S2}/><path d="M6 24 Q${W * .25} 30 ${W * .5} 24 T${W - 6} 24" fill="none" stroke="#c93a3a" stroke-width="2"/><path d="M6 25 Q${W * .3} 33 ${W * .6} 25 T${W - 6} 26" fill="none" stroke="#3a7fe8" stroke-width="2"/>`;
+      s += `<g transform="translate(${W - 26} ${FLOOR * .56})"><rect x="-10" y="-8" width="20" height="16" rx="2" fill="#5a5866" ${S2}/><path d="M-6 -4 h12 M-6 0 h12 M-6 4 h12" stroke="${INK}" stroke-width="1.6"/></g>`;
+    }
+    if (gr >= 3) s += `<rect x="0" y="${(FLOOR * .62 - 3).toFixed(0)}" width="${W}" height="5" fill="#8a8e98" ${S2}/>` + `<g opacity=".9">${Array.from({ length: Math.ceil(W / 24) }, (_, i) => `<path d="M${i * 24} ${FLOOR + 1} l12 0 l-6 6 l-12 0 z" fill="#f0c020"/>`).join('')}</g>`;
+    if (gr >= 4) s += `<g opacity=".22">${Array.from({ length: Math.ceil(W / 20) }, (_, i) => `<path d="M${i * 20} ${(FLOOR * .62 + 4).toFixed(0)} V${FLOOR - 4}" stroke="#fff" stroke-width="1.2"/>`).join('')}<path d="M0 ${(FLOOR * .81).toFixed(0)} H${W}" stroke="#fff" stroke-width="1.2"/></g><rect x="0" y="${(FLOOR * .62 - 5).toFixed(0)}" width="${W}" height="3" fill="#d8a84a"/>`;
+    if (gr >= 5) s += `<rect class="p-accent" x="8" y="13" width="${W - 16}" height="3" rx="1.5" fill="${t.lamp}" opacity=".85"/><rect x="0" y="${FLOOR + 6}" width="${W}" height="3" fill="#fff" opacity=".14"/>`;
+    if (gr >= 6) s += `<rect x="0" y="12" width="${W}" height="3" fill="#ffd34a"/><rect x="0" y="${FLOOR - 4}" width="${W}" height="2" fill="#ffd34a" opacity=".8"/>`;
+    if (gr >= 1) {
+      // the star plaque: one star per grade, a crown on top at grade 6
+      const n = Math.min(5, gr), pw = 10 + n * 9;
+      s += `<g class="lv-plaque" transform="translate(${W - pw - 8} 30)"><rect width="${pw}" height="14" rx="3" fill="#2a2433" ${S2}/>${Array.from({ length: n }, (_, i) => `<path transform="translate(${9 + i * 9} 7) scale(.62)" d="M0 -7 L2 -2.2 L7 -2.2 L3 1 L4.5 6 L0 3 L-4.5 6 L-3 1 L-7 -2.2 L-2 -2.2 Z" fill="#ffd34a" stroke="${INK}" stroke-width="1.4"/>`).join('')}${gr >= 6 ? `<path d="M${pw / 2 - 7} -2 l2 -7 l5 4 l5 -4 l2 7 z" fill="#ffd34a" stroke="${INK}" stroke-width="1.4"/>` : ''}</g>`;
+    }
+    return s;
+  }
 
   /** Trophy Hall: a plinth for every collectible the teams found, the item on top (more plinths with levels). */
   function exhibits(state, W, level) {
@@ -231,8 +264,9 @@ DE.Scenes = (function () {
     return s;
   }
 
-  /** Full scene markup for a room. */
-  function render(room, def, state) {
+  /** Full scene markup for a room. o.noScaffold leaves out the scaffolding (drawn by overlay()). */
+  function render(room, def, state, o) {
+    o = o || {};
     const layout = DE.Data.SCENES[def.id] || DE.Data.SCENES._default;
     const size = def.size, W = CELL * size, level = room.level, tier = tierOf(level);
     let s = `<svg class="scene" viewBox="0 ${-TOP} ${W} ${180 + TOP}" preserveAspectRatio="none" aria-hidden="true">${defs()}${base(def, layout.theme, size, level, room.construction)}`;
@@ -255,7 +289,7 @@ DE.Scenes = (function () {
       s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] || y >= FLOOR ? FLOOR + DE.Data.FLOOR_DROP : y, opts.scale ? `scale(${opts.scale})` : '');
     });
     if (layout.exhibits && !room.construction) s += exhibits(state, W, level);
-    if (room.construction) s += g('construction', P.scaffold({ w: W - 30, h: 110 }), W / 2, FLOOR);
+    if (room.construction && !o.noScaffold) s += g('construction', P.scaffold({ w: W - 30, h: 110 }), W / 2, FLOOR);
     s += `<rect x="0" y="${-TOP}" width="${W}" height="${180 + TOP}" fill="url(#sc-vig)" class="vig"/></svg>`;
     return s;
   }
@@ -279,5 +313,26 @@ DE.Scenes = (function () {
     return list;
   }
 
-  return { P, render, sprite, stations, tierOf, defs, THEMES, FLOOR, CELL, TOP };
+  /** A building site over a room: scaffolding (all of it for a new room, one bay for an upgrade), a
+   *  crane hook lowering a girder, welding sparks, dust, warning barriers and a work lamp. */
+  function overlay(room, def) {
+    const size = def.size, W = CELL * size, build = room.construction && room.construction.kind === 'build';
+    let s = `<svg class="scene site" viewBox="0 ${-TOP} ${W} ${180 + TOP}" preserveAspectRatio="none" aria-hidden="true">`;
+    const sw = build ? W - 30 : Math.min(120, W * .5);
+    s += g('construction', P.scaffold({ w: sw, h: build ? 116 : 96 }), build ? W / 2 : W - sw / 2 - 12, FLOOR);
+    // crane: a trolley on the ceiling beam, a cable, a hook carrying a girder up and down
+    const cx = build ? W * .32 : W * .3;
+    // (the moving parts are inner groups: a CSS animation would replace a transform attribute)
+    s += `<g transform="translate(${cx} 0)"><g class="crane"><rect x="-14" y="-2" width="28" height="9" rx="2" fill="#f0a020" ${S2}/><circle cx="-7" cy="8" r="3" fill="${INK}"/><circle cx="7" cy="8" r="3" fill="${INK}"/>
+      <g class="crane-load"><path d="M0 9 V54" stroke="${INK}" stroke-width="2"/><path d="M-4 54 h8 l-2 8 q-2 4 -6 0" fill="none" ${S2}/><rect x="-26" y="62" width="52" height="9" rx="1" fill="#c93a3a" ${S2}/><path d="M-22 66.5 h44" stroke="#fff" stroke-width="1.4" opacity=".35"/></g></g></g>`;
+    // sparks where the welder works, dust at the base, barriers and a lamp
+    const wx = build ? W * .62 : W - sw / 2 - 12;
+    s += `<g class="sparks" transform="translate(${wx} ${FLOOR - 70})">${Array.from({ length: 7 }, (_, i) => `<circle r="${(1.4 + (i % 3) * .5).toFixed(1)}" fill="${i % 2 ? '#fff4a8' : '#ffb02a'}" style="--sx:${((i - 3) * 9).toFixed(0)}px;--sy:${(-14 - (i % 4) * 7)}px;animation-delay:${(i * .13).toFixed(2)}s"/>`).join('')}<circle class="weld" r="5" fill="#fff8d0"/></g>`;
+    s += `<g class="site-dust">${[0, 1, 2].map(i => `<circle cx="${(W * (.25 + i * .25)).toFixed(0)}" cy="${FLOOR + 2}" r="${12 + i * 3}" fill="#c9c2b0" style="animation-delay:${(i * .7).toFixed(1)}s"/>`).join('')}</g>`;
+    if (build) s += `<g transform="translate(10 ${FLOOR + 9})"><rect x="0" y="-18" width="34" height="8" fill="#f0c020" ${S2}/><path d="M6 -18 l6 8 M18 -18 l6 8 M30 -18 l2 3" stroke="${INK}" stroke-width="3"/><path d="M4 -10 v10 M30 -10 v10" stroke="${INK}" stroke-width="3"/></g><g transform="translate(${W - 44} ${FLOOR + 9})"><rect x="0" y="-18" width="34" height="8" fill="#f0c020" ${S2}/><path d="M6 -18 l6 8 M18 -18 l6 8 M30 -18 l2 3" stroke="${INK}" stroke-width="3"/><path d="M4 -10 v10 M30 -10 v10" stroke="${INK}" stroke-width="3"/></g>`;
+    s += `<g class="worklamp" transform="translate(${W - 30} ${FLOOR + 9})"><path d="M0 0 V-30" stroke="${INK}" stroke-width="3"/><path d="M-8 -30 h16 l-3 -9 h-10 z" fill="#f0a020" ${S2}/><path d="M-6 -30 L-40 30 H30 Z" fill="#fff4a8" opacity=".12"/></g>`;
+    return s + '</svg>';
+  }
+
+  return { P, render, overlay, sprite, stations, tierOf, gradeOf, defs, THEMES, FLOOR, CELL, TOP };
 })();

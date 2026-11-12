@@ -267,3 +267,44 @@ body.no-anim .dig-site *, body.no-anim .wing-mine * { animation: none !important
 .wing-mine svg { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; }
 .wing-mine .rig { position: absolute; left: 22px; bottom: 6px; height: 46px; width: 30px; }
 .wing.digging .wing-body { position: relative; z-index: 1; background: rgba(20, 14, 24, .72); border-radius: 8px; margin-top: -60px; }
+
+/* ============ BUILDING SITES & CELEBRATIONS ============ */
+/* a new room assembles from the floor up: blueprint behind, the built part rising with --bp */
+.room.building, .room.building .room-scene { filter: none !important; }
+.room .room-scene .bp-ghost, .room .room-scene .bp-real { position: absolute; inset: 0; }
+.room .room-scene .bp-ghost { filter: grayscale(1) sepia(1) hue-rotate(165deg) saturate(2.6) brightness(1.15); opacity: .38; }
+.room .room-scene .bp-ghost::after { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(140, 220, 255, .22) 1px, transparent 1px), linear-gradient(90deg, rgba(140, 220, 255, .22) 1px, transparent 1px); background-size: 20px 20px; }
+.room .room-scene .bp-real { -webkit-clip-path: inset(calc((1 - var(--bp, 0)) * 100%) 0 0 0); clip-path: inset(calc((1 - var(--bp, 0)) * 100%) 0 0 0); transition: clip-path .4s, -webkit-clip-path .4s; }
+.room .room-scene .bp-real::before { content: ''; position: absolute; left: 0; right: 0; top: calc((1 - var(--bp, 0)) * 100%); height: 3px; background: #7fe3ff; box-shadow: 0 0 10px #7fe3ff; z-index: 1; }
+.room .room-scene svg.site { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; pointer-events: none; }
+.site .crane-load { animation: craneLoad 5.5s ease-in-out infinite; }
+@keyframes craneLoad { 0%, 12% { transform: translateY(0); } 45%, 58% { transform: translateY(58px); } 90%, 100% { transform: translateY(0); } }
+.site .crane { animation: craneTrolley 11s ease-in-out infinite; }
+@keyframes craneTrolley { 0%, 100% { transform: translateX(0); } 50% { transform: translateX(26px); } }
+.site .sparks circle:not(.weld) { animation: sparkFly .9s ease-out infinite; opacity: 0; }
+@keyframes sparkFly { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(var(--sx), calc(var(--sy) + 40px)); opacity: 0; } }
+.site .sparks .weld { animation: weldFlick .18s steps(2) infinite; } @keyframes weldFlick { 50% { opacity: .2; } }
+.site .site-dust circle { opacity: 0; animation: siteDust 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+@keyframes siteDust { 0% { opacity: 0; transform: scale(.4); } 30% { opacity: .45; } 100% { opacity: 0; transform: translateY(-10px) scale(1.5); } }
+.room.offscreen .site * { animation-play-state: paused !important; }
+body.no-anim .site * { animation: none !important; }
+/* a finish that improves with levels */
+.scene .p-accent { animation: accentGlow 3.2s ease-in-out infinite; } @keyframes accentGlow { 50% { opacity: .45; } }
+/* the celebration when a room is finished or levels up */
+.room-cele { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+.room-cele .rc-sweep { position: absolute; top: 0; bottom: 0; width: 40%; left: -45%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent); animation: rcSweep .9s ease-out .05s forwards; }
+@keyframes rcSweep { to { left: 110%; } }
+.room-cele .rc-dust i { position: absolute; bottom: 0; left: var(--x); width: 70px; height: 50px; margin-left: -35px; border-radius: 50%; background: radial-gradient(circle, rgba(220, 210, 190, .75), rgba(220, 210, 190, 0) 70%); animation: rcDust 1.2s ease-out forwards; opacity: 0; }
+.room-cele.just-upgraded:not(.big) .rc-dust { display: none; }
+@keyframes rcDust { 0% { opacity: .9; transform: scale(.5) translateY(10px); } 100% { opacity: 0; transform: scale(1.8) translateY(-20px); } }
+.room-cele em { position: absolute; top: -12px; left: var(--x); width: 7px; height: 11px; background: var(--c); border: 1.5px solid #1c1020; border-radius: 2px; animation: rcConf 1.9s cubic-bezier(.25, .6, .4, 1) forwards; }
+@keyframes rcConf { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 85% { opacity: 1; } 100% { transform: translate(var(--dx), 230px) rotate(var(--r)); opacity: 0; } }
+.lvl-burst.big b { font-size: 24px; background: linear-gradient(180deg, #fff3a0, #ffb02a); color: #3a1c00; text-shadow: none; }
+#bunker-wrap.thump { animation: thump .45s ease-out; } @keyframes thump { 20% { transform: translateY(3px); } 45% { transform: translateY(-2px); } 70% { transform: translateY(1px); } }
+/* a perimeter structure upgraded on the surface */
+.ow-burst { position: absolute; z-index: 6; pointer-events: none; width: 0; height: 0; }
+.ow-burst b { position: absolute; left: 0; top: -40px; transform: translateX(-50%); white-space: nowrap; font-family: var(--display); font-weight: 400; font-size: 16px; color: #3a1c00; padding: 3px 12px; border-radius: 10px; border: 3px solid #1c1020; background: linear-gradient(180deg, #fff3a0, #ffb02a); animation: owRibbon 1.8s ease-out forwards; }
+@keyframes owRibbon { 0% { transform: translate(-50%, 10px) scale(.4); opacity: 0; } 15% { transform: translate(-50%, 0) scale(1.1); opacity: 1; } 25% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%, -16px); opacity: 0; } }
+.ow-burst i { position: absolute; width: 10px; height: 10px; margin: -5px; background: #ffd76a; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: owStar .9s ease-out forwards; }
+@keyframes owStar { 0% { transform: rotate(var(--a)) translateX(0) scale(.4); opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(1); opacity: 0; } }
+.ow-burst em { position: absolute; left: var(--x); top: 0; width: 46px; height: 32px; margin: -16px -23px; border-radius: 50%; background: radial-gradient(circle, rgba(220, 210, 190, .8), rgba(220, 210, 190, 0) 70%); animation: rcDust 1.1s ease-out forwards; opacity: 0; }

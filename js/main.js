@@ -91,10 +91,18 @@ DE.Game = (function () {
  const s = G.state; if (!events || !events.length) return;
  events.forEach(e => {
  switch (e.type) {
- case 'built': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> built on B' + e.room.floor, 'ok', 3200, DE.Icons.room(d.id)); log(d.name + ' built on B' + e.room.floor + '.'); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-built', 'NEW!'); DE.Audio.sfx('done'); break; }
- case 'upgraded': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> upgraded to level ' + e.room.level, 'ok', 3200, DE.Icons.room(d.id), { key: 'up:' + e.room.id }); DE.UI.Bunker.flashRoom(e.room.id, 'just-upgraded', 'LEVEL ' + e.room.level); DE.Audio.sfx('done'); break; }
+ case 'built': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> built on B' + e.room.floor, 'ok', 3200, DE.Icons.room(d.id)); log(d.name + ' built on B' + e.room.floor + '.'); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-built', d.name.toUpperCase() + ' READY!'); DE.Audio.sfx('complete'); break; }
+ case 'upgraded': { const d = DE.Data.ROOMS[e.room.type], was = e.room.level - (e.levels || 1), Sc = DE.Scenes; const big = Sc.gradeOf(was) !== Sc.gradeOf(e.room.level) || Sc.tierOf(was) !== Sc.tierOf(e.room.level);
+ DE.UI.toast('<b>' + d.name + '</b> upgraded to level ' + e.room.level + (big ? ' — new look!' : ''), 'ok', 3200, DE.Icons.room(d.id), { key: 'up:' + e.room.id }); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-upgraded', (big ? 'NEW LOOK · ' : '') + 'LEVEL ' + e.room.level, big); DE.Audio.sfx(big ? 'complete' : 'levelup'); break; }
  case 'expanded': DE.UI.toast('B' + e.depth + ' widened: ' + DE.CONFIG.WING_CELLS + ' new cells', 'ok', 3400, 'dig'); log('Floor B' + e.depth + ' widened.'); DE.UI.refresh(); break;
-      case 'research': DE.UI.toast('Research complete: <b>' + esc(e.node.name) + '</b>', 'ok', 4500, 'research'); log('Researched ' + e.node.name + '.'); break;
+      case 'research': {
+        DE.UI.toast('Research complete: <b>' + esc(e.node.name) + '</b>', 'ok', 4500, 'research'); log('Researched ' + e.node.name + '.');
+        // rooms this research opens up get a moment in the spotlight
+        const keys = (e.node.effects || []).filter(f => f.type === 'unlockRoom').map(f => f.room);
+        const rooms = Object.values(DE.Data.ROOMS).filter(d => keys.includes(d.id) || (d.unlock && keys.includes(d.unlock) && d.unlock.startsWith('blueprints'))).map(d => d.id);
+        if (rooms.length) DE.UI.unlockBanner(rooms, 'New rooms to build');
+        break;
+      }
  case 'excavated':
  log('Floor B' + e.depth + ' excavated' + (e.facility ? ' — discovered ' + e.facility.name + '!' : '.'));
  DE.UI.refresh(); DE.UI.Bunker.revealFloor(e.depth);

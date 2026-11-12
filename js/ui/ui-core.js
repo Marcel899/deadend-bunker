@@ -243,6 +243,34 @@ DE.UI = (function () {
  if (msg) toast(msg, 'ok', 2600, 'medal');
  }
 
+ /** What was spent flies from the resource counters to where it went (a room being built). */
+ function flyCost(cost, target) {
+ if (!cost || !target || !state() || !state().settings.animations) return;
+ const root = $('#floaters'); if (!root) return; const t = target.getBoundingClientRect(); if (!t.width) return;
+ let i = 0;
+ for (const k in cost) {
+   if (!cost[k] || i >= 4) continue; const from = document.querySelector(`#resbar .res[data-res="${k}"]`); if (!from) continue;
+   const f = from.getBoundingClientRect(), n = Math.min(4, 1 + Math.floor(Math.log10(cost[k] + 1)));
+   for (let j = 0; j < n; j++) {
+     const el = document.createElement('div'); el.className = 'fly-res';
+     el.innerHTML = `<i><img src="${DE.Icons.src('res.' + k)}" alt=""></i>`;
+     const x0 = f.left + 22, y0 = f.top + f.height / 2, x1 = t.left + t.width * (.3 + .4 * Math.random()), y1 = t.top + t.height * .45;
+     el.style.left = x0 + 'px'; el.style.top = y0 + 'px'; el.style.setProperty('--dx', (x1 - x0).toFixed(0) + 'px'); el.style.setProperty('--dy', (y1 - y0).toFixed(0) + 'px');
+     el.style.animationDelay = el.firstChild.style.animationDelay = ((i * 3 + j) * .07).toFixed(2) + 's';
+     root.appendChild(el); setTimeout(() => el.remove(), 1500 + (i * 3 + j) * 70);
+   }
+   i++;
+ }
+ }
+ /** A banner across the top when new rooms become buildable. */
+ function unlockBanner(types, title) {
+ const old = document.querySelector('.unlock-banner'); if (old) old.remove();
+ const el = document.createElement('div'); el.className = 'unlock-banner';
+ el.innerHTML = `<b>${esc(title || 'Unlocked')}</b><div>${types.slice(0, 8).map((t, i) => `<span style="animation-delay:${(.15 + i * .08).toFixed(2)}s" title="${esc(DE.Data.ROOMS[t].name)}">${DE.Icons.room(t, 'ub-ico')}<small>${esc(DE.Data.ROOMS[t].name)}</small></span>`).join('')}</div>`;
+ el.addEventListener('click', () => el.remove());
+ document.body.appendChild(el); DE.Audio.sfx('reveal'); setTimeout(() => el.classList.add('out'), 4600); setTimeout(() => el.remove(), 5200);
+ }
+
  function floatText(x, y, text, cls, iconSrc) {
  if (!state().settings.animations) return;
  const root = $('#floaters'); if (!root) return;
@@ -387,6 +415,6 @@ DE.UI = (function () {
  renderDrawer(force);
  }
 
- return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, floatText, floatAt, modal, eventModal, closeModal, confirmModal,
+ return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, flyCost, unlockBanner, floatText, floatAt, modal, eventModal, closeModal, confirmModal,
  openDrawer, closeDrawer, renderDrawer, refresh, state, scrollBusy  };
 })();

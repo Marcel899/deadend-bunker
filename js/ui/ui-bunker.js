@@ -7,7 +7,7 @@ DE.UI.Bunker = (function () {
   const esc = (s) => DE.Util.escapeHtml(s);
   const $ = (sel) => document.querySelector(sel);
   const Ic = () => DE.Icons;
-  let fightUntil = 0;
+  let fightUntil = 0, siteNoise = false;
 
   function render() {
     const s = DE.UI.state(); const root = document.getElementById('bunker');
@@ -60,6 +60,16 @@ DE.UI.Bunker = (function () {
       </div>
       ${fac ? `<div class="facility-tag" title="${esc(fac.lore)}">${Ic().img('facility', 'ico-inline')} ${esc(fac.name)}</div>` : ''}
     </div>`;
+  }
+
+  /** A room's art. A new room assembles from the floor up while it is built: its finished look is
+   *  shown as a blueprint, the built part rises with the progress (--bp, set every tick), and the
+   *  building site (scaffold, crane, sparks, dust) stands in front. An upgrade gets a smaller site. */
+  function sceneHtml(room, def, s) {
+    const c = room.construction;
+    if (!c) return DE.Scenes.render(room, def, s);
+    if (c.kind === 'build') { const art = DE.Scenes.render(Object.assign({}, room, { level: 1, construction: null }), def, s, { noScaffold: true }); return `<div class="bp-ghost">${art}</div><div class="bp-real">${art}</div>${DE.Scenes.overlay(room, def)}`; }
+    return DE.Scenes.render(room, def, s, { noScaffold: true }) + DE.Scenes.overlay(room, def);
   }
 
   function renderRoom(room) {
@@ -128,9 +138,9 @@ DE.UI.Bunker = (function () {
       const room = s.rooms[id]; const el = document.getElementById('room-' + id); if (!el) continue;
       const def = DE.Data.ROOMS[room.type];
       const c = room.construction; const info = rates && rates.perRoom[id];
-      // scene art: re-rendered only when its level tier or construction state changes
-      const sig = room.type + ':' + DE.Scenes.tierOf(room.level) + ':' + (c ? 1 : 0);
-      if (el.dataset.sig !== sig) { el.dataset.sig = sig; el.querySelector('.room-scene').innerHTML = DE.Scenes.render(room, def, s); observe(el); }
+      // scene art: rebuilt only when its look changes (furniture tier, finish grade, building site)
+      const sig = room.type + ':' + DE.Scenes.tierOf(room.level) + ':' + DE.Scenes.gradeOf(room.level) + ':' + (c ? c.kind : '-') + (def.id === 'museum' ? ':' + DE.Expeditions.owned(s) : '');
+      if (el.dataset.sig !== sig) { el.dataset.sig = sig; el.querySelector('.room-scene').innerHTML = sceneHtml(room, def, s); observe(el); }
       setText(el.querySelector('.room-lvl'), room.level > 0 ? 'Lv ' + room.level : '');
       let rate = '', flag = '';
       if (room.level > 0 && info) {
@@ -157,6 +167,8 @@ DE.UI.Bunker = (function () {
       if (c) {
         const pct = Math.min(100, 100 * (1 - (c.endsAt - now) / (c.duration * 1000)));
         prog.querySelector('i').style.width = pct + '%';
+        const bp = (pct / 100).toFixed(3); if (el.style.getPropertyValue('--bp') !== bp) el.style.setProperty('--bp', bp);
+        if (!el.classList.contains('offscreen') && !DE.UI.ui.drawer) siteNoise = true;
         setText(prog.querySelector('span'), (c.kind === 'build' ? 'Building ' : 'Upgrading +' + c.levels + ' ') + U().fmtTime((c.endsAt - now) / 1000));
       }
       el.classList.toggle('building', !!c && c.kind === 'build');
@@ -169,6 +181,7 @@ DE.UI.Bunker = (function () {
       if (!el.classList.contains('tier-' + tier)) { el.classList.remove('tier-1', 'tier-2', 'tier-3', 'tier-4'); el.classList.add('tier-' + tier); }
     }
     placeTags();
+    if (siteNoise) { siteNoise = false; DE.Audio.sfx(Math.random() < .7 ? 'clank' : 'ratchet', 2300 + Math.random() * 1800); }
     document.querySelectorAll('.cell').forEach(el => el.classList.toggle('selected', !!(sel && sel.type === 'slot' && String(sel.depth) === el.dataset.depth && String(sel.slot) === el.dataset.slot)));
     updateSurface(s, now);
     updateDig(s, now);
@@ -238,15 +251,34 @@ DE.UI.Bunker = (function () {
   }
 
 
-  /** Highlight a room after it is built or upgraded; with a label, a ribbon and a burst of stars. */
-  function flashRoom(id, cls, label) {
+  /** Celebrate a room after it is built or upgraded: a flash of light sweeps across it, the dust of
+   *  the building site settles, confetti falls, stars burst around a ribbon with the news, and the
+   *  floor shakes a little for a brand-new room. big: a new look (grade or furniture tier). */
+  function flashRoom(id, cls, label, big) {
     const el = document.getElementById('room-' + id); if (!el) return;
     el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
-    setTimeout(() => el.classList.remove(cls), 1500);
+    setTimeout(() => el.classList.remove(cls), 1600);
     if (!label || !DE.UI.state().settings.animations) return;
-    const b = document.createElement('div'); b.className = 'lvl-burst ' + cls;
-    b.innerHTML = `<b>${label}</b>` + Array.from({ length: 10 }, (_, i) => `<i style="--a:${i * 36 + (Math.random() * 16 - 8)}deg;--d:${50 + Math.random() * 40}px;animation-delay:${(Math.random() * .12).toFixed(2)}s"></i>`).join('');
-    el.appendChild(b); setTimeout(() => b.remove(), 1700);
+    const colors = ['#ffd34a', '#7fdc3e', '#5bb8f0', '#ff6a5a', '#e0b0ff', '#fff'];
+    const fx = document.createElement('div'); fx.className = 'room-cele ' + cls + (big ? ' big' : '');
+    fx.innerHTML = `<span class="rc-sweep"></span><span class="rc-dust">${Array.from({ length: 5 }, (_, i) => `<i style="--x:${10 + i * 20}%;animation-delay:${(i * .06).toFixed(2)}s"></i>`).join('')}</span>`
+      + Array.from({ length: big || cls === 'just-built' ? 26 : 14 }, (_, i) => `<em style="--x:${(Math.random() * 100).toFixed(0)}%;--r:${(Math.random() * 720 - 360).toFixed(0)}deg;--c:${colors[i % colors.length]};--dx:${(Math.random() * 60 - 30).toFixed(0)}px;animation-delay:${(Math.random() * .35).toFixed(2)}s"></em>`).join('');
+    el.appendChild(fx); setTimeout(() => fx.remove(), 2400);
+    const b = document.createElement('div'); b.className = 'lvl-burst ' + cls + (big ? ' big' : '');
+    b.innerHTML = `<b>${label}</b>` + Array.from({ length: 12 }, (_, i) => `<i style="--a:${i * 30 + (Math.random() * 16 - 8)}deg;--d:${55 + Math.random() * 45}px;animation-delay:${(Math.random() * .12).toFixed(2)}s"></i>`).join('');
+    el.appendChild(b); setTimeout(() => b.remove(), 1900);
+    if (cls === 'just-built' || big) { const wrap = document.getElementById('bunker-wrap'); if (wrap) { wrap.classList.remove('thump'); void wrap.offsetWidth; wrap.classList.add('thump'); setTimeout(() => wrap.classList.remove('thump'), 500); } }
+  }
+  /** A perimeter structure was upgraded: dust, sparks and a ribbon over it on the surface. */
+  function surfaceBurst(key) {
+    const scene = document.getElementById('scene'); if (!scene || !DE.UI.state().settings.animations) return;
+    const target = scene.querySelector('.ow-' + key) || document.getElementById('wall') || scene;
+    const sr = scene.getBoundingClientRect(), r = target.getBoundingClientRect();
+    const x = ((r.left + r.width / 2 - sr.left) / sr.width * 100).toFixed(1), y = ((r.top + r.height * .6 - sr.top) / sr.height * 100).toFixed(1);
+    const b = document.createElement('div'); b.className = 'ow-burst'; b.style.left = x + '%'; b.style.top = y + '%';
+    const def = DE.Data.OVERWORLD[key], lvl = (DE.UI.state().overworld || {})[key] || 0, name = def && def.levels[lvl] ? def.levels[lvl].name : 'Upgraded';
+    b.innerHTML = `<b>${DE.Util.escapeHtml(name)}</b>` + Array.from({ length: 8 }, (_, i) => `<i style="--a:${i * 45}deg;--d:${40 + Math.random() * 30}px"></i>`).join('') + Array.from({ length: 5 }, (_, i) => `<em style="--x:${(i - 2) * 22}px;animation-delay:${(i * .05).toFixed(2)}s"></em>`).join('');
+    scene.appendChild(b); setTimeout(() => b.remove(), 1900);
   }
   /** Footprint preview on the grid (build menu hover): the cells a room of `size` would take. */
   function previewFootprint(depth, slot, size, ok) {
@@ -276,5 +308,5 @@ DE.UI.Bunker = (function () {
     const el = document.querySelector(`.floor[data-depth="${depth}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  return { render, update, playWave, scrollToFloor, flashRoom, previewFootprint, clearFootprint, revealFloor, collectAt };
+  return { render, update, playWave, scrollToFloor, flashRoom, surfaceBurst, previewFootprint, clearFootprint, revealFloor, collectAt };
 })();

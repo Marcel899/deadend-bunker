@@ -63,13 +63,14 @@ DE.Actions = (function () {
  if (!r.ok) return fail(r);
  UI().purchased(el, cost, 'Building ' + DE.Data.ROOMS[p.type].name);
  UI().ui.selection = { type: 'room', id: r.room.id };
- done();
+ done(); DE.Audio.sfx('ratchet');
+ setTimeout(() => UI().flyCost(cost, document.getElementById('room-' + r.room.id)), 60);
  };
  A.upgrade = (p, el) => {
  const r = DE.Bunker.upgrade(S(), p.id, +p.n);
  if (!r.ok) return fail(r);
  UI().purchased(el, r.cost, '+' + r.levels + ' level' + (r.levels > 1 ? 's' : ''));
- done();
+ done(); UI().flyCost(r.cost, document.getElementById('room-' + p.id));
  };
  A.demolish = (p) => {
  const room = S().rooms[p.id]; if (!room) return;
@@ -219,6 +220,7 @@ DE.Actions = (function () {
  const next = DE.Defense.structureNext(S(), p.key); const r = DE.Defense.upgradeStructure(S(), p.key); if (!r.ok) return fail(r);
  UI().purchased(el, r.cost, DE.Data.OVERWORLD[p.key].name + ': ' + next.name);
  const sc = document.getElementById('scene'); if (sc) { sc.classList.remove('just-upgraded'); void sc.offsetWidth; sc.classList.add('just-upgraded'); }
+ DE.UI.Bunker.surfaceBurst(p.key); DE.Audio.sfx('complete');
  S().log.push({ t: Date.now(), msg: DE.Data.OVERWORLD[p.key].name + ' upgraded to ' + next.name + '.' });
  done();
  };

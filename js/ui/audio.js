@@ -1,6 +1,7 @@
 /* Audio: every sound and the soundtrack are synthesised with the Web Audio API (no audio files).
  *
  *   DE.Audio.sfx(name)   click · buy · upgrade · error · shot · heavy · launch · boom · alarm · event · dig · hit
+ *                        · clank · ratchet (building sites) · complete · levelup
  *   DE.Audio.music(on)   ambient loop: a slow minor pad with a sparse plucked melody and a soft
  *                        heartbeat kick; darker and sparser at night (DE.Audio.setNight)
  *
@@ -82,6 +83,11 @@ DE.Audio = (function () {
     done: (t) => { tone(784, t, .16, 'triangle', .07); tone(1175, t + .08, .3, 'triangle', .07); tone(1568, t + .16, .25, 'sine', .04); },
     reveal: (t) => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, t + i * .09, .45, 'triangle', .09)); noise(t + .4, .5, .06, 6000, 2, 'highpass'); },
     tick: (t) => { tone(1400 + Math.random() * 200, t, .025, 'square', .02); },
+    // building sites: a hammer on steel, a ratchet, the fanfare when a room is finished
+    clank: (t) => { [0, .19].forEach((d, i) => { noise(t + d, .05, .05, 2600, 4, 'bandpass'); tone(1650 - i * 230 + Math.random() * 80, t + d, .16, 'triangle', .022); tone(3100 - i * 300, t + d, .08, 'sine', .01); }); },
+    ratchet: (t) => { for (let i = 0; i < 5; i++) noise(t + i * .05, .025, .045, 3400, 6, 'bandpass'); tone(220, t, .25, 'sawtooth', .012, null, 180); },
+    complete: (t) => { noise(t, .2, .12, 500, .8, 'lowpass', 200); [523, 659, 784, 1047].forEach((f, i) => tone(f, t + .08 + i * .08, .3, 'triangle', .09)); tone(1568, t + .42, .55, 'sine', .07); noise(t + .4, .45, .05, 7000, 2, 'highpass'); },
+    levelup: (t) => { [659, 880, 1175].forEach((f, i) => tone(f, t + i * .07, .22, 'triangle', .08)); tone(1760, t + .22, .35, 'sine', .04); },
   };
   /* a zombie growl: a wobbling sawtooth through a vowel-ish formant filter, pitch sagging */
   function growl(t0, f0, dur, vol, fEnd) {
