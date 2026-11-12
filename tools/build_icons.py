@@ -176,8 +176,11 @@ def build(room, theme):
             ImageDraw.Draw(sh).ellipse((x + w * .04, y + h - S * .03, x + w * .96, y + h + S * .025), fill=(0, 0, 0, 120))
             img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(S / 90)))
         img.alpha_composite(sp, (x, y))
+    return finish(img, theme['cat'])
 
-    # vignette
+
+def finish(img, cat):
+    """Vignette, rounded clip, the shared frame and the category badge; downsampled to SIZE."""
     vig = Image.new('L', (S, S), 0)
     ImageDraw.Draw(vig).rectangle((0, 0, S, S), fill=110)
     hole = Image.new('L', (S, S), 0)
@@ -199,11 +202,125 @@ def build(room, theme):
     ins = pad + bw
     d.rounded_rectangle((ins, ins, S - ins, S - ins), radius=rad - bw, outline=(255, 255, 255, 46), width=max(2, S // 110))
     # category badge
-    c = CAT.get(theme['cat'], (170, 170, 170))
+    c = CAT.get(cat, (170, 170, 170))
     r, bx, by = S * .07, S * .835, S * .165
     d.ellipse((bx - r, by - r, bx + r, by + r), fill=c + (255,), outline=INK, width=int(S * .025))
     d.ellipse((bx - r * .45, by - r * .62, bx + r * .1, by - r * .1), fill=(255, 255, 255, 110))
     return tile.resize((SIZE, SIZE), Image.LANCZOS)
+
+
+# surface structures: the same frame, outdoors at dusk; (folder/name, centre x, max w, max h[, bottom])
+STRUCT = {
+    'fence': [('sprites/f3_railing', .50, .86, .50)],
+    'towers': [('icons/watchtower', .50, .60, .74)],
+    'missile': [('sprites/f3_missile', .50, .40, .76)],
+    'turret': [('sprites/f3_turret', .50, .64, .72)],
+    'trap': [('icons/spikes', .70, .40, .22), ('sprites/landmine', .36, .46, .28)],
+    'lights': 'lights', 'barricades': 'sandbags', 'road': 'road', 'wall': 'wall',
+}
+
+
+def place(img, path, cx, mw, mh, bottom=FLOOR + .045, shadow=True):
+    sp = Image.open(os.path.join(ROOT, 'assets', path + '.png')).convert('RGBA')
+    k = min(mw * S / sp.width, mh * S / sp.height)
+    w, h = max(1, int(sp.width * k)), max(1, int(sp.height * k))
+    sp = sp.resize((w, h), Image.LANCZOS)
+    x, y = int(cx * S - w / 2), int(bottom * S - h)
+    if shadow:
+        sh = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+        ImageDraw.Draw(sh).ellipse((x + w * .04, y + h - S * .03, x + w * .96, y + h + S * .025), fill=(0, 0, 0, 120))
+        img.alpha_composite(sh.filter(ImageFilter.GaussianBlur(S / 90)))
+    img.alpha_composite(sp, (x, y))
+
+
+def outdoor():
+    """Dusk sky, sun, ruined skyline and a grassy strip: the overworld's palette."""
+    img = Image.new('RGBA', (S, S))
+    top, mid, low = (58, 42, 94), (200, 96, 74), (240, 160, 80)
+    for y in range(S):
+        t = y / (S * FLOOR)
+        c = mix(top, mid, min(1, t / .6)) if t < .6 else mix(mid, low, min(1, (t - .6) / .4))
+        ImageDraw.Draw(img).line((0, y, S, y), fill=c + (255,))
+    img.alpha_composite(radial(S, S, int(S * .74), int(S * .62), int(S * .3), (255, 214, 122), .9))
+    d = ImageDraw.Draw(img, 'RGBA')
+    hz = int(S * .7)
+    sky = [(0, hz), (0, hz - S * .1), (S * .1, hz - S * .1), (S * .1, hz - S * .16), (S * .2, hz - S * .16), (S * .2, hz - S * .07), (S * .34, hz - S * .07), (S * .34, hz - S * .2),
+           (S * .44, hz - S * .2), (S * .44, hz - S * .12), (S * .6, hz - S * .12), (S * .6, hz - S * .05), (S * .78, hz - S * .05), (S * .78, hz - S * .14), (S * .9, hz - S * .14), (S * .9, hz - S * .08), (S, hz - S * .08), (S, hz)]
+    d.polygon(sky, fill=(106, 47, 95, 210))
+    d.rectangle((0, hz, S, int(S * FLOOR)), fill=(122, 90, 68, 255))
+    fy = int(S * FLOOR)
+    d.rectangle((0, fy, S, S), fill=(92, 112, 38, 255))
+    d.rectangle((0, fy, S, fy + int(S * .018)), fill=INK)
+    d.rectangle((0, fy + int(S * .07), S, S), fill=(90, 58, 38, 255))
+    return img
+
+
+def ol(d, shape, box, fill, width=None):
+    """A filled shape with the icons' thick dark outline."""
+    width = width or int(S * .018)
+    getattr(d, shape)(box, fill=fill, outline=INK, width=width)
+
+
+def draw_struct(img, kind):
+    d = ImageDraw.Draw(img, 'RGBA')
+    fy = S * (FLOOR + .03)
+    if kind == 'sandbags':
+        w, h = S * .27, S * .13
+        rows = [(3, fy - h / 2), (2, fy - h * 1.35), (1, fy - h * 2.2)]
+        for n, cy in rows:
+            for i in range(n):
+                cx = S * .5 + (i - (n - 1) / 2) * w * .95
+                ol(d, 'ellipse', (cx - w / 2, cy - h / 2, cx + w / 2, cy + h / 2), (190, 146, 84, 255), int(S * .026))
+                d.ellipse((cx - w * .34, cy - h * .34, cx + w * .18, cy - h * .02), fill=(232, 196, 136, 230))
+                d.line((cx, cy - h * .4, cx, cy + h * .4), fill=(110, 78, 40, 255), width=int(S * .014))
+    elif kind == 'lights':
+        lampy = S * .26
+        beam = Image.new('RGBA', (S, S), (0, 0, 0, 0))
+        ImageDraw.Draw(beam).polygon([(S * .42, lampy + S * .12), (S * .58, lampy + S * .12), (S * .8, fy), (S * .2, fy)], fill=(255, 226, 120, 120))
+        img.alpha_composite(beam.filter(ImageFilter.GaussianBlur(S / 60)))
+        d = ImageDraw.Draw(img, 'RGBA')
+        ol(d, 'rectangle', (S * .465, lampy, S * .535, fy), (100, 105, 116, 255), int(S * .022))
+        d.rectangle((S * .475, lampy + S * .02, S * .49, fy - S * .02), fill=(160, 166, 178, 255))
+        place(img, 'sprites/f3_lamp', .5, .56, .32, (lampy + S * .17) / S, shadow=False)
+        d = ImageDraw.Draw(img, 'RGBA')
+        ol(d, 'rectangle', (S * .4, fy - S * .04, S * .6, fy), (70, 74, 82, 255), int(S * .022))
+    elif kind == 'road':
+        hz = S * .7
+        ol(d, 'polygon', [(S * .44, hz), (S * .56, hz), (S * .96, S), (S * .04, S)], (74, 70, 80, 255))
+        for a, b in [(.72, .77), (.81, .87), (.91, .99)]:
+            d.polygon([(S * (.5 - .006 / (1.1 - a)), S * a), (S * (.5 + .006 / (1.1 - a)), S * a), (S * (.5 + .006 / (1.1 - b)), S * b), (S * (.5 - .006 / (1.1 - b)), S * b)], fill=(255, 211, 74, 255))
+        place(img, 'icons/barrier', .76, .36, .16, .9)
+    elif kind == 'wall':
+        x0, x1, y0 = S * .1, S * .9, S * .38
+        ol(d, 'rectangle', (x0, y0, x1, fy), (184, 181, 174, 255))
+        rows = 5; rh = (fy - y0) / rows
+        for r in range(rows):
+            y = y0 + r * rh
+            if r:
+                d.line((x0, y, x1, y), fill=(108, 104, 101, 255), width=int(S * .012))
+            off = (r % 2) * .5
+            for j in range(-1, 5):
+                x = x0 + (j + off) * (x1 - x0) / 4
+                if x0 < x < x1:
+                    d.line((x, y, x, y + rh), fill=(108, 104, 101, 255), width=int(S * .012))
+            d.rectangle((x0 + S * .01, y + S * .012, x1 - S * .01, y + S * .03), fill=(255, 255, 255, 40))
+        ol(d, 'rectangle', (x0 - S * .03, y0 - S * .05, x1 + S * .03, y0 + S * .005), (216, 214, 209, 255))
+
+
+def build_struct(key):
+    img = outdoor()
+    spec = STRUCT[key]
+    if isinstance(spec, str):
+        draw_struct(img, spec)
+    else:
+        for path, cx, mw, mh, *rest in spec:
+            place(img, path, cx, mw, mh, *(rest[:1] or [FLOOR + .045]))
+    return finish(img, 'defense')
+
+
+def save(img, path):
+    # 256-colour palette PNG with alpha: a third of the size, no visible loss at icon size
+    img.quantize(colors=256, method=Image.FASTOCTREE, dither=Image.FLOYDSTEINBERG).save(path, optimize=True)
 
 
 def main():
@@ -219,14 +336,18 @@ def main():
     for room in th:
         if room not in SIG:
             continue
-        # 256-colour palette PNG with alpha: a third of the size, no visible loss at icon size
-        build(room, th[room]).quantize(colors=256, method=Image.FASTOCTREE, dither=Image.FLOYDSTEINBERG).save(os.path.join(OUT_DIR, room + '.png'), optimize=True)
+        save(build(room, th[room]), os.path.join(OUT_DIR, room + '.png'))
         done.append(room)
+    structs = []
+    for key in STRUCT:
+        save(build_struct(key), os.path.join(OUT_DIR, 's-' + key + '.png'))
+        structs.append(key)
     with open(os.path.join(ROOT, 'js', 'data', 'room_icons.js'), 'w') as f:
-        f.write('/* Generated by tools/build_icons.py: rooms with a composed build icon in assets/rooms/icons/<id>.png. */\n')
+        f.write('/* Generated by tools/build_icons.py: composed build icons in assets/rooms/icons/ —\n * rooms as <id>.png, surface structures as s-<key>.png. */\n')
         f.write('var DE = globalThis.DE = globalThis.DE || {};\nDE.Data = DE.Data || {};\n')
         f.write('DE.Data.ROOM_ICONS = ' + json.dumps(done) + ';\n')
-    print('built', len(done), 'icons')
+        f.write('DE.Data.STRUCT_ICONS = ' + json.dumps(structs) + ';\n')
+    print('built', len(done), 'room icons and', len(structs), 'structure icons')
 
 
 if __name__ == '__main__':

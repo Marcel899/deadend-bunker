@@ -1130,3 +1130,6 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .ex-line { display: flex; align-items: flex-start; gap: 5px; font-size: 11px; color: #c9c3d6; margin-top: 3px; line-height: 1.35; } .ex-line .ico-inline { width: 14px; height: 14px; flex: 0 0 auto; margin-top: 1px; } .ex-line.find { color: #ffe08a; }
 .ex-rep .ex-chips { margin-top: 4px; }
 @media (max-width: 900px) { .ex-grid { grid-template-columns: 1fr; } .em-name { font-size: 17px; } }
+/* composed structure icons read better a little larger */
+.dk-line img.ico-struct.dk-mid { width: 46px !important; height: 46px !important; }
+.dk-sec-head img.ico-struct.dk-big, .dk-wallcard img.ico-struct.dk-big { width: 56px !important; height: 56px !important; }
