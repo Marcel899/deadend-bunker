@@ -374,11 +374,19 @@ t('needs garage; sends and returns loot', () => {
   assert(S.expeditions.active.length === 0); assert(S.resources.scrap > scrap); assert(S.survivors[ids[0]].assignment === null);
   assert(S.expeditions.log.length === 1);
 });
+t('at most two decisions wait: no new events or road encounters beyond that', () => {
+  const E = DE.State.create(null, now); E.events = []; E.eventChains = [];
+  for (let i = 0; i < 6; i++) { E.nextEventAt = 1; E.playtime = 1000 + i; DE.Events.tick(E, 0.1, now); }
+  assert(E.events.length === 2, 'events ' + E.events.length);
+  assert(DE.Events.encounter(E, { id: 'x1', location: 'suburbs', survivors: [], seen: [] }) === null, 'road quiet while two wait');
+  E.events.push({ id: 'old', kind: 'bunker', choices: [] }); DE.Events.tick(E, 0.1, now); assert(E.events.length === 2, 'old saves trimmed to two');
+});
 t('road encounters change the trip that is still out; finds and notes reach the report', () => {
   Object.values(S.survivors).forEach(sv => sv.hp = 100);
   const ids = Object.keys(S.survivors).filter(id => !S.survivors[id].assignment || S.survivors[id].assignment.kind !== 'expedition').slice(0, 2);
   const r = DE.Expeditions.send(S, 'suburbs', ids, now); assert(r.ok, r.reason);
   const trip = S.expeditions.active[S.expeditions.active.length - 1];
+  S.events = [];   // no decisions waiting (at most two can wait)
   const ev = DE.Events.encounter(S, trip); assert(ev && ev.ctx.expId === trip.id, 'encounter tied to the trip');
   assert(DE.Data.ENCOUNTERS.find(e => e.id === ev.def).tags.some(t => DE.Expeditions.location('suburbs').tags.includes(t) || t === 'suburbs'), 'matches the location');
   assert(trip.seen.includes(ev.def), 'remembered so it does not repeat');
