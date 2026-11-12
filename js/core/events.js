@@ -162,8 +162,10 @@ DE.Events = (function () {
     } else ev.choices = def.choices.filter(c => !c.cond || c.cond(state)).map(c => ({ label: fill(c.label, ctx), desc: fill(c.desc || '', ctx), effects: bind(c.effects, ctx) }));
     return ev;
   }
+  const MAX_WAITING = 2;   // decisions that can pile up (coming back after a while: two at most)
   function tickEvents(state, now) {
-    if (state.events.length >= 3) return;
+    if (state.events.length > MAX_WAITING) state.events.splice(MAX_WAITING);   // older saves could hold more
+    if (state.events.length >= MAX_WAITING) return;
     // consequences of earlier choices come first, when they are due
     const due = state.eventChains.findIndex(c => c.at <= state.playtime);
     if (due >= 0) {
@@ -186,6 +188,7 @@ DE.Events = (function () {
    *  is still out (ctx.expId). */
   function encounter(state, exp) {
     ensure(state);
+    if (state.events.length >= MAX_WAITING) return null;   // the road stays quiet while decisions are waiting
     const loc = DE.Expeditions.location(exp.location); const tags = (loc && loc.tags) || [exp.location];
     const seen = exp.seen || [];
     const pool = DE.Data.ENCOUNTERS.filter(e => (e.tags.includes(exp.location) || e.tags.some(t => tags.includes(t))) && !seen.includes(e.id));

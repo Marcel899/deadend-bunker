@@ -112,6 +112,13 @@ DE.Audio = (function () {
     FX[name](ctx.currentTime + .005);
   }
 
+  /** A soft talk blip while a speech bubble types (pitch per speaker), rate-limited. */
+  function blip(freq) {
+    if (!prefs.sfxOn || !ensure()) return;
+    const now = performance.now(); if (now - (last.blip || 0) < 45) return; last.blip = now;
+    const t = ctx.currentTime + .003; tone(freq, t, .05, 'triangle', .03); tone(freq * 2.01, t, .03, 'sine', .008);
+  }
+
   /* ---------- music: A minor, 4-bar progression, 72 bpm, 8th-note grid ---------- */
   const PROG = [[57, 60, 64], [53, 57, 60], [48, 52, 55], [55, 59, 62]];       // Am · F · C · G
   const MEL = [76, null, 72, null, 74, 72, null, 69, 72, null, 67, null, 69, null, null, null];
@@ -174,5 +181,5 @@ DE.Audio = (function () {
 
   /** Current output level 0..1 (peak of the last few ms) — for tests and a future VU meter. */
   function level() { if (!meter) return 0; const a = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(a); let m = 0; for (const v of a) m = Math.max(m, Math.abs(v)); return m; }
-  return { ambience, level, sfx, set, setNight, prefs: () => prefs, ensure, stopMusic };
+  return { ambience, level, sfx, blip, set, setNight, prefs: () => prefs, ensure, stopMusic };
 })();

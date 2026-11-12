@@ -128,6 +128,141 @@ DE.UI.Actors = (function () {
   }
   function bubble(a, text, cls) { a.bubble.textContent = text; a.bubble.className = 'bubble ' + (cls || '') + (text && !/\bquiet\b/.test(cls || '') ? ' show' : ''); }
 
+  /* ---------- speech: short contextual lines (DE.Data.SPEECH) ----------
+   * Needs first (hurt, starving, tired, thirsty when the water runs low), then the work or activity a
+   * survivor just started, now and then some chatter; big moments (a horde coming, a fight won or
+   * lost, the weather turning, a newcomer) get one speaker. Never more than two bubbles at once, a
+   * gap between any two, a long cooldown per survivor and no line repeated within a few minutes. */
+  const TALK = { last: 0, wave: -1, fight: -1, weather: '', ready: false, built: {} };
+  const SAY_MS = 3000, GAP_MS = 4000, MAX_SAYING = 2;
+  function sayingCount(now) { let n = 0; for (const id in actors) if (actors[id].sayUntil > now) n++; document.querySelectorAll('.room .builder .say.on').forEach(() => n++); return n; }
+  /* Lines come out of a shuffled bag per topic: every line of a topic is said once before any comes
+   * round again, and the bags are kept in this browser (localStorage), so a reload does not start
+   * the same lines over. The bags hold the text itself, so lines added later join in on the next round. */
+  const BAG_KEY = 'deadend_speech_v1'; let bags = null, bagSave = 0;
+  function loadBags() { if (bags) return bags; try { bags = JSON.parse(localStorage.getItem(BAG_KEY) || '{}') || {}; } catch (e) { bags = {}; } if (typeof bags !== 'object') bags = {}; return bags; }
+  function saveBags() { clearTimeout(bagSave); bagSave = setTimeout(() => { try { localStorage.setItem(BAG_KEY, JSON.stringify(bags)); } catch (e) { /* private mode: bags live for this session */ } }, 600); }
+  function pickLine(topic) {
+    const list = (DE.Data.SPEECH || {})[topic]; if (!list || !list.length) return null;
+    const B = loadBags(), lastKey = '_' + topic;
+    let bag = Array.isArray(B[topic]) ? B[topic].filter(l => list.includes(l)) : [];
+    if (!bag.length) {
+      bag = list.slice(); for (let i = bag.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); const t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
+      if (bag.length > 1 && bag[0] === B[lastKey]) bag.push(bag.shift());   // never the same line twice in a row across rounds
+    }
+    const line = bag.shift(); B[topic] = bag; B[lastKey] = line; saveBags(); return line;
+  }
+  function canTalk(now) { return now - TALK.last >= GAP_MS && sayingCount(now) < MAX_SAYING; }
+  function sayEl(host) { let e = host.querySelector(':scope > .say'); if (!e) { e = document.createElement('span'); e.className = 'say'; host.appendChild(e); } return e; }
+  /** Pop the bubble in at full size (the untyped rest is laid out but invisible, so the bubble never
+   *  jumps), then type the line left to right with a soft blip every other letter. */
+  function typeLine(e, text, cls, pitch) {
+    clearTimeout(e._typer);
+    e.className = 'say ' + (cls || ''); e.innerHTML = '<span class="st"></span><span class="sr"></span>';
+    const st = e.firstChild, sr = e.lastChild; st.textContent = ''; sr.textContent = text;
+    void e.offsetWidth; e.classList.add('on');
+    if (document.body.classList.contains('no-anim')) { st.textContent = text; sr.textContent = ''; return; }
+    let i = 0;
+    const audible = () => !DE.UI.ui.drawer && document.getElementById('modal-root').classList.contains('hidden') && !document.hidden;
+    const step = () => {
+      if (!e.isConnected) return;
+      i++; st.textContent = text.slice(0, i); sr.textContent = text.slice(i);
+      const ch = text[i - 1];
+      if (i % 2 === 1 && /[a-z0-9]/i.test(ch) && audible()) DE.Audio.blip(pitch * (.94 + Math.random() * .12));
+      if (i < text.length) e._typer = setTimeout(step, /[.,!?]/.test(ch) ? 110 : 34);
+    };
+    e._typer = setTimeout(step, 160);   // once the bubble has popped in
+  }
+  function sayText(a, text, cls, now) {
+    const e = a.sayEl || (a.sayEl = sayEl(a.el));
+    typeLine(e, text, cls, 300 + (hash(a.id) % 9) * 26);
+    a.el.classList.add('saying'); a.sayUntil = now + SAY_MS + text.length * 40;
+    TALK.last = now; return true;
+  }
+  function say(a, topic, cls, now) { const text = pickLine(topic); return text ? sayText(a, text, cls, now) : false; }
+  /** A two-person joke: this survivor asks, someone standing close by answers once the question is out. */
+  function joke(a, now) {
+    const near = Object.values(actors).filter(o => o !== a && o.placed && o.floor === a.floor && Math.abs(o.x - a.x) < 170 && !(o.sayUntil > now) && o.anim !== 'sleep'
+      && !o.el.classList.contains('riding') && !o.el.classList.contains('paused'));
+    if (!near.length) return say(a, 'chat', '', now);
+    const pair = pickLine('jokes'); if (!pair) return false;
+    const [q, ans] = pair.split('|'), b = near[Math.floor(Math.random() * near.length)];
+    sayText(a, q, '', now);
+    const delay = 160 + q.length * 34 + 1000;
+    a.sayUntil = now + delay + 600; b.nextSay = Math.max(b.nextSay || 0, now + delay + 30000);
+    setTimeout(() => { if (b.el.isConnected && b.placed && !b.el.classList.contains('riding')) sayText(b, ans, 'good', Date.now()); }, delay);
+    return true;
+  }
+  function hush(a, now) { if (a.sayUntil && now >= a.sayUntil) { a.sayUntil = 0; if (a.sayEl) a.sayEl.classList.remove('on'); a.el.classList.remove('saying'); } }
+  /** What this survivor has on their mind right now (null: nothing worth saying). */
+  function topicFor(a, sv, s, now) {
+    const act = sv.act || {}, k = act.kind, room = act.room && s.rooms[act.room];
+    if (k === 'sleep' && a.segEnd === 0 && !a.queue.length) return null;           // asleep: z z z only
+    if (sv.hp < 45 && k !== 'heal') return { t: 'hurt', cls: 'bad', urgent: true };
+    if (sv.hunger > 84 && k !== 'eat') return { t: 'starving', cls: 'bad', urgent: true };
+    const R = s._rates, waterLow = s.resources.water < 25 || (R && R.net && R.net.water < 0 && s.resources.water < 70);
+    if (waterLow && Math.random() < .5) return { t: 'thirsty', cls: 'bad', urgent: true };
+    if (sv.energy < 14 && k !== 'sleep') return { t: 'tired', cls: 'warn', urgent: true };
+    if (room && R && R.perRoom && R.perRoom[room.id] && R.perRoom[room.id].power < .5 && Math.random() < .5) return { t: 'dark', cls: 'warn' };
+    if (a.lift && a.lift.ticket.state === 'wait') return Math.random() < .25 ? { t: 'lift' } : null;
+    if (room && room.construction && k === 'work') {
+      const c = room.construction, p = 1 - (c.endsAt - now) / Math.max(1, c.duration * 1000);
+      return p > .8 ? { t: 'almost', cls: 'good' } : Math.random() < .35 ? { t: 'build' } : null;
+    }
+    if (a.planned === 'sleep' && now - a.plannedAt < 4000) return Math.random() < .3 ? { t: 'sleep' } : null;
+    const moving = a.queue.length > 0 || a.segEnd !== 0;
+    const fresh = !moving && a.arriveAt && now >= a.arriveAt && now - a.arriveAt < 7000;
+    if (Math.random() > (fresh ? .45 : .12)) return null;
+    // banter (on the way or at ease): quips, nods to old zombie stories, a joke for whoever is nearby
+    const banter = moving ? .65 : k === 'rest' || k === 'eat' || k === 'idle' ? .5 : k === 'work' || k === 'mine' ? .18 : 0;
+    if (Math.random() < banter) return Math.random() < .4 ? { t: 'joke' } : { t: 'chat' };
+    if (moving) return null;   // the job itself is talked about once there, not on the way through other rooms
+    if (k === 'work') return { t: room && DE.Data.SPEECH[room.type] ? room.type : 'work', cls: room && /farm|hydroponics|greenhouse|mushroom|kitchen/.test(room.type) ? 'good' : '' };
+    if (k === 'mine') return { t: 'mine' };
+    if (k === 'eat') return { t: 'eat', cls: 'good' };
+    if (k === 'rest') return { t: 'rest' };
+    if (k === 'heal') return { t: 'heal' };
+    if (k === 'idle') return { t: 'idle' };
+    if (sv.hunger > 66) return { t: 'hungry' };
+    if (s.resources.food < 50) return { t: 'foodlow', cls: 'warn' };
+    return null;
+  }
+  /** A visible, awake survivor to speak for everyone (big moments). */
+  function speaker(now) {
+    const list = Object.values(actors).filter(a => a.placed && !a.el.classList.contains('paused') && !(a.sayUntil > now) && a.anim !== 'sleep');
+    return list.length ? list[Math.floor(Math.random() * list.length)] : null;
+  }
+  function moments(s, now) {
+    const surf = document.getElementById('surface'); if (!surf || !canTalk(now)) return;
+    const wave = s.defense.wave;
+    if (surf.classList.contains('incoming') && TALK.wave !== wave) { const a = speaker(now); if (a && say(a, 'wave', 'alarm', now)) TALK.wave = wave; return; }
+    const won = surf.classList.contains('won'), lost = surf.classList.contains('breached');
+    if ((won || lost) && TALK.fight !== wave) { const a = speaker(now); if (a && say(a, lost ? 'breach' : 'won', lost ? 'bad' : 'good', now)) TALK.fight = wave; return; }
+    const w = DE.Season ? DE.Season.clock(s).weather : '';
+    if (w !== TALK.weather) { const prev = TALK.weather; TALK.weather = w; if (prev && (w === 'rain' || w === 'snow') && Math.random() < .6) { const a = speaker(now); if (a) say(a, w, '', now); } return; }
+    // the builder on a site that is nearly done
+    for (const id in s.rooms) {
+      const r = s.rooms[id], c = r.construction; if (!c || TALK.built[id + ':' + c.endsAt]) continue;
+      const p = 1 - (c.endsAt - now) / Math.max(1, c.duration * 1000); if (p < .82 || c.duration < 8) continue;
+      const el = document.getElementById('room-' + id); if (!el || el.classList.contains('offscreen')) continue;
+      const b = el.querySelector('.builder'); if (!b) continue;
+      TALK.built[id + ':' + c.endsAt] = true;
+      const text = pickLine('almost'); if (!text) return;
+      const e = sayEl(b); typeLine(e, text, 'good', 250);
+      TALK.last = now; setTimeout(() => e.classList.remove('on'), SAY_MS + 400 + text.length * 40); return;
+    }
+  }
+  function talk(a, sv, s, now) {
+    hush(a, now);
+    if (!TALK.ready || a.sayUntil > now || now < (a.nextSay || 0) || !a.placed || a.el.classList.contains('paused') || a.el.classList.contains('riding')) return;
+    if (a.isNew) { a.isNew = false; if (canTalk(now) && say(a, 'newbie', 'good', now)) { a.nextSay = now + 60000; return; } }
+    if (!canTalk(now)) return;
+    const tp = topicFor(a, sv, s, now);
+    if (!tp) { a.nextSay = now + 3000 + Math.random() * 5000; return; }
+    if (tp.t === 'joke' ? joke(a, now) : say(a, tp.t, tp.cls, now)) a.nextSay = now + (tp.urgent ? 40000 : 55000) + Math.random() * 45000;
+    else a.nextSay = now + 8000;
+  }
+
   /** Plan a path from the actor's position to a point (same floor: walk; other floor: walk→ride→walk). */
   function plan(a, dest) {
     a.queue = [];
@@ -157,7 +292,7 @@ DE.UI.Actors = (function () {
       // guards and expedition members are shown on the surface
       if (assign && (assign.kind === 'expedition' || (assign.kind === 'guard' && sv.act && (sv.act.kind === 'guard' || sv.act.kind === 'idle')))) continue;
       seen[id] = true;
-      let a = actors[id] || make(sv);
+      let a = actors[id]; if (!a) { a = make(sv); a.isNew = TALK.ready; }
       if (a.prof !== sv.profession) { a.el.remove(); delete actors[id]; a = make(sv); }
       const t = target(s, sv);
       const key = (t.room || 'none') + ':' + t.kind + ':' + (t.sx | 0) + (t.bed ? ':' + t.bed.y : '');
@@ -170,7 +305,7 @@ DE.UI.Actors = (function () {
       }
       if (key !== a.key && !riding) {
         if (a.lift) { DE.UI.Elevator.cancel(a.lift.ticket); a.lift = null; }
-        a.key = key; a.walkAnim = t.walk || null;
+        a.key = key; a.walkAnim = t.walk || null; a.planned = t.kind; a.plannedAt = now;
         const dest = pointFor();
         if (dest) {
           if (t.room == null && !t.site) dest.x += 40 + (hash(id) % 50);
@@ -215,11 +350,13 @@ DE.UI.Actors = (function () {
         if (t.kind === 'sleep') bubble(a, 'z z z', 'zz'); else if (t.kind === 'eat') bubble(a, 'nom', 'eat quiet'); else if (t.kind === 'heal') bubble(a, '+ resting', 'hurt'); else if (t.kind === 'rest') bubble(a, 'break', 'quiet'); else bubble(a, '', '');
         if (a.pendingAnim === 'sleep' || a.pendingAnim === 'heal') a.rig.classList.remove('flip');
       }
+      talk(a, sv, s, now);
       a.el.classList.toggle('hurt', sv.hp < 50);
       a.el.classList.toggle('paused', a.y < viewTop || a.y > viewBot);
       a.el.title = sv.name + ' · ' + DE.Needs.describe(sv) + (sv.act && sv.act.room && s.rooms[sv.act.room] ? ' in ' + DE.Data.ROOMS[s.rooms[sv.act.room].type].name : '');
     }
     for (const id in actors) if (!seen[id]) { actors[id].el.remove(); delete actors[id]; }
+    if (TALK.ready) moments(s, now); else { TALK.ready = true; TALK.weather = DE.Season ? DE.Season.clock(s).weather : ''; const sf = document.getElementById('surface'); TALK.wave = sf && sf.classList.contains('incoming') ? s.defense.wave : -1; TALK.fight = s.defense.wave; TALK.last = now; }
   }
 
   /** Elevator ride, driven by the ticket the cabin updates: wait → walk in → ride → walk out. */
@@ -255,9 +392,9 @@ DE.UI.Actors = (function () {
     }
     last = 0;
   }
-  function reset() { for (const id in actors) actors[id].el.remove(); for (const id in actors) delete actors[id]; }
+  function reset() { for (const id in actors) actors[id].el.remove(); for (const id in actors) delete actors[id]; TALK.ready = false; TALK.built = {}; }
 
   /** For tests: where each actor is and what it is doing. */
-  function debug() { const o = {}; for (const id in actors) { const a = actors[id]; o[id] = { floor: a.floor, x: Math.round(a.x), y: Math.round(a.y), q: a.queue.length, lift: a.lift ? a.lift.ticket.state : null, key: a.key, placed: a.placed, segEnd: a.segEnd }; } return o; }
+  function debug() { const o = {}; for (const id in actors) { const a = actors[id]; o[id] = { floor: a.floor, x: Math.round(a.x), y: Math.round(a.y), q: a.queue.length, lift: a.lift ? a.lift.ticket.state : null, key: a.key, placed: a.placed, segEnd: a.segEnd, nextSay: a.nextSay || 0, paused: a.el.classList.contains('paused'), anim: a.anim }; } return o; }
   return { update, relayout, reset, target, debug };
 })();

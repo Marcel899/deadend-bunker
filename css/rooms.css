@@ -329,3 +329,16 @@ body.no-anim .site * { animation: none !important; }
 .room .room-head .room-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
 .room-head .room-flag.icon { padding: 0 3px; max-width: none; flex: none; line-height: 1; display: inline-flex; align-items: center; height: 18px; }
 .room-head .room-flag.icon .ico-inline { width: 13px; height: 13px; }
+/* speech bubbles (js/ui/actors.js talk): small, white, with a tail pointing at the speaker's head */
+.actor .say, .room .builder .say { position: absolute; bottom: 60px; left: -20px; z-index: 6; pointer-events: none; width: max-content; max-width: 150px; padding: 4px 9px 5px;
+  border-radius: 12px; background: #fffaf0; color: #1c1020; border: 2px solid #1c1020; font: 800 11px/1.2 var(--body); text-align: left; white-space: normal;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .35); opacity: 0; transform: translateY(6px) scale(.5); transform-origin: 20px 100%; transition: opacity .18s ease-out, transform .3s cubic-bezier(.2, 1.5, .4, 1); }
+.actor .say::after, .room .builder .say::after { content: ''; position: absolute; left: 14px; bottom: -6px; width: 9px; height: 9px; background: inherit; border-right: 2px solid #1c1020; border-bottom: 2px solid #1c1020; transform: rotate(45deg); }
+.actor .say.on, .room .builder .say.on { opacity: 1; transform: none; }
+.actor .say.bad, .room .builder .say.bad { background: #ffe3dc; } .actor .say.warn { background: #fff1c8; } .actor .say.good, .room .builder .say.good { background: #e8f8d8; }
+.actor .say.alarm { background: #ffd6cf; color: #7a1010; }
+.room .builder .say { bottom: 54px; left: calc(50% - 20px); }
+.actor.saying .bubble { opacity: 0 !important; }
+.actor.saying { z-index: 2; }
+body.no-anim .actor .say { transition: none; }
+.say .sr { visibility: hidden; }
