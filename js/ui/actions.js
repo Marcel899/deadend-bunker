@@ -53,6 +53,8 @@ DE.Actions = (function () {
  };
  A.busUpgrade = (p, el) => { const next = DE.Events.busNext(S()); const r = DE.Events.upgradeBus(S()); if (!r.ok) return fail(r); UI().purchased(el, r.cost, 'New vehicle: ' + next.name); S().log.push({ t: Date.now(), msg: 'Expedition vehicle upgraded to ' + next.name + '.' }); done(); };
  A.selectNone = () => { UI().ui.selection = null; UI().refresh(true); };
+ /** Replay the intro (the game is paused behind it: its loop stops and restarts afterwards). */
+ A.replayIntro = () => { if (!DE.UI.Intro || DE.UI.Intro.running()) return; UI().closeDrawer(); DE.Game.stop(); DE.UI.Intro.play(() => DE.Game.start()); };
  A.scrollFloor = (p) => { UI().closeDrawer(); DE.UI.Bunker.scrollToFloor(+p.depth); };
  A.setBuyMode = (p) => { UI().ui.buyMode = p.mode === 'max' ? 'max' : +p.mode; UI().refresh(true); };
 

@@ -706,7 +706,8 @@ DE.UI.Drawers = (function () {
  <div class="card"><h4>Sound</h4>${(() => { const a = DE.Audio.prefs(); return `<div class="row"><span>Music</span><input type="range" min="0" max="1" step="0.05" value="${a.music}" data-audio="music" class="vol"><button class="btn small ${a.musicOn ? 'active' : ''}" data-action="toggleMusic">${a.musicOn ? 'On' : 'Off'}</button></div>
  <div class="row"><span>Sound effects</span><input type="range" min="0" max="1" step="0.05" value="${a.sfx}" data-audio="sfx" class="vol"><button class="btn small ${a.sfxOn ? 'active' : ''}" data-action="toggleSfx">${a.sfxOn ? 'On' : 'Off'}</button></div>`; })()}</div>
  <div class="card"><h4>Options</h4><div class="row"><span>Animations</span><button class="btn small ${s.settings.animations ? 'active' : ''}" data-action="toggleAnimations">${s.settings.animations ? 'On' : 'Off'}</button></div>
- <div class="row"><span>Offline cap</span><b>${s._fx.offlineCapHours}h</b></div></div>
+ <div class="row"><span>Offline cap</span><b>${s._fx.offlineCapHours}h</b></div>
+ <div class="row"><span>Intro</span><button class="btn small" data-action="replayIntro">${DE.Icons.img('play', 'ico-btn')} Watch it again</button></div></div>
  <div class="card"><h4>Statistics</h4><div class="stats-grid">
  <div><small>Playtime</small><b>${U().fmtTime(s.playtime)}</b></div><div><small>Zombies killed</small><b>${U().fmt(st.zombiesKilled)}</b></div>
  <div><small>Waves survived</small><b>${st.wavesSurvived}</b></div><div><small>Breaches</small><b>${st.breaches}</b></div>

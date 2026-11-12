@@ -17,9 +17,13 @@ DE.Game = (function () {
  };
 
  G.newGame = function () {
- DE.UI.ui.selection = null;
- G.loadState(DE.State.create(null, Date.now()));
- DE.UI.toast('Welcome to the Dead End. Assign survivors, keep the lights on, and dig.', 'ok', 6000);
+ const start = () => {
+   DE.UI.ui.selection = null;
+   G.loadState(DE.State.create(null, Date.now()));
+   DE.UI.toast('Welcome to the Dead End. Assign survivors, keep the lights on, and dig.', 'ok', 6000);
+ };
+ // the very first bunker starts with the intro (skippable; it does not play by itself again)
+ if (DE.UI.Intro && !DE.UI.Intro.seen()) DE.UI.Intro.play(start); else start();
  };
 
  G.continueGame = function () {

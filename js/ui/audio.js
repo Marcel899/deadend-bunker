@@ -87,6 +87,9 @@ DE.Audio = (function () {
     clank: (t) => { [0, .19].forEach((d, i) => { noise(t + d, .05, .05, 2600, 4, 'bandpass'); tone(1650 - i * 230 + Math.random() * 80, t + d, .16, 'triangle', .022); tone(3100 - i * 300, t + d, .08, 'sine', .01); }); },
     ratchet: (t) => { for (let i = 0; i < 5; i++) noise(t + i * .05, .025, .045, 3400, 6, 'bandpass'); tone(220, t, .25, 'sawtooth', .012, null, 180); },
     complete: (t) => { noise(t, .2, .12, 500, .8, 'lowpass', 200); [523, 659, 784, 1047].forEach((f, i) => tone(f, t + .08 + i * .08, .3, 'triangle', .09)); tone(1568, t + .42, .55, 'sine', .07); noise(t + .4, .45, .05, 7000, 2, 'highpass'); },
+    creak: (t) => { const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(70, t); o.frequency.linearRampToValueAtTime(140, t + .9); o.frequency.linearRampToValueAtTime(95, t + 1.6);
+      f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 6; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.07, t + .15); g.gain.setValueAtTime(.07, t + 1.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
+      o.connect(f); f.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 1.8); noise(t + 1.5, .5, .25, 300, .7, 'lowpass', 80); tone(60, t + 1.5, .5, 'sine', .2, null, 35); },
     levelup: (t) => { [659, 880, 1175].forEach((f, i) => tone(f, t + i * .07, .22, 'triangle', .08)); tone(1760, t + .22, .35, 'sine', .04); },
   };
   /* a zombie growl: a wobbling sawtooth through a vowel-ish formant filter, pitch sagging */
