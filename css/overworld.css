@@ -290,3 +290,21 @@ body.no-anim .dc-weather { display: none !important; }
   33% { transform: translate(calc(var(--dx) * .33 + 9px), calc(var(--fallH) * .33)); }
   66% { transform: translate(calc(var(--dx) * .66 - 9px), calc(var(--fallH) * .66)); }
   100% { transform: translate(var(--dx), calc(var(--fallH) - var(--s))); } }
+
+/* ============ HIGH QUALITY MODE (body.hq, js/ui/settings.js) — surface ============ */
+.dc-hq { display: none; pointer-events: none; mix-blend-mode: screen; }
+body.hq .dc-hq { display: block; }
+.dc-hq .hq-sun { transition: opacity 2s linear; }
+.dc-hq .hq-beam { animation: hqBeam 9s ease-in-out infinite; }
+@keyframes hqBeam { 0%, 100% { opacity: .45; } 50% { opacity: 1; } }
+.dc-hq .hq-depth { transition: opacity 3s linear; }
+.dc-hq .hq-fog { filter: url(#hq-soft); transition: opacity 4s linear; }
+.dc-hq .hq-mist { transform-box: fill-box; animation: hqMist 70s ease-in-out infinite; }
+@keyframes hqMist { 0%, 100% { transform: translateX(-90px); } 50% { transform: translateX(90px); } }
+.dc-hq .hq-lightning.flash { animation: hqBolt 1.1s ease-out 1; }
+@keyframes hqBolt { 0% { opacity: 0; } 4% { opacity: .8; } 10% { opacity: .08; } 16% { opacity: .6; } 100% { opacity: 0; } }
+body.fx-off .dc-hq .hq-lightning { display: none; }
+body.fx-soft .dc-hq .hq-lightning.flash { animation-name: hqBoltSoft; } @keyframes hqBoltSoft { 0% { opacity: 0; } 6% { opacity: .35; } 100% { opacity: 0; } }
+body.no-ambient .dc-hq :is(.hq-beam, .hq-mist) { animation: none; }
+/* low quality / performance: the expensive sky dressing goes */
+body:is(.q-low, .perf) :is(.ow-godrays, .ow-mote, .ow-sunrays, .ow-shadows) { display: none !important; }

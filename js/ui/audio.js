@@ -77,6 +77,8 @@ DE.Audio = (function () {
     boom: (t) => { noise(t, .9, .4, 600, .5, 'lowpass', 60); tone(70, t, .6, 'sine', .26, null, 30); },
     // a two-tone siren (triangle + a quiet square an octave up: present, not harsh)
     alarm: (t) => { for (let i = 0; i < 3; i++) { tone(620, t + i * .6, .3, 'triangle', .09, null, 880); tone(1240, t + i * .6, .3, 'square', .012, null, 1760); tone(880, t + i * .6 + .3, .3, 'triangle', .09, null, 620); } },
+    // a distant rumble after a lightning flash
+    thunder: (t) => { noise(t, 2.4, .22, 140, .6, 'lowpass', 50); noise(t + .1, .5, .12, 900, .7, 'lowpass', 200); tone(42, t, 1.8, 'sine', .08, null, 30); },
     // the dig site: a pick biting into rock, and the air drill's rattle
     pick: (t) => { noise(t, .07, .12, 1800 + Math.random() * 600, 3, 'bandpass'); tone(2400 + Math.random() * 300, t, .06, 'triangle', .02); noise(t + .02, .16, .09, 280, .8, 'lowpass', 90); },
     rattle: (t) => { for (let i = 0; i < 6; i++) noise(t + i * .045, .03, .05, 1500, 3, 'bandpass'); },

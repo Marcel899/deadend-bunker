@@ -65,6 +65,19 @@ DE.UI.DayCycle = (function () {
         <g class="dc-windows">${[[216, 277], [696, 277], [1050, 293], [1458, 305]].map(([x, y]) => pool(x, y, 26, 'warm', 'dc-flicker')).join('')}</g>
       </g>
       <ellipse class="dc-moonglow" cx="0" cy="0" rx="160" ry="160" fill="url(#dc-moon)"/>`;
+    // High Quality Mode: sunbeams from the sun, horizon and depth fog, ground mist, lightning flashes
+    const hq = document.createElementNS(NS, 'svg'); hq.setAttribute('class', 'ow-svg dc-hq'); hq.setAttribute('viewBox', `0 0 ${W} ${H}`); hq.setAttribute('preserveAspectRatio', 'xMidYMax slice');
+    const beams = [-34, -22, -12, -3, 6, 15, 26, 38].map((a, i) => { const r = a * Math.PI / 180, len = 900, w = 26 + (i % 3) * 18;
+      const ex = Math.sin(r) * len, ey = Math.cos(r) * len, nx = Math.cos(r) * w, ny = -Math.sin(r) * w;
+      return `<path class="hq-beam" style="animation-delay:-${(i * 1.7).toFixed(1)}s;animation-duration:${(7 + (i % 4) * 2.3).toFixed(1)}s" d="M-6 0 L6 0 L${(ex + nx).toFixed(0)} ${ey.toFixed(0)} L${(ex - nx).toFixed(0)} ${(ey - ny * 0).toFixed(0)} Z" fill="url(#hq-beam)"/>`; }).join('');
+    hq.innerHTML = `<defs><linearGradient id="hq-beam" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff6d8" stop-opacity=".55"/><stop offset=".55" stop-color="#ffe8b0" stop-opacity=".16"/><stop offset="1" stop-color="#ffe0a0" stop-opacity="0"/></linearGradient>
+        <linearGradient id="hq-depth" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="0"/><stop offset=".55" stop-color="#fff" stop-opacity=".0"/><stop offset=".74" stop-color="#fff" stop-opacity=".55"/><stop offset=".8" stop-color="#fff" stop-opacity=".2"/><stop offset=".9" stop-color="#fff" stop-opacity="0"/></linearGradient>
+        <radialGradient id="hq-mist"><stop offset="0" stop-color="#fff" stop-opacity=".7"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></radialGradient>
+        <filter id="hq-soft" x="-20%" y="-20%" width="140%" height="140%"><feGaussianBlur stdDeviation="9"/></filter></defs>
+      <rect class="hq-depth" x="0" y="0" width="${W}" height="${H}" fill="url(#hq-depth)"/>
+      <g class="hq-sun"><g class="hq-beams" filter="url(#hq-soft)">${beams}</g></g>
+      <g class="hq-fog">${[0, 1, 2, 3, 4].map(i => `<ellipse class="hq-mist" cx="${(i * 420 + 120).toFixed(0)}" cy="${G - 6 - (i % 2) * 10}" rx="${300 + (i % 3) * 60}" ry="${26 + (i % 2) * 10}" fill="url(#hq-mist)" style="animation-delay:-${(i * 9).toFixed(0)}s"/>`).join('')}</g>
+      <rect class="hq-lightning" x="0" y="0" width="${W}" height="${G}" fill="#e8f0ff" opacity="0"/>`;
     const fx = document.createElement('div'); fx.className = 'dc-weather';
     // weather particles: cheap CSS-animated spans, generated once. Rain, snow and leaves each have their
     // own layer (and particles), so a shower in autumn never stops the leaves, and switching weather
@@ -79,9 +92,10 @@ DE.UI.DayCycle = (function () {
     // order: art SVG, battlefield, then ambient darkness, then lights, then weather, then UI overlay
     const bf = scene.querySelector('.bf');
     const after = bf ? bf.nextSibling : scene.querySelector('.ow-overlay');
-    scene.insertBefore(amb, after); scene.insertBefore(lights, after); scene.insertBefore(fx, after);
+    scene.insertBefore(amb, after); scene.insertBefore(lights, after); scene.insertBefore(hq, after); scene.insertBefore(fx, after);
     (scene.querySelector('.ow-overlay') || scene).appendChild(chip);
-    built = { scene, amb, lights, fx, chip, svg: scene.querySelector('.ow-svg:not(.dc-lights)') };
+    built = { scene, amb, lights, hq, fx, chip, svg: scene.querySelector('.ow-svg:not(.dc-lights):not(.dc-hq)') };
+    built.hqSun = hq.querySelector('.hq-sun'); built.hqDepth = hq.querySelector('.hq-depth'); built.hqFog = hq.querySelector('.hq-fog'); built.hqBolt = hq.querySelector('.hq-lightning');
     built.wx = { rain: fx.querySelector('.wx-rain'), splash: fx.querySelector('.wx-splash'), leaves: fx.querySelector('.wx-leaves'), snow: fx.querySelector('.wx-snow') };
     built.stops = Array.from(built.svg.querySelectorAll('#ow-sky stop'));
     built.sun = built.svg.querySelector('.ow-sunwrap'); built.stars = built.svg.querySelector('.ow-stars');
@@ -119,6 +133,17 @@ DE.UI.DayCycle = (function () {
     const low = 1 - Math.sin(Math.max(0, Math.min(1, sp)) * Math.PI);           // 1 near the horizon
     if (built.rays) built.rays.style.opacity = (c.sunUp ? Math.max(0, low - .45) * 1.1 : 0).toFixed(2);   // god-rays only when the sun is low
     if (built.haze) built.haze.style.opacity = (.15 + .35 * low * (1 - dark)).toFixed(2);
+    // High Quality Mode: beams follow the sun (strongest when it is low, gone at night and in heavy
+    // cloud), the depth haze takes the horizon's colour, the mist is thick at dawn, at night and in rain
+    if (built.hqSun) {
+      built.hqSun.setAttribute('transform', `translate(${sx.toFixed(1)} ${sy.toFixed(1)})`);
+      built.hqSun.style.opacity = (c.sunUp ? (.35 + .65 * low) * (1 - .85 * overcast) * (1 - dark) : 0).toFixed(2);
+      built.hqDepth.style.opacity = (.35 + .3 * low + .3 * overcast).toFixed(2);
+      if (!built.hqStops) built.hqStops = Array.from(built.hq.querySelectorAll('#hq-depth stop'));
+      const hz = mix(hor, '#ffffff', .35); built.hqStops.forEach(st => st.setAttribute('stop-color', hz));
+      const dawn = h > 4 && h < 8.5 ? 1 - Math.abs(h - 6.2) / 2.3 : 0;
+      built.hqFog.style.opacity = Math.min(.95, .25 + .55 * dawn + .35 * dark + .4 * overcast).toFixed(2);
+    }
     // moon: opposite arc at night
     const mh = (h + 12) % 24, mp = Math.max(-.08, Math.min(1.08, (mh - 6) / 12.5)), mx = W * (.92 - .84 * mp), my = 420 - Math.sin(Math.max(0, Math.min(1, mp)) * Math.PI) * 300;
     built.moon.setAttribute('transform', `translate(${mx.toFixed(1)} ${my.toFixed(1)})`); built.moon.style.opacity = dark.toFixed(2);
@@ -159,6 +184,10 @@ DE.UI.DayCycle = (function () {
     const fh = built.fx.clientHeight;
     if (fh && fh !== built.fh) { built.fh = fh; built.fx.style.setProperty('--fallH', fh + 'px'); built.fx.style.setProperty('--rx', (-fh * .2126).toFixed(0) + 'px'); }
     if (DE.Audio && DE.Audio.ambience) DE.Audio.ambience(wxOn ? c.weather : 'clear', wx);
+    if (SET && SET.on('hq') && rainOn && c.weather === 'rain' && c.heavy && wx > .6 && built.hqBolt && Date.now() > (built.boltAt || 0)) {
+      built.boltAt = Date.now() + 14000 + Math.random() * 26000;
+      if (built.boltAt > 0 && Math.random() < .7) { const b = built.hqBolt; b.classList.remove('flash'); void b.getBBox; b.classList.add('flash'); setTimeout(() => DE.Audio.sfx('thunder', 4000), 400 + Math.random() * 900); }
+    }
     scene.dataset.tod = c.night ? 'night' : (h < 8 || h > 17) ? 'twilight' : 'day';
     const hh = Math.floor(h), mm = Math.floor((h % 1) * 60 / 15) * 15;
     const wxTxt = c.weather === 'clear' ? '' : ` · ${c.weather === 'snow' ? '<img class="dc-snow" src="assets/icons/snow.png" alt="">' : ''}${c.heavy ? 'Heavy ' : ''}${c.weatherName.toLowerCase()}`;

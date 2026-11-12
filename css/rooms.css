@@ -382,3 +382,22 @@ body.no-anim .actor .say { transition: none; }
 @keyframes infSpores { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: .9; } 100% { opacity: 0; transform: translateY(-16px) scale(1.2); } }
 .actor.infected[data-inf="incubating"]::after { display: none; }
 body.no-anim .actor.infected::after { animation: none; opacity: .7; }
+
+/* ============ HIGH QUALITY MODE — bunker lighting ============ */
+/* each room: a light cone from the ceiling lamp, ambient occlusion in the corners and along floor and
+   walls, and dust motes drifting slowly up through the light (visible rooms only) */
+body.hq .room .room-scene::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    radial-gradient(ellipse 48% 62% at 50% 4%, rgba(255, 236, 190, .17), rgba(255, 236, 190, .05) 55%, transparent 72%),
+    linear-gradient(180deg, rgba(0, 0, 0, .26), transparent 13%, transparent 80%, rgba(0, 0, 0, .3)),
+    linear-gradient(90deg, rgba(0, 0, 0, .3), transparent 8%, transparent 92%, rgba(0, 0, 0, .3)); }
+body.hq .room:not(.offscreen) .room-scene::before { content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: -60px; pointer-events: none; z-index: 1; opacity: .55;
+  background-image: radial-gradient(circle, rgba(255, 240, 205, .75) 0 1px, transparent 1.8px), radial-gradient(circle, rgba(255, 240, 205, .5) 0 .8px, transparent 1.5px);
+  background-size: 73px 61px, 109px 83px; background-position: 11px 7px, 47px 31px; animation: hqMotes 18s linear infinite; }
+@keyframes hqMotes { to { transform: translateY(-60px); } }
+body.hq.no-ambient .room .room-scene::before { animation: none; }
+/* contact shadows under the survivors */
+body.hq .actor::before { content: ''; position: absolute; left: -15px; bottom: -4px; width: 30px; height: 8px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, .45), transparent); }
+/* the dig site gets the same soft depth */
+body.hq .dig-site::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(0, 0, 0, .25), transparent 18%, transparent 82%, rgba(0, 0, 0, .3)); }
