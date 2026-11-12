@@ -1,7 +1,10 @@
 /* Audio: every sound and the soundtrack are synthesised with the Web Audio API (no audio files).
  *
  *   DE.Audio.sfx(name)   click · buy · upgrade · error · shot · heavy · launch · boom · alarm · event · dig · hit
- *                        · clank · ratchet (building sites) · complete · levelup
+ *                        · clank · ratchet (building sites) · complete · levelup · pick · rattle (dig site)
+ *   DE.Audio.sfxAt(name, clientX)   the same, panned to where on screen it happens
+ *   DE.Audio.machine(kind, level, clientX)   the dig site's running machine (a looping hum)
+ * Everything goes through a limiter, so many sounds at once never clip.
  *   DE.Audio.music(on)   ambient loop: a slow minor pad with a sparse plucked melody and a soft
  *                        heartbeat kick; darker and sparser at night (DE.Audio.setNight)
  *
@@ -14,7 +17,7 @@ DE.Audio = (function () {
   const KEY = 'deadend_audio_v1';
   let prefs = { music: 0.45, sfx: 0.7, musicOn: true, sfxOn: true };
   try { Object.assign(prefs, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* defaults */ }
-  let ctx = null, master = null, sfxBus = null, musicBus = null, noiseBuf = null, verb = null;
+  let ctx = null, master = null, sfxBus = null, musicBus = null, noiseBuf = null, verb = null, out = null;
   let meter = null, musicTimer = 0, step = 0, night = false, last = {};
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (e) { /* private mode */ } }
@@ -22,9 +25,13 @@ DE.Audio = (function () {
     if (ctx) { if (ctx.state === 'suspended') ctx.resume(); return true; }
     const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return false;
     ctx = new AC();
-    master = ctx.createGain(); master.gain.value = 0.9; master.connect(ctx.destination);
-    meter = ctx.createAnalyser(); meter.fftSize = 512; master.connect(meter);
-    sfxBus = ctx.createGain(); sfxBus.connect(master);
+    // a limiter after the master: a wave's worth of shots, splats, groans and blasts stacking up can
+    // no longer clip (that was the crackle/distortion in big fights)
+    master = ctx.createGain(); master.gain.value = 0.9;
+    const lim = ctx.createDynamicsCompressor(); lim.threshold.value = -9; lim.knee.value = 6; lim.ratio.value = 14; lim.attack.value = .003; lim.release.value = .22;
+    master.connect(lim); lim.connect(ctx.destination);
+    meter = ctx.createAnalyser(); meter.fftSize = 512; lim.connect(meter);
+    sfxBus = ctx.createGain(); sfxBus.connect(master); out = sfxBus;
     musicBus = ctx.createGain(); musicBus.connect(master);
     // a cheap reverb: a feedback delay network on the music bus
     verb = ctx.createDelay(1); verb.delayTime.value = 0.23; const fb = ctx.createGain(); fb.gain.value = 0.38; const lp = ctx.createBiquadFilter(); lp.frequency.value = 1800;
@@ -47,13 +54,13 @@ DE.Audio = (function () {
     const o = ctx.createOscillator(), g = ctx.createGain();
     o.type = type || 'sine'; o.frequency.setValueAtTime(freq, t0); if (glideTo) o.frequency.exponentialRampToValueAtTime(glideTo, t0 + dur);
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + Math.min(.02, dur / 4)); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(g); g.connect(bus || sfxBus); o.start(t0); o.stop(t0 + dur + .05); return g;
+    o.connect(g); g.connect(bus || out); o.start(t0); o.stop(t0 + dur + .05); return g;
   }
   function noise(t0, dur, vol, freq, q, type, sweepTo) {
     const s = ctx.createBufferSource(); s.buffer = noiseBuf; const f = ctx.createBiquadFilter(); f.type = type || 'bandpass'; f.frequency.setValueAtTime(freq, t0); f.Q.value = q || 1;
     if (sweepTo) f.frequency.exponentialRampToValueAtTime(sweepTo, t0 + dur);
     const g = ctx.createGain(); g.gain.setValueAtTime(vol, t0); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    s.connect(f); f.connect(g); g.connect(sfxBus); s.start(t0, Math.random() * .5); s.stop(t0 + dur + .05);
+    s.connect(f); f.connect(g); g.connect(out); s.start(t0, Math.random() * .5); s.stop(t0 + dur + .05);
   }
 
   /* ---------- sound effects ---------- */
@@ -65,8 +72,12 @@ DE.Audio = (function () {
     shot: (t) => { noise(t, .07, .22, 1800, .8, 'bandpass', 600); tone(120, t, .06, 'square', .05, null, 60); },
     heavy: (t) => { noise(t, .12, .3, 900, .7, 'lowpass', 200); tone(90, t, .1, 'square', .09, null, 45); },
     launch: (t) => { noise(t, .7, .18, 400, .6, 'bandpass', 2400); tone(220, t, .5, 'sawtooth', .04, null, 660); },
-    boom: (t) => { noise(t, .9, .55, 600, .5, 'lowpass', 60); tone(70, t, .6, 'sine', .35, null, 30); },
-    alarm: (t) => { for (let i = 0; i < 3; i++) { tone(620, t + i * .6, .3, 'sawtooth', .07, null, 880); tone(880, t + i * .6 + .3, .3, 'sawtooth', .07, null, 620); } },
+    boom: (t) => { noise(t, .9, .4, 600, .5, 'lowpass', 60); tone(70, t, .6, 'sine', .26, null, 30); },
+    // a two-tone siren (triangle + a quiet square an octave up: present, not harsh)
+    alarm: (t) => { for (let i = 0; i < 3; i++) { tone(620, t + i * .6, .3, 'triangle', .09, null, 880); tone(1240, t + i * .6, .3, 'square', .012, null, 1760); tone(880, t + i * .6 + .3, .3, 'triangle', .09, null, 620); } },
+    // the dig site: a pick biting into rock, and the air drill's rattle
+    pick: (t) => { noise(t, .07, .12, 1800 + Math.random() * 600, 3, 'bandpass'); tone(2400 + Math.random() * 300, t, .06, 'triangle', .02); noise(t + .02, .16, .09, 280, .8, 'lowpass', 90); },
+    rattle: (t) => { for (let i = 0; i < 6; i++) noise(t + i * .045, .03, .05, 1500, 3, 'bandpass'); },
     event: (t) => { tone(988, t, .6, 'sine', .12); tone(1319, t + .12, .7, 'sine', .08); tone(1976, t + .12, .5, 'sine', .03); },
     // a decision taken: a soft stamp and a rising two-note answer
     choice: (t) => { noise(t, .06, .16, 500, .9, 'lowpass', 160); tone(140, t, .08, 'sine', .14, null, 70); tone(659, t + .07, .16, 'triangle', .1); tone(988, t + .15, .26, 'triangle', .09); },
@@ -91,7 +102,7 @@ DE.Audio = (function () {
     complete: (t) => { noise(t, .2, .12, 500, .8, 'lowpass', 200); [523, 659, 784, 1047].forEach((f, i) => tone(f, t + .08 + i * .08, .3, 'triangle', .09)); tone(1568, t + .42, .55, 'sine', .07); noise(t + .4, .45, .05, 7000, 2, 'highpass'); },
     creak: (t) => { const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(70, t); o.frequency.linearRampToValueAtTime(140, t + .9); o.frequency.linearRampToValueAtTime(95, t + 1.6);
       f.type = 'bandpass'; f.frequency.value = 900; f.Q.value = 6; g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(.07, t + .15); g.gain.setValueAtTime(.07, t + 1.3); g.gain.exponentialRampToValueAtTime(0.0001, t + 1.7);
-      o.connect(f); f.connect(g); g.connect(sfxBus); o.start(t); o.stop(t + 1.8); noise(t + 1.5, .5, .25, 300, .7, 'lowpass', 80); tone(60, t + 1.5, .5, 'sine', .2, null, 35); },
+      o.connect(f); f.connect(g); g.connect(out); o.start(t); o.stop(t + 1.8); noise(t + 1.5, .5, .25, 300, .7, 'lowpass', 80); tone(60, t + 1.5, .5, 'sine', .2, null, 35); },
     levelup: (t) => { [659, 880, 1175].forEach((f, i) => tone(f, t + i * .07, .22, 'triangle', .08)); tone(1760, t + .22, .35, 'sine', .04); },
   };
   /* a zombie growl: a wobbling sawtooth through a vowel-ish formant filter, pitch sagging */
@@ -102,14 +113,47 @@ DE.Audio = (function () {
     bp.type = 'bandpass'; bp.frequency.setValueAtTime(650, t0); bp.frequency.linearRampToValueAtTime(420, t0 + dur); bp.Q.value = 3;
     bp2.type = 'lowpass'; bp2.frequency.value = 1400;
     g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(vol, t0 + .08); g.gain.setValueAtTime(vol, t0 + dur * .6); g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-    o.connect(bp); bp.connect(bp2); bp2.connect(g); g.connect(sfxBus); o.start(t0); lfo.start(t0); o.stop(t0 + dur + .05); lfo.stop(t0 + dur + .05);
+    o.connect(bp); bp.connect(bp2); bp2.connect(g); g.connect(out); o.start(t0); lfo.start(t0); o.stop(t0 + dur + .05); lfo.stop(t0 + dur + .05);
   }
   /** Play a sound effect. Fast repeats (gunfire) are rate-limited per sound. */
-  function sfx(name, minGapMs) {
+  function sfx(name, minGapMs, pan) {
     if (!prefs.sfxOn || !FX[name] || !ensure()) return;
     const now = performance.now(); const gap = minGapMs != null ? minGapMs : (name === 'shot' ? 55 : name === 'hit' || name === 'splat' ? 45 : name === 'hover' ? 60 : 30);
     if (now - (last[name] || 0) < gap) return; last[name] = now;
-    FX[name](ctx.currentTime + .005);
+    if (pan && ctx.createStereoPanner) {
+      // positional: everything this sound makes goes through a panner
+      const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(sfxBus);
+      out = p; try { FX[name](ctx.currentTime + .005); } finally { out = sfxBus; }
+      setTimeout(() => { try { p.disconnect(); } catch (e) { /* gone */ } }, 3000);
+    } else FX[name](ctx.currentTime + .005);
+  }
+  /** A sound coming from a point on screen (client x): panned left/right with where it happens. */
+  function sfxAt(name, clientX, minGapMs) {
+    const w = (typeof window !== 'undefined' && window.innerWidth) || 1;
+    sfx(name, minGapMs, clientX == null ? 0 : ((clientX / w) * 2 - 1) * .75);
+  }
+  /** The dig site's machine running (0 = off): an engine hum and a drill's grind, panned to the site. */
+  let mach = null;
+  function machine(kind, level, clientX) {
+    if (!ctx) return;
+    const t = ctx.currentTime, v = prefs.sfxOn ? level : 0;
+    if (!mach) {
+      if (!v) return;
+      const src = ctx.createBufferSource(); src.buffer = noiseBuf; src.loop = true;
+      const f = ctx.createBiquadFilter(); f.type = 'bandpass'; f.Q.value = 2.2;
+      const eng = ctx.createOscillator(), ef = ctx.createBiquadFilter(); eng.type = 'sawtooth'; ef.type = 'lowpass'; ef.frequency.value = 220;
+      const g = ctx.createGain(), eg = ctx.createGain(); g.gain.value = 0; eg.gain.value = .5;
+      const p = ctx.createStereoPanner ? ctx.createStereoPanner() : ctx.createGain();
+      src.connect(f); f.connect(g); eng.connect(ef); ef.connect(eg); eg.connect(g); g.connect(p); p.connect(sfxBus); src.start(); eng.start();
+      mach = { f, eng, g, p, kind: '' };
+    }
+    if (kind !== mach.kind) {
+      mach.kind = kind;
+      const K = { drill: [1100, 52], borer: [420, 38], air: [1600, 60], hand: [700, 0] }[kind] || [800, 45];
+      mach.f.frequency.setTargetAtTime(K[0], t, .2); mach.eng.frequency.setTargetAtTime(K[1] || 40, t, .2);
+    }
+    mach.g.gain.setTargetAtTime(v * (mach.kind === 'hand' ? 0 : mach.kind === 'borer' ? .05 : .035), t, .6);
+    if (mach.p.pan && clientX != null) mach.p.pan.setTargetAtTime(Math.max(-.8, Math.min(.8, (clientX / (window.innerWidth || 1)) * 2 - 1)), t, .3);
   }
 
   /** A soft talk blip while a speech bubble types (pitch per speaker), rate-limited. */
@@ -181,5 +225,5 @@ DE.Audio = (function () {
 
   /** Current output level 0..1 (peak of the last few ms) — for tests and a future VU meter. */
   function level() { if (!meter) return 0; const a = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(a); let m = 0; for (const v of a) m = Math.max(m, Math.abs(v)); return m; }
-  return { ambience, level, sfx, blip, set, setNight, prefs: () => prefs, ensure, stopMusic };
+  return { ambience, level, sfx, sfxAt, machine, blip, set, setNight, prefs: () => prefs, ensure, stopMusic };
 })();

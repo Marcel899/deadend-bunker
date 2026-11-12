@@ -178,7 +178,7 @@ DE.UI.Bunker = (function () {
         const pct = Math.min(100, 100 * (1 - (c.endsAt - now) / (c.duration * 1000)));
         prog.querySelector('i').style.width = pct + '%';
         const bp = (pct / 100).toFixed(3); if (el.style.getPropertyValue('--bp') !== bp) el.style.setProperty('--bp', bp);
-        if (!el.classList.contains('offscreen') && !DE.UI.ui.drawer) siteNoise = true;
+        if (!el.classList.contains('offscreen') && !DE.UI.ui.drawer) siteNoise = el;
         setText(prog.querySelector('span'), (c.kind === 'build' ? 'Building ' : 'Upgrading +' + c.levels + ' ') + U().fmtTime((c.endsAt - now) / 1000));
       }
       el.classList.toggle('building', !!c && c.kind === 'build');
@@ -191,7 +191,7 @@ DE.UI.Bunker = (function () {
       if (!el.classList.contains('tier-' + tier)) { el.classList.remove('tier-1', 'tier-2', 'tier-3', 'tier-4'); el.classList.add('tier-' + tier); }
     }
     placeTags();
-    if (siteNoise) { siteNoise = false; DE.Audio.sfx(Math.random() < .7 ? 'clank' : 'ratchet', 2300 + Math.random() * 1800); }
+    if (siteNoise) { const r = siteNoise.getBoundingClientRect(); siteNoise = false; DE.Audio.sfxAt(Math.random() < .7 ? 'clank' : 'ratchet', r.left + r.width / 2, 2300 + Math.random() * 1800); }
     document.querySelectorAll('.cell').forEach(el => el.classList.toggle('selected', !!(sel && sel.type === 'slot' && String(sel.depth) === el.dataset.depth && String(sel.slot) === el.dataset.slot)));
     updateSurface(s, now);
     updateDig(s, now);

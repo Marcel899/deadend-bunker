@@ -246,7 +246,23 @@ DE.UI.DigSite = (function () {
     if (artEl) artEl.style.setProperty('--pace', (1 / Math.min(2.5, Math.max(.6, pace))).toFixed(2));
     site.classList.toggle('active', digging); site.classList.toggle('crewed', crew > 0);
     runCart(site, fx, pace, digging || crew > 0);
+    sounds(site, layer, fx, digging, crew, pace, now);
     hud(s, now);
+  }
+  /** What the site sounds like while it is on screen: the machine of the layer humming (drill, borer,
+   *  compressor), picks biting into the rock at the crew's pace, the air drill rattling; panned to the
+   *  face. Silent when scrolled away or behind a drawer. */
+  let nextPick = 0, nextRattle = 0;
+  function sounds(site, layer, fx, digging, crew, pace, now) {
+    if (!DE.Audio || !DE.Audio.machine) return;
+    const r = site.getBoundingClientRect(), vh = window.innerHeight || 800;
+    const seen = r.bottom > 40 && r.top < vh - 40 && !DE.UI.ui.drawer && !document.hidden;
+    const faceX = r.left + fx, kind = layer === 'granite' || layer === 'basalt' ? 'drill' : layer === 'magma' ? 'borer' : layer === 'limestone' ? 'air' : 'hand';
+    DE.Audio.machine(kind, seen && digging && fx > 330 ? 1 : 0, faceX);
+    if (!seen || !crew) return;
+    now = now || Date.now();
+    if (now >= nextPick) { nextPick = now + (1300 + Math.random() * 900) / Math.min(2, Math.max(.6, pace)); DE.Audio.sfxAt('pick', faceX - 40, 500); }
+    if (kind === 'air' && digging && fx > 330 && now >= nextRattle) { nextRattle = now + 2200 + Math.random() * 1600; DE.Audio.sfxAt('rattle', faceX, 1500); }
   }
   /** A sprite as an <img> (the cart rides in HTML so it can be animated smoothly). */
   function img2(sp, w, h) { return `<img src="assets/sprites/${sp}.png" alt="" draggable="false" style="width:${w}px;height:${h}px;object-fit:contain">`; }
