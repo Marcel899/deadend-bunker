@@ -62,7 +62,10 @@ DE.Chars = (function () {
       document.body.appendChild(host);
     }
     if (madeDefs[id]) return;
-    host.insertAdjacentHTML('beforeend', defsFor(id, c)); madeDefs[id] = true;
+    // parse as inline SVG inside HTML (works in every engine), then move the <defs> into the host
+    const tmp = document.createElement('div'); tmp.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg">${defsFor(id, c)}</svg>`;
+    const defs = tmp.firstChild && tmp.firstChild.firstChild; if (defs) host.appendChild(defs);
+    madeDefs[id] = true;
   }
 
   /* ---------- head ---------- */
