@@ -41,3 +41,5 @@ body.no-anim .rig *, body.no-anim .rig { animation: none !important; }
 .rig.a-farm .item, .rig.a-study .item, .rig.a-operate .item, .rig.a-cook .item { display: none; }
 /* standing still: tools are put away, guns stay in hand */
 .rig.a-idle:not([data-hold="gun"]):not([data-hold="pistol"]) .item { display: none; }
+/* climbing: both hands are on the ladder */
+.rig.a-climb .item { display: none; }

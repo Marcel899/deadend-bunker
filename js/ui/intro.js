@@ -73,6 +73,7 @@ DE.UI.Intro = (function () {
     for (let i = 0; i < 30; i++) { const x = 40 + r() * 1120, y = 300 + r() * 160; if (y < 250 + Math.abs(x - 560) * .3) continue; s += `<path d="M${x.toFixed(0)} ${y.toFixed(0)} l4 -10 l3 9 l4 -12 l3 13" fill="none" stroke="#5a6a3a" stroke-width="2.5" stroke-linecap="round"/>`; }
     // the hatch: a concrete collar in the hillside, a round steel door with a wheel
     s += `<g transform="translate(600 400)"><path d="M-110 70 V-40 Q-110 -86 0 -86 Q110 -86 110 -40 V70 Z" fill="#7a7684" ${S}/><path d="M-96 70 V-34 Q-96 -72 0 -72 Q96 -72 96 -34 V70 Z" fill="#141018"/>
+      <g class="in-puffs">${Array.from({ length: 9 }, (_, i) => { const a = Math.PI * (1.05 + i * .11); return `<circle cx="0" cy="0" r="${10 + (i % 3) * 5}" fill="#b8ab9a" style="--px:${(Math.cos(a) * 120).toFixed(0)}px;--py:${(Math.sin(a) * 70 - 10).toFixed(0)}px;animation-delay:${(i * .04).toFixed(2)}s"/>`; }).join('')}</g>
       <g class="in-spill" opacity="0"><ellipse cx="0" cy="-6" rx="92" ry="72" fill="#ffd27a" opacity=".85"/><circle cx="0" cy="0" r="150" fill="url(#in-glow)"/><ellipse cx="10" cy="92" rx="210" ry="30" fill="url(#in-glow)"/></g>
       <g class="in-door"><circle r="66" fill="#5a5f6a" ${S}/><circle r="54" fill="#6c717c" ${S2}/>${Array.from({ length: 12 }, (_, i) => `<circle cx="${(60 * Math.cos(i * Math.PI / 6)).toFixed(1)}" cy="${(60 * Math.sin(i * Math.PI / 6)).toFixed(1)}" r="3" fill="${INK}"/>`).join('')}
         <g class="in-wheel"><circle r="28" fill="none" stroke="${INK}" stroke-width="9"/><circle r="28" fill="none" stroke="#c93a3a" stroke-width="5"/><path d="M-28 0 H28 M0 -28 V28" stroke="${INK}" stroke-width="8"/><path d="M-28 0 H28 M0 -28 V28" stroke="#c93a3a" stroke-width="4"/><circle r="7" fill="#8a8e98" ${S2}/></g></g>
@@ -82,7 +83,10 @@ DE.UI.Intro = (function () {
   }
   /** Below the hatch: earth, a ladder shaft, two dark rooms (the game's own room art). */
   function below() {
-    let s = `<div class="in-earth"></div><div class="in-shaft"><i></i></div>`;
+    // the shaft: a ladder seen from the side (rail and rung stubs, the climbers face it), the light that
+    // falls in through the opened hatch with dust drifting in it, a wall lamp, a vent fan in the corridor
+    let s = `<div class="in-earth"></div><div class="in-shaft"><i></i><b class="in-beam"></b><span class="in-motes">${Array.from({ length: 9 }, (_, i) => `<u style="left:${8 + (i * 23) % 74}px;animation-delay:-${(i * 1.3).toFixed(1)}s;animation-duration:${(6 + (i % 4)).toFixed(0)}s"></u>`).join('')}</span><em class="in-lamp"></em></div>`
+      + `<div class="in-fan"><i></i></div>`;
     const room = (type, x, w) => { const def = DE.Data.ROOMS[type]; return `<div class="in-room" style="left:${x}px;width:${w}px">${DE.Scenes.render({ type, level: 1, construction: null }, def, null)}<div class="in-dark"></div></div>`; };
     s += `<div class="in-corr"></div>` + room('quarters', 140, 400) + room('generator', 660, 200) + room('farm', 870, 200);
     return s;
@@ -168,26 +172,45 @@ DE.UI.Intro = (function () {
     at(17000, () => { P.forEach((p, i) => setAnim(p, i === 0 ? 'repair' : 'idle')); camera(3600, 350, 1.55, 1.6); });
     at(17300, () => { root.querySelector('.in-wheel').classList.add('turn'); sfx('ratchet'); });
     at(18100, () => sfx('ratchet')); at(18800, () => sfx('clank'));
-    at(19300, () => { root.querySelector('.in-door').classList.add('open'); root.querySelector('.in-spill').classList.add('on'); sfx('creak'); P.forEach(p => setAnim(p, 'idle')); });
+    at(19300, () => { root.querySelector('.in-door').classList.add('open'); root.querySelector('.in-spill').classList.add('on'); root.classList.add('opened'); sfx('creak'); P.forEach(p => setAnim(p, 'idle')); });
     // 4 · down into the dark (21-28s)
     at(21000, () => {
       caption('Below it: a shelter someone built for the end of the world.');
       camera(3600, 640, 1.15, 2.6);
       P.forEach((p, i) => { p.style.transition = 'opacity .4s'; p.style.opacity = '0'; });
     });
-    // inside, people are drawn at room scale; they climb down the ladder to the floor between the rooms
-    const FLOOR_Y = 1079, IH = 74;
+    // inside, people are drawn at room scale; one after the other they climb down the ladder, facing it,
+    // hand over hand and rung by rung, step off at the bottom and spread out between the rooms
+    const FLOOR_Y = 1079, IH = 74, TOP = 640, V = 80, CLIMB = (FLOOR_Y - TOP) / V, GAP = 1350;
     at(22600, () => {
-      P.forEach((p, i) => { const r = rigOf(p); r.style.height = IH + 'px'; r.style.width = Math.round(IH * 140 / 225) + 'px'; r.dataset.h = IH; p.style.transition = 'none'; p.style.left = '3600px'; p.style.top = (640 - IH) + 'px'; p.style.transform = 'none'; p.style.opacity = '1'; setAnim(p, 'idle'); });
-      P.forEach((p, i) => setTimeout(() => move(p, 0, FLOOR_Y - 640, 1.2, 'ease-in'), 200 + i * 520));
-      camera(3600, 930, 1.05, 3.4);
+      P.forEach(p => { const r = rigOf(p); r.style.height = IH + 'px'; r.style.width = Math.round(IH * 140 / 225) + 'px'; r.dataset.h = IH; p.style.transition = 'none'; p.style.left = '3600px'; p.style.top = (TOP - IH) + 'px'; p.style.transform = 'none'; p.style.opacity = '0'; r.classList.remove('flip'); });
+      camera(3600, 760, 1.3, 1.4);
+      setTimeout(() => camera(3600, 960, 1.08, CLIMB + 1.6, 'linear'), 1500);
     });
-    at(25000, () => P.forEach((p, i) => { const tx = [-300, -170, 190, 330][i]; setAnim(p, 'walk', 70); rigOf(p).classList.toggle('flip', tx < 0); move(p, tx, FLOOR_Y - 640, Math.abs(tx) / 110, 'linear'); setTimeout(() => setAnim(p, 'idle'), Math.abs(tx) / 110 * 1000); }));
-    root.querySelectorAll('.in-dark').forEach((d, i) => at(25400 + i * 650, () => { d.classList.add('on'); sfx('clank'); }));
-    // 5 · title (28.5s)
-    at(28500, () => { caption(''); root.querySelector('.in-cap').classList.remove('show'); root.classList.add('titled'); sfx('reveal'); });
-    at(36500, () => finish(false));
+    P.forEach((p, i) => {
+      const t0 = 23000 + i * GAP;
+      at(t0, () => { p.style.transition = 'opacity .25s'; p.style.opacity = '1'; setAnim(p, 'climb', V); setTimeout(() => move(p, 0, FLOOR_Y - TOP, CLIMB, 'linear'), 30); });
+      // a clink on the rungs for the first two climbers (the others are drowned out)
+      if (i < 2) for (let k = 0; k < Math.floor(CLIMB * V / 25); k += 2) at(t0 + 200 + k * 25 / V * 1000, () => sfx('rung', 60));
+      at(t0 + CLIMB * 1000 + 120, () => {
+        sfx('thud', 200); setAnim(p, 'idle');
+        const tx = [-300, -170, 190, 330][i];
+        setTimeout(() => { if (!running) return; setAnim(p, 'walk', 70); rigOf(p).classList.toggle('flip', tx < 0); move(p, tx, FLOOR_Y - TOP, Math.abs(tx) / 110, 'linear');
+          setTimeout(() => { if (running) setAnim(p, 'idle'); }, Math.abs(tx) / 110 * 1000); }, 350);
+      });
+    });
+    // the generator coughs into life, the rooms light up one by one, the fan starts turning
+    const lit = 23000 + 3 * GAP + CLIMB * 1000 + 900;
+    at(lit, () => { sfx('powerup'); root.classList.add('powered'); });
+    root.querySelectorAll('.in-dark').forEach((d, i) => at(lit + 500 + i * 650, () => { d.classList.add('on'); sfx('clank'); }));
+    at(lit + 2600, () => say(P[1], 'Whoa...'));
+    at(lit + 3600, () => say(P[0], 'Home, sweet home.'));
+    // 5 · title
+    at(lit + 5600, () => { caption(''); root.querySelector('.in-cap').classList.remove('show'); root.classList.add('titled'); sfx('reveal'); });
+    at(lit + 13600, () => finish(false));
   }
+  /** A little speech bubble over one of the cast. */
+  function say(el, text) { if (!el) return; const b = document.createElement('span'); b.className = 'say good'; b.textContent = text; el.appendChild(b); void b.offsetWidth; b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 2400); setTimeout(() => b.remove(), 2800); }
   function flash(o) { const f = root && root.querySelector('.in-flash'); if (!f) return; f.style.transition = 'none'; f.style.opacity = o; void f.offsetWidth; f.style.transition = 'opacity .6s'; f.style.opacity = 0; }
   function onKey(e) { if (e.key === 'Escape') finish(true); else if (e.key === 'Enter' && root && root.classList.contains('titled')) finish(false); }
   function finish(skipped) {

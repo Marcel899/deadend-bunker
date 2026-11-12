@@ -188,6 +188,24 @@ DE.UI.Anim = (function () {
     P.aB = -36 + 3 * kB; P.fB = -58 - 9 * kB;
     P.lL = 3; P.lR = -5; P.sR = 3;
   }
+  /** Climbing down a ladder seen from the side (the ladder in front of the character): the hands take
+   *  turns gripping the rail above the head and at the shoulder, the feet take turns on the rungs, and
+   *  the body drops one rung per beat. The element itself slides down at a steady speed (Anim.speed);
+   *  the pose turns that slide into rung-by-rung steps, so hands and feet never float. */
+  const RUNG = 25;   // rung spacing in the character's own world px
+  function climb(st, P) {
+    const v = speeds.get(st.el) || 0, H = st.h || 74, Tr = v > 0 ? RUNG / v : .7;
+    const ph = st.t / Tr, n = Math.floor(ph), f = ph - n, odd = n % 2 === 1;
+    const drop = smooth((f - .3) / .5);                 // the body drops onto the next rung mid-beat
+    const corr = v > 0 ? RUNG * (drop - f) : 0;         // steady slide → steps
+    const s = odd ? drop : 1 - drop;                    // which side reaches up (blends across the beat)
+    P.b2y = corr * 225 / H;
+    P.aF = -92 - 42 * s; P.fF = -28 + 14 * s;           // the near hand high on the rail, then at the shoulder
+    P.aB = -92 - 42 * (1 - s); P.fB = -28 + 14 * (1 - s);
+    P.lL = -16 - 40 * (1 - s); P.sL = 22 + 58 * (1 - s); // the opposite foot is up on a rung
+    P.lR = -16 - 40 * s; P.sR = 22 + 58 * s;
+    P.tr = 8; P.hr = 12 + 5 * sin(TAU * st.t / 2.3);     // close to the ladder, glancing down
+  }
   function cook(st, P) {
     // stirring the pot (the ladle goes round), a taste every few rounds
     const t = st.t, c = frac(t / 7 + st.seed * .1) * 7, w = TAU * t / 1.4;
@@ -291,6 +309,7 @@ DE.UI.Anim = (function () {
       case 'study': study(st, P); break;
       case 'operate': operate(st, P); break;
       case 'cook': cook(st, P); break;
+      case 'climb': climb(st, P); break;
       case 'eat': eat(st, P); break;
       case 'sleep': case 'heal': sleep(st, P); break;
       case 'guard': guard(st, P, false); break;

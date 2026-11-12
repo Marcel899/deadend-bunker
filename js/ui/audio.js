@@ -77,6 +77,11 @@ DE.Audio = (function () {
     boom: (t) => { noise(t, .9, .4, 600, .5, 'lowpass', 60); tone(70, t, .6, 'sine', .26, null, 30); },
     // a two-tone siren (triangle + a quiet square an octave up: present, not harsh)
     alarm: (t) => { for (let i = 0; i < 3; i++) { tone(620, t + i * .6, .3, 'triangle', .09, null, 880); tone(1240, t + i * .6, .3, 'square', .012, null, 1760); tone(880, t + i * .6 + .3, .3, 'triangle', .09, null, 620); } },
+    // the intro: a boot on a steel rung, a generator spinning up
+    rung: (t) => { tone(1250 + Math.random() * 150, t, .05, 'triangle', .025); noise(t, .04, .04, 2600, 3, 'bandpass'); },
+    powerup: (t) => { const o = ctx.createOscillator(), f = ctx.createBiquadFilter(), g = ctx.createGain(); o.type = 'sawtooth'; o.frequency.setValueAtTime(30, t); o.frequency.exponentialRampToValueAtTime(95, t + 1.6);
+      f.type = 'lowpass'; f.frequency.setValueAtTime(200, t); f.frequency.linearRampToValueAtTime(900, t + 1.6); g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(.08, t + .4); g.gain.setValueAtTime(.08, t + 1.5); g.gain.exponentialRampToValueAtTime(.0001, t + 2.4);
+      o.connect(f); f.connect(g); g.connect(out); o.start(t); o.stop(t + 2.5); noise(t, .12, .2, 400, .8, 'lowpass', 100); noise(t + .25, .1, .14, 400, .8, 'lowpass', 100); },
     // a distant rumble after a lightning flash
     thunder: (t) => { noise(t, 2.4, .22, 140, .6, 'lowpass', 50); noise(t + .1, .5, .12, 900, .7, 'lowpass', 200); tone(42, t, 1.8, 'sine', .08, null, 30); },
     // the dig site: a pick biting into rock, and the air drill's rattle
