@@ -325,7 +325,7 @@ DE.Chars = (function () {
     const leg = (side, x) => `<g transform="translate(${x} ${B.hip})"><g class="j j-leg${side}">${thigh(c, B.thigh, id)}<g transform="translate(0 ${B.thigh})"><g class="j j-shin${side}">${shin(c, B.shin, id)}</g></g></g></g>`;
     const arm = (side, x, held) => `<g transform="translate(${x} ${-L + B.shY})"><g class="j j-arm${side}">${upperArm(c, B.upper, id)}<g transform="translate(0 ${B.upper})"><g class="j j-fore${side}">${foreArm(c, B.fore, held, id, side)}</g></g></g></g>`;
     const parts = leg('L', -B.hipOff) + leg('R', B.hipOff)
-      + `<g transform="translate(0 ${B.hip})"><g class="j j-torso">${arm('B', -B.sh, null)}${torso(c, L, id)}${c.kind === 'crew' ? CRATE : ''}<g transform="translate(0 ${-L})"><g class="j j-head">${head(c, id)}</g></g>${arm('F', B.sh, it)}</g></g>`;
+      + `<g transform="translate(0 ${B.hip})"><g class="j j-torso">${arm('B', B.shB != null ? B.shB : -B.sh, null)}${torso(c, L, id)}${c.kind === 'crew' ? CRATE : ''}<g transform="translate(0 ${-L})"><g class="j j-head">${head(c, id)}</g></g>${arm('F', B.sh, it)}</g></g>`;
     const h = o.h || 48, w = Math.round(h * 140 / 225);
     const vars = Object.assign({}, c.vars || {});
     if (o.phase != null) vars['--ph'] = (-Math.abs(+o.phase || 0)).toFixed(2) + 's';
@@ -345,9 +345,10 @@ DE.Chars = (function () {
   }
 
   /* ---------- character tables (matched to the illustrated sheet) ---------- */
-  const Z = (x) => Object.assign({ kind: 'zombie', skin: SKIN.zombie, eyes: 'glow', mouth: 'open', angry: true, torn: true, boots: '#3a2a2a' }, x);
+  // zombies are turned toward their prey: the far shoulder sits near the front, so both arms reach out
+  const Z = (x) => Object.assign({ kind: 'zombie', skin: SKIN.zombie, eyes: 'glow', mouth: 'open', angry: true, torn: true, boots: '#3a2a2a' }, x, { body: Object.assign({ shB: 10 }, x.body || {}) });
   const C = (x) => Object.assign({ kind: 'crew', skin: SKIN.light, eyes: 'normal', mouth: 'smile', belt: true, boots: '#5a3a24', dirt: true }, x);
-  const BIG = { hip: -60, neck: -122, sh: 42, shY: 10, hipOff: 19, thigh: 30, shin: 27, upper: 31, fore: 30 };
+  const BIG = { hip: -60, neck: -122, sh: 42, shB: 14, shY: 10, hipOff: 19, thigh: 30, shin: 27, upper: 31, fore: 30 };
   const ZOMBIES = {
     walker:  Z({ name: 'Walker', hair: { style: 'bald' }, shirt: '#e9e4dc', pants: '#3f4f72', ribs: true, drip: true, vars: { '--t': '1.5s', '--la': '15deg', '--aa': '9deg', '--bob': '4px' } }),
     runner:  Z({ name: 'Runner', skin: SKIN.pale, hair: { style: 'messy', color: '#2d1e22' }, shirt: '#3a2f33', jacket: { color: '#c73a3a', lapel: '#8f2626', pocket: true, hood: true }, sleeve: '#c73a3a', pants: '#2e3a4e', boots: '#a0303a', hold: 'flail', vars: { '--t': '.62s', '--la': '30deg', '--aa': '34deg', '--bob': '8px' } }),

@@ -27,8 +27,8 @@
 .rig.hold-hang { --uaF: 2deg; --faF: -4deg; }
 .rig.hold-torch { --uaF: -14deg; --faF: -56deg; --aak: .35; }
 .rig.hold-board { --uaF: -6deg; --faF: -100deg; --aak: .3; }
-.rig.hold-reach { --uaF: -64deg; --faF: -20deg; --uaB: -72deg; --faB: -16deg; --aak: .6; }
-.rig.hold-heavy { --uaF: -12deg; --faF: -28deg; --uaB: -20deg; --faB: -24deg; }
+.rig.hold-reach { --uaF: -60deg; --faF: -26deg; --uaB: -96deg; --faB: -8deg; --aak: .6; }
+.rig.hold-heavy { --uaF: -12deg; --faF: -28deg; --uaB: -44deg; --faB: -30deg; }
 .rig.hold-hunch { --uaF: -22deg; --faF: -12deg; --uaB: -28deg; --faB: -10deg; --lean: 12deg; }
 .rig.hold-cast { --uaF: -98deg; --faF: -36deg; --uaB: -112deg; --faB: -30deg; --aak: .4; }
 .rig.hold-pounce { --uaF: -78deg; --faF: -52deg; --uaB: -88deg; --faB: -46deg; }
