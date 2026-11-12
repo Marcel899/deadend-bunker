@@ -77,7 +77,7 @@ DE.UI.Anim = (function () {
     legs(P, p, A, st.zombie ? 34 : 52, st.zombie && !st.big);
     P.b2y = -st.bob * (1 - cos(2 * TAU * p)) / 2;
     if (st.zombie) {
-      P.tr = H.lean + 6 + 4 * sin(TAU * p); P.hr = -5 + 9 * sin(TAU * p + 1) + 2 * wander(st.t, st.seed);
+      P.tr = H.lean + 9 + 4 * sin(TAU * p); P.hr = 2 + 8 * sin(TAU * p + 1) + 2 * wander(st.t, st.seed);
       P.aF = H.uaF - 6 * H.k * cos(TAU * p); P.aB = H.uaB + 6 * H.k * cos(TAU * p);
       P.fF = H.faF - 4 - 7 * sin(2 * TAU * p); P.fB = H.faB - 4 - 7 * sin(2 * TAU * p + 1);
       if (!st.big) P.b2y += 2 * bump(p, .6, .07);   // the dragged leg makes it dip
@@ -101,7 +101,7 @@ DE.UI.Anim = (function () {
     const H = st.H, t = st.t, b = (1 - cos(TAU * t / 3.9)) / 2;
     if (st.zombie) {
       const s = (1 + sin(TAU * t / 3.6)) / 2;
-      P.tr = H.lean + 3 + 5 * s; P.hr = -9 + 15 * (1 + sin(TAU * t / 3.6 + 1.2)) / 2 + 2 * wander(t, st.seed);
+      P.tr = H.lean + 6 + 5 * s; P.hr = -4 + 14 * (1 + sin(TAU * t / 3.6 + 1.2)) / 2 + 2 * wander(t, st.seed);
       P.aF = H.uaF + 7 * H.k * sin(TAU * t / 3.6); P.aB = H.uaB - 7 * H.k * sin(TAU * t / 3.6 + .6);
       P.fF = H.faF - 5 * sin(TAU * t / 1.8); P.fB = H.faB - 5 * sin(TAU * t / 1.8 + 1); P.b2y = 1.2 * s;
       return;

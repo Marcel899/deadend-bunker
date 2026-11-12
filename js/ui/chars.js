@@ -71,7 +71,7 @@ DE.Chars = (function () {
   /* ---------- head ---------- */
   // pivot at the neck; face centred at (0,-44)
   function head(c, id) {
-    const cy = -44, rx = c.headW || 36, ry = c.headH || 40;
+    const cy = -44, rx = c.headW || 34, ry = c.headH || 38;
     let s = '';
     if (c.hat && c.hat.type === 'hood') {
       // the hood hangs behind the head; the face shows in its dark opening
@@ -113,9 +113,9 @@ DE.Chars = (function () {
     } else if (eye === 'visor') {
       s += `<path d="M-28 ${ey - 12} h56 v22 q0 6 -6 6 h-44 q-6 0 -6 -6 z" fill="#1d1a26" ${sw}/><path d="M-22 ${ey - 6} h18" stroke="#6d6a86" stroke-width="3"/><ellipse cx="-10" cy="${ey + 1}" rx="5" ry="3" fill="#f3e36a" opacity=".75"/><ellipse cx="12" cy="${ey + 1}" rx="5" ry="3" fill="#f3e36a" opacity=".75"/>`;
     } else if (eye === 'glow' || eye === 'greenglow') {
-      const col = eye === 'greenglow' ? '#7dff5a' : '#f3e36a', ry = c.angry ? 6.5 : 8;
-      s += `<g class="z-eyes"><ellipse cx="-12" cy="${ey}" rx="12" ry="10" fill="${col}" opacity=".25"/><ellipse cx="12" cy="${ey}" rx="12" ry="10" fill="${col}" opacity=".25"/>`;
-      s += `<ellipse cx="-12" cy="${ey}" rx="7.5" ry="${ry}" fill="${col}" ${sw3}/><ellipse cx="12" cy="${ey}" rx="7.5" ry="${ry}" fill="${col}" ${sw3}/><circle cx="-11" cy="${ey + 1}" r="2.3" fill="#2a1a24"/><circle cx="13" cy="${ey + 1}" r="2.3" fill="#2a1a24"/><circle cx="-14" cy="${ey - 2.5}" r="1.4" fill="#fff" opacity=".85"/><circle cx="10" cy="${ey - 2.5}" r="1.4" fill="#fff" opacity=".85"/></g>`;
+      const col = eye === 'greenglow' ? '#7dff5a' : '#f3e36a', ry = c.angry ? 5.6 : 7;
+      s += `<g class="z-eyes"><ellipse cx="-12" cy="${ey}" rx="11" ry="9" fill="#1a0e14" opacity=".45"/><ellipse cx="12" cy="${ey}" rx="11" ry="9" fill="#1a0e14" opacity=".45"/><ellipse cx="-12" cy="${ey}" rx="11" ry="9" fill="${col}" opacity=".18"/><ellipse cx="12" cy="${ey}" rx="11" ry="9" fill="${col}" opacity=".18"/>`;
+      s += `<ellipse cx="-12" cy="${ey}" rx="7" ry="${ry}" fill="${col}" ${sw3}/><ellipse cx="12" cy="${ey}" rx="7" ry="${ry}" fill="${col}" ${sw3}/><path d="M-20 ${ey - ry + 1} L-4 ${ey - 1} M20 ${ey - ry + 1} L4 ${ey - 1}" ${thin(INK, 3.2)}/><circle cx="-10.5" cy="${ey + .5}" r="1.8" fill="#2a1a24"/><circle cx="13.5" cy="${ey + .5}" r="1.8" fill="#2a1a24"/><circle cx="-13" cy="${ey - 1.6}" r="1.1" fill="#fff" opacity=".8"/><circle cx="11" cy="${ey - 1.6}" r="1.1" fill="#fff" opacity=".8"/></g>`;
     } else {
       // survivors: dark irises with a glint in small whites — reads as eyes (not goggles) at any size
       const ic = c.eyeColor || '#2b1d22', px = c.look == null ? 1.6 : c.look, lid = dark(c.skin[1], .45);
@@ -191,11 +191,11 @@ DE.Chars = (function () {
 
   /* ---------- torso: pivot at the hips (0,0), neck at (0,-L) ---------- */
   function torso(c, L, id) {
-    const ws = c.shoulderW || 30, wh = c.hipW || 24;
+    const ws = c.shoulderW || 31, wh = c.hipW || 25;
     const body = `M${-wh} 2 L${-ws} ${-L + 10} q0 -10 10 -10 h${ws * 2 - 20} q10 0 10 10 L${wh} 2 z`;
     let s = '';
     if (c.robe) s += `<path d="M${-wh - 10} 44 q${wh + 10} 8 ${wh * 2 + 20} 0 L${wh + 2} -4 h${-(wh * 2 + 4)} z" fill="${F(id, 'robe')}" ${sw}/><path d="M${-wh - 4} 40 q-2 -20 2 -40 M${wh + 4} 40 q2 -20 -2 -40 M0 4 v40" ${thin(dark(c.robe, .35), 2.5)} opacity=".6"/>`;
-    s += `<path d="${body}" fill="${F(id, 'shirt')}" ${sw}/>`;
+    s += `<path d="${body}" fill="${F(id, 'shirt')}" ${sw}/><path d="M${-wh + 2} 0 L${-ws + 2} ${-L + 10} q0 -7 7 -7 h6 L${-wh + 12} 0 z" fill="#000" opacity=".13"/>`;
     s += `<path d="M${-ws + 8} ${-L + 14} q-2 ${L * .5} 4 ${L - 16}" ${thin(dark(c.shirt, .3), 2.5)} opacity=".5"/><path d="M${ws - 8} ${-L + 14} q2 ${L * .5} -4 ${L - 16}" ${thin(light(c.shirt, .3), 2)} opacity=".45"/>`;
     if (c.belly) s += `<ellipse cx="2" cy="${-L * .42}" rx="${ws - 2}" ry="${L * .36}" fill="${F(id, 'shirt')}" ${sw}/><path d="M-12 ${-L * .3} q14 8 28 0" ${thin(dark(c.shirt, .35), 2.5)} opacity=".6"/><path d="M-6 ${-L * .6} q8 -4 16 0" ${thin(light(c.shirt, .4), 3)} opacity=".5"/><circle cx="4" cy="${-L * .28}" r="2.5" fill="${dark(c.shirt, .4)}"/><ellipse cx="-10" cy="${-L * .55}" rx="7" ry="5" fill="#6b4a2a" opacity=".35"/>`;
     if (c.torn) s += `<path d="M${-wh + 4} 0 l6 -8 l5 8 l6 -10 l6 10 l5 -8 l6 8" fill="${F(id, 'skin')}" stroke="none"/><path d="M${-wh + 4} 0 l6 -8 l5 8 l6 -10 l6 10 l5 -8 l6 8" fill="none" ${sw2}/><ellipse cx="-8" cy="${-L * .5}" rx="6" ry="4" fill="#7a1f2a" opacity=".55"/><ellipse cx="10" cy="${-L * .3}" rx="4" ry="6" fill="#7a1f2a" opacity=".45"/><path d="M${ws - 14} ${-L + 16} l6 8 l-8 2" fill="${F(id, 'skin')}" ${sw2}/>`;
@@ -233,7 +233,7 @@ DE.Chars = (function () {
   // upper arm: pivot at the shoulder, elbow at (0,len)
   function upperArm(c, len, id) {
     const base = c.sleeve || c.shirt;
-    let s = `<path d="M-7.5 -4 h15 v${len + 4} a7.5 7.5 0 0 1 -15 0 z" fill="${c.sleeveShort ? F(id, 'skin') : sleeve(c, id)}" ${sw}/>`;
+    let s = `<path d="M-7.5 -4 h15 v${len + 4} a7.5 7.5 0 0 1 -15 0 z" fill="${c.sleeveShort ? F(id, 'skin') : sleeve(c, id)}" ${sw}/><path d="M-5.5 -2 h4.5 v${len + 3} q-4.5 -1 -4.5 -4 z" fill="#000" opacity=".14"/>`;
     if (c.sleeveShort) s += `<path d="M-7.5 -4 h15 v${len * .5} q-7.5 4 -15 0 z" fill="${sleeve(c, id)}" ${sw}/>`;
     else s += `<path d="M-3.5 2 q-1 ${len * .5} 0 ${len}" ${thin(dark(base, .35), 2)} opacity=".45"/><path d="M4 3 q1 ${len * .4} 0 ${len - 4}" ${thin(light(base, .35), 1.6)} opacity=".45"/>`;
     if (c.pads) s += `<path d="M-10 -6 h20 v13 q-10 6 -20 0 z" fill="#3a3845" ${sw3}/><path d="M-6 0 h12" ${thin('#56546a', 2)}/>`;
@@ -243,13 +243,13 @@ DE.Chars = (function () {
   // forearm: pivot at the elbow, hand at (0,len); items are drawn in the hand's frame
   function foreArm(c, len, it, id, side) {
     const base = c.sleeve || c.shirt, bare = c.sleeveShort || c.bareArms;
-    let s = `<path d="M-7 0 a7 7 0 0 1 14 0 v${len - 7} q0 6 -7 6 q-7 0 -7 -6 z" fill="${bare ? F(id, 'skin') : sleeve(c, id)}" ${sw}/>`;
+    let s = `<path d="M-7 0 a7 7 0 0 1 14 0 v${len - 7} q0 6 -7 6 q-7 0 -7 -6 z" fill="${bare ? F(id, 'skin') : sleeve(c, id)}" ${sw}/><path d="M-5 2 h4 v${len - 9} h-4 z" fill="#000" opacity=".14"/><path d="M4.5 3 v${len - 12}" ${thin('#fff', 1.6)} opacity=".18"/>`;
     if (!bare) s += `<path d="M-6.5 ${len - 8} h13" ${thin(dark(base, .4), 3)} opacity=".55"/>`;
     if (c.boneArm) s += `<path d="M-7 ${len * .25} h14 v${len * .3} h-14 z" fill="#efe6d0" ${sw2}/><path d="M-3 ${len * .3} v${len * .2} M3 ${len * .3} v${len * .2}" ${thin(INK, 1.2)} opacity=".6"/>`;
     if (c.wristband) s += `<path d="M-7 ${len - 7} h14" ${thin(c.wristband, 5)}/>`;
     const hc = c.gloves || c.skin[0], hcd = c.gloves ? dark(c.gloves, .35) : c.skin[1];
     // a mitten hand: palm, thumb on the +x side, two finger creases
-    s += `<ellipse cx="6.5" cy="${len - 2}" rx="4.2" ry="4.8" fill="${hc}" ${sw3}/><ellipse cx="0" cy="${len + 1}" rx="8.2" ry="9" fill="${hc}" ${sw}/><path d="M-5.5 ${len + 1} q2.5 3 6 3 M-4.5 ${len + 5} q2.5 2.5 5.5 2.5" ${thin(hcd, 1.7)} opacity=".8"/><path d="M-3 ${len - 5} q3 -2 6 0" ${thin(light(hc, .4), 2)} opacity=".7"/>`;
+    s += `<ellipse cx="7" cy="${len - 2}" rx="4.6" ry="5.2" fill="${hc}" ${sw3}/><ellipse cx="0" cy="${len + 1}" rx="9" ry="9.8" fill="${hc}" ${sw}/><path d="M-6 ${len - 2} q-1 6 3 9" ${thin(hcd, 2.2)} opacity=".5"/><path d="M-5.5 ${len + 1} q2.5 3 6 3 M-4.5 ${len + 5} q2.5 2.5 5.5 2.5" ${thin(hcd, 1.7)} opacity=".8"/><path d="M-3 ${len - 5} q3 -2 6 0" ${thin(light(hc, .4), 2)} opacity=".7"/>`;
     if (c.claws) s += `<path d="M-8 ${len + 4} l-5 11 M-2 ${len + 8} l-1 12 M5 ${len + 7} l4 11" ${thin(INK, 3.5)}/><path d="M-8 ${len + 4} l-5 11 M-2 ${len + 8} l-1 12 M5 ${len + 7} l4 11" ${thin('#efe6d0', 1.8)}/>`;
     if (c.glowHands) s += `<circle class="orb" cx="0" cy="${len + 2}" r="16" fill="${F(id, 'glow')}" stroke="none"/><circle cx="0" cy="${len + 2}" r="7" fill="#c9ffb8" stroke="#2f8a2a" stroke-width="2"/><circle cx="-2" cy="${len}" r="2" fill="#fff"/>`;
     if (it) s += `<g class="item">${item(it, len)}</g>`;
@@ -258,18 +258,18 @@ DE.Chars = (function () {
   }
   // thigh: pivot at the hip, knee at (0,len)
   function thigh(c, len, id) {
-    let s = `<path d="M-8.5 -4 h17 v${len + 4} a8.5 8.5 0 0 1 -17 0 z" fill="${F(id, 'pants')}" ${sw}/>`;
+    let s = `<path d="M-8.5 -4 h17 v${len + 4} a8.5 8.5 0 0 1 -17 0 z" fill="${F(id, 'pants')}" ${sw}/><path d="M-6.5 -2 h5 v${len + 3} q-5 -1 -5 -4 z" fill="#000" opacity=".15"/>`;
     s += `<path d="M-4 2 q-1 ${len * .5} 0 ${len}" ${thin(dark(c.pants, .35), 2)} opacity=".45"/><path d="M4.5 3 q1 ${len * .4} 0 ${len - 4}" ${thin(light(c.pants, .3), 1.6)} opacity=".35"/>`;
     return s;
   }
   // shin: pivot at the knee; boot sole at (0,len+1), toes pointing +x (the way the figure faces)
   function shin(c, len, id) {
-    let s = `<path d="M-8 0 a8 8 0 0 1 16 0 v${len - 8} h-16 z" fill="${F(id, 'pants')}" ${sw}/>`;
+    let s = `<path d="M-8 0 a8 8 0 0 1 16 0 v${len - 8} h-16 z" fill="${F(id, 'pants')}" ${sw}/><path d="M-6 2 h4.5 v${len - 11} h-4.5 z" fill="#000" opacity=".15"/>`;
     if (c.kneepads) s += `<path d="M-9.5 -6 h19 v11 q-9.5 5 -19 0 z" fill="#2a2a2a" ${sw2}/><path d="M-5 -2 h10" ${thin('#4a4a4a', 2)}/>`;
     if (c.torn) s += `<path d="M-8 ${len - 10} l4 -8 l4 8 l4 -10 l4 10" fill="${F(id, 'skin')}" stroke="none"/><path d="M-8 ${len - 10} l4 -8 l4 8 l4 -10 l4 10" fill="none" ${sw2}/><path d="M-5 ${len * .35} l3 4" ${thin('#5b2a2a', 2.5)} opacity=".7"/>`;
-    s += `<path d="M10 ${len - 12} h-20 v10 q0 6 6 6 h22 q5 0 5 -5 q0 -11 -13 -11 z" fill="${F(id, 'boots')}" ${sw}/><path d="M22 ${len + 1} h-32" ${thin(dark(c.boots, .5), 3)}/>`;
-    s += `<path d="M6 ${len - 9} l-6 2 M6 ${len - 5} l-6 2" ${thin(light(c.boots, .5), 1.8)} opacity=".8"/><path d="M-4 ${len - 10} q6 -2 12 0" ${thin(light(c.boots, .35), 2)} opacity=".5"/>`;
-    if (c.sneakers) s += `<path d="M19 ${len - 1} h-28" stroke="#fff" stroke-width="3"/><circle cx="14" cy="${len - 5}" r="2" fill="#fff"/>`;
+    s += `<path d="M11 ${len - 15} h-22 v13 q0 3 3 3 h28 q5 0 5 -5 q0 -11 -14 -11 z" fill="${F(id, 'boots')}" ${sw}/><path d="M25 ${len + 1} h-35" ${thin(dark(c.boots, .55), 3.5)}/>`;
+    s += `<path d="M14 ${len - 10} q6 0 9 4" ${thin(light(c.boots, .45), 2.4)} opacity=".7"/><path d="M6 ${len - 11} l-6 2 M6 ${len - 7} l-6 2" ${thin(light(c.boots, .5), 1.8)} opacity=".75"/><path d="M-9 ${len - 13} h4 v12 h-4 z" fill="#000" opacity=".16"/>`;
+    if (c.sneakers) s += `<path d="M22 ${len - 1} h-31" stroke="#fff" stroke-width="3"/><circle cx="17" cy="${len - 6}" r="2.2" fill="#fff"/>`;
     return s;
   }
 
@@ -328,7 +328,7 @@ DE.Chars = (function () {
   const CRATE = `<g class="crate"><rect x="8" y="-46" width="42" height="34" rx="3" fill="#b0824e" ${sw}/><path d="M10 -29 h38 M29 -45 v32" stroke="#7a5230" stroke-width="3"/><path d="M12 -43 l34 28" stroke="#7a5230" stroke-width="2.5" opacity=".6"/><path d="M11 -43 h36" ${thin('#dcb27c', 2)} opacity=".8"/><rect x="22" y="-38" width="14" height="6" rx="1" fill="#e9dcc0" opacity=".85"/></g>`;
 
   /* ---------- assemble ---------- */
-  const BODY = { hip: -52, neck: -104, sh: 24, shY: 6, hipOff: 11, thigh: 26, shin: 24, upper: 22, fore: 21 };
+  const BODY = { hip: -56, neck: -110, sh: 25, shY: 6, hipOff: 11.5, thigh: 28, shin: 26, upper: 23, fore: 22 };
   function rig(id, o) {
     o = o || {}; const c = ALL[id]; if (!c) return '';
     const B = Object.assign({}, BODY, c.body || {}), L = B.hip - B.neck;
@@ -362,7 +362,7 @@ DE.Chars = (function () {
 
   /* ---------- character tables (matched to the illustrated sheet) ---------- */
   // zombies are turned toward their prey: the far shoulder sits near the front, so both arms reach out
-  const Z = (x) => Object.assign({ kind: 'zombie', skin: SKIN.zombie, eyes: 'glow', mouth: 'open', angry: true, torn: true, boots: '#3a2a2a' }, x, { body: Object.assign({ shB: 10 }, x.body || {}) });
+  const Z = (x) => Object.assign({ kind: 'zombie', skin: SKIN.zombie, eyes: 'glow', mouth: 'open', angry: true, torn: true, boots: '#3a2a2a' }, x, { body: Object.assign({ shB: 10, upper: 25, fore: 25 }, x.body || {}) });
   const C = (x) => Object.assign({ kind: 'crew', skin: SKIN.light, eyes: 'normal', mouth: 'smile', belt: true, boots: '#5a3a24', dirt: true }, x);
   const BIG = { hip: -60, neck: -122, sh: 42, shB: 14, shY: 10, hipOff: 19, thigh: 30, shin: 27, upper: 31, fore: 30 };
   const ZOMBIES = {
