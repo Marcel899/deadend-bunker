@@ -35,3 +35,7 @@
 .rig-scout .beam { animation: ri-beam 2.6s ease-in-out infinite; } @keyframes ri-beam { 50% { opacity: .1; } }
 
 body.no-anim .rig *, body.no-anim .rig { animation: none !important; }
+/* room tools in the front hand (js/ui/chars.js), shown by the job animation */
+.rig .trowel, .rig .clip, .rig .ladle { display: none; }
+.rig.a-farm .trowel, .rig.a-study .clip, .rig.a-cook .ladle { display: inline; }
+.rig.a-farm .item, .rig.a-study .item, .rig.a-operate .item, .rig.a-cook .item { display: none; }

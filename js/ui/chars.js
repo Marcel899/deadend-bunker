@@ -255,6 +255,10 @@ DE.Chars = (function () {
     if (it) s += `<g class="item">${item(it, len)}</g>`;
     if (side === 'F' && c.kind === 'crew') s += `<g class="hammer" transform="translate(0 ${len})"><rect x="-3.5" y="-4" width="7" height="32" rx="3" fill="#8a5a32" ${sw3}/><path d="M-14 24 h24 q5 0 5 5 v5 q0 5 -5 5 h-24 z" fill="#6e717b" ${sw3}/><path d="M-11 28 h19" ${thin('#b9bcc6', 2)}/></g>`
       // a pickaxe for the mining crew (shown by .a-dig): long haft through the fist, a curved double pick
+      // room tools: a trowel (.a-farm), a clipboard (.a-study, held upright when raised to read), a ladle (.a-cook)
+      + `<g class="trowel" transform="translate(0 ${len})"><rect x="-2.6" y="-4" width="5.2" height="16" rx="2.4" fill="#8a5a32" ${sw3}/><path d="M-6.5 11 h13 l-2.5 15 q-4 6 -8 0 z" fill="#a9adb8" ${sw3}/><path d="M0 13 v10" ${thin('#e0e3ea', 1.6)}/></g>`
+      + `<g class="clip" transform="translate(0 ${len}) rotate(118)"><rect x="-12" y="-17" width="24" height="31" rx="2.5" fill="#a87a48" ${sw3}/><rect x="-9" y="-12" width="18" height="23" fill="#f4efe2" stroke="${INK}" stroke-width="1.5"/><rect x="-5" y="-19" width="10" height="5" rx="1.5" fill="#8a8e98" ${sw3}/><path d="M-6 -6 h12 M-6 -1 h12 M-6 4 h8" ${thin('#8a8494', 1.4)}/></g>`
+      + `<g class="ladle" transform="translate(0 ${len})"><rect x="-2" y="-6" width="4" height="34" rx="2" fill="#c9ccd4" ${sw3}/><path d="M-9 27 h18 q0 11 -9 11 q-9 0 -9 -11 z" fill="#b9bcc6" ${sw3}/></g>`
       + `<g class="pick" transform="translate(0 ${len})"><rect x="-3.5" y="-10" width="7" height="60" rx="3" fill="#8a5a32" ${sw3}/><path d="M-1.5 -6 v50" ${thin('#b07a42', 1.8)}/><path d="M-32 52 q32 -24 64 0 l-4 6 q-28 -15 -56 0 z" fill="#8a8e98" ${sw3}/><path d="M-7 45 h14 v11 h-14 z" fill="#5a5f6a" ${sw3}/><path d="M-22 47 q22 -12 44 0" ${thin('#d0d3dc', 2)}/></g>`;
     return s;
   }

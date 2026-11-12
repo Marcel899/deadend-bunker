@@ -49,7 +49,7 @@ DE.UI.Actors = (function () {
         spread = [0, -16, 16][k % 3] + (k >= 3 ? 6 : 0);
       }
       const sx = list[idx % list.length] + spread + (idx >= list.length ? 12 * Math.floor(idx / list.length) : 0);
-      return { room: roomId, kind, anim: kind === 'work' ? roomAnim(def, room) : anim, sx, size: def.size };
+      return { room: roomId, kind, anim: kind === 'work' ? roomAnim(def, room, idx) : anim, sx, size: def.size };
     }
     // nowhere to go: hang around the elevator landing on the top floor (never sleeping on the floor)
     return { room: null, kind, anim: 'idle', floor: 1, sx: null };
@@ -74,8 +74,20 @@ DE.UI.Actors = (function () {
     const cor = fl && fl.querySelector('.corridor'), y = cor ? cor.getBoundingClientRect().bottom - base.top - 6 : r.bottom - base.top - 22;
     return { x: r.left - base.left + sx, y, floor: fl ? +fl.dataset.depth : 0 };
   }
-  function roomAnim(def, room) {
+  /* the jobs a room's workers do; several entries are handed out by station, so a crew does not move
+     in lockstep (one at the console, one with the hammer) */
+  const ROOM_ANIM = {
+    farm: ['farm'], greenhouse: ['farm'], hydroponics: ['farm', 'work'], mushroom: ['farm', 'carry'],
+    lab: ['study', 'operate'], medresearch: ['study'], chemlab: ['study', 'work'], museum: ['study', 'interact'],
+    radio: ['operate'], comms: ['operate'], signal: ['operate'], security: ['operate'],
+    generator: ['repair', 'operate'], water: ['operate', 'repair'], purification: ['operate', 'repair'], reservoir: ['operate', 'carry'], aquifer: ['operate', 'repair'],
+    condenser: ['operate'], geothermal: ['operate', 'repair'], reactor: ['operate'], fusion: ['operate'], solar: ['operate', 'repair'],
+    workshop: ['repair', 'work'], advworkshop: ['repair', 'operate'], smelter: ['repair', 'operate'],
+    kitchen: ['cook'], cafeteria: ['cook', 'interact'],
+  };
+  function roomAnim(def, room, idx) {
     if (room.construction) return 'repair';
+    const list = ROOM_ANIM[def.id]; if (list) return list[(idx || 0) % list.length];
     if (def.category === 'housing' || ['cafeteria', 'kitchen', 'medbay', 'infirmary', 'hospital', 'radio', 'comms', 'quarantine', 'bioeng', 'medresearch'].includes(def.id)) return 'interact';
     if (['storage', 'coldstorage', 'cache', 'garage', 'dronehangar', 'recycling'].includes(def.id)) return 'carry';
     if (['workshop', 'advworkshop', 'generator', 'refinery', 'geothermal', 'vehicleshop', 'reactor', 'fusion', 'autoplant', 'ammofactory', 'heavyweapons', 'concrete', 'water', 'purification', 'reservoir', 'aquifer', 'orevein'].includes(def.id)) return 'repair';

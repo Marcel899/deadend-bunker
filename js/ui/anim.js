@@ -7,7 +7,8 @@
  *    few frames a second, which keeps scrolling on an iPad smooth;
  *  - it behaves identically in every browser (no var()/calc() inside @keyframes).
  * The animation is still picked with a class on the <svg> (a-idle, a-walk, a-run, a-work, a-repair,
- * a-carry, a-interact, a-eat, a-sleep, a-heal, a-guard, a-shoot, a-attack, a-hit, a-die, and for the
+ * a-carry, a-interact, a-eat, a-sleep, a-heal, a-guard, a-shoot, a-attack, a-hit, a-die, the room jobs
+ * a-farm (trowel), a-study (clipboard), a-operate (console), a-cook (ladle), and for the
  * mining crew a-dig, a-haul (walking with a basket of rocks), a-push (a wheelbarrow)); the rig's
  * build and gait come from its data-* attributes, its arm rest pose from DE.Chars.pose(hold). */
 var DE = globalThis.DE = globalThis.DE || {};
@@ -152,6 +153,47 @@ DE.UI.Anim = (function () {
     P.tr = 18 - 26 * up + 4 * hit - 4 * pull; P.hr = 8 - 14 * up;
     P.b2y = 4 + 2.5 * hit - 2 * up; P.lL = 14; P.sL = 12; P.lR = -18; P.sR = 16;
   }
+  function farm(st, P) {
+    // crouched over the beds working the soil with a trowel; now and then up to stretch and wipe the brow
+    const t = st.t, c = frac(t / 8 + st.seed * .07) * 8;
+    const up = c < 6 ? 0 : c < 6.5 ? smooth((c - 6) / .5) : c < 7.5 ? 1 : 1 - smooth((c - 7.5) / .5), down = 1 - up;
+    const jab = down * Math.pow(max(0, sin(TAU * t / .9 + st.seed)), 3);
+    P.b2y = 12 * down; P.lL = -44 * down; P.sL = 82 * down; P.lR = -22 * down + 3 * up; P.sR = 54 * down;
+    P.tr = 17 * down + 1 * up; P.hr = 12 * down - 8 * up + 2 * wander(t * .7, st.seed);
+    P.aF = -16 * down - 8 * jab - 4 * up; P.fF = -34 * down + 22 * jab - 12 * up;
+    const wipe = up * sin(TAU * t * 1.6) * 8;
+    P.aB = -34 * down - 128 * up; P.fB = -32 * down - 96 * up + wipe;
+  }
+  function study(st, P) {
+    // over the bench (samples, microscope), then notes on the clipboard; every third time a "got it!" finger
+    const t = st.t, n = Math.floor(t / 7 + st.seed), c = frac(t / 7 + st.seed) * 7;
+    const notes = c < 3.6 ? 0 : c < 4 ? smooth((c - 3.6) / .4) : c < 6.6 ? 1 : 1 - smooth((c - 6.6) / .4), bench = 1 - notes;
+    const fid = wander(t * 2.4, st.seed);
+    P.tr = 16 * bench + 3 * notes; P.hr = 18 * bench + 9 * notes + 2 * fid * bench;
+    P.aF = -16 * bench - 34 * notes; P.fF = -18 * bench - 84 * notes;                        // clipboard: down by the side, then up to read
+    P.aB = (-42 + 3 * fid) * bench - 30 * notes; P.fB = (-40 + 6 * wander(t * 3, st.seed + 1)) * bench + (-92 + 3 * sin(TAU * t * 2.6)) * notes;
+    if (n % 3 === 0) { const e = smooth((c - 4.5) / .25) * (1 - smooth((c - 5.4) / .3)); P.aB -= 96 * e; P.fB += 44 * e; P.hr -= 12 * e; P.b2y -= 2 * e; }
+    P.lL = 4; P.lR = -6; P.sR = 4;
+  }
+  function operate(st, P) {
+    // at a console: quick keys with both hands, a look up at the screen, now and then a lever pulled down
+    const t = st.t, c = frac(t / 6 + st.seed * .1) * 6;
+    const lift = c > 4.4 && c < 5.1 ? smooth((c - 4.4) / .7) : c >= 5.1 && c < 5.9 ? 1 - smooth((c - 5.1) / .8) : 0;
+    const kF = max(0, sin(TAU * t * 2.7 + st.seed)), kB = max(0, sin(TAU * t * 2.3 + st.seed + 1.7)), keys = 1 - lift;
+    P.tr = 7 - 3 * lift; P.hr = -4 + 3 * wander(t * .8, st.seed) - 8 * lift;
+    P.aF = (-40 + 3 * kF) * keys - 112 * lift; P.fF = (-56 - 9 * kF) * keys - 30 * lift;
+    P.aB = -36 + 3 * kB; P.fB = -58 - 9 * kB;
+    P.lL = 3; P.lR = -5; P.sR = 3;
+  }
+  function cook(st, P) {
+    // stirring the pot (the ladle goes round), a taste every few rounds
+    const t = st.t, c = frac(t / 7 + st.seed * .1) * 7, w = TAU * t / 1.4;
+    const taste = c > 5.2 && c < 6.4 ? sin(Math.PI * (c - 5.2) / 1.2) : 0, stir = 1 - taste;
+    P.tr = 9 * stir + 2; P.hr = 12 * stir - 6 * taste;
+    P.aF = (-30 + 9 * cos(w)) * stir - 50 * taste; P.fF = (-44 + 12 * sin(w)) * stir - 118 * taste;
+    P.aB = -40; P.fB = -38 + 4 * sin(w + 1);
+    P.lL = 4; P.lR = -6; P.sR = 4; P.b2y = .8 * sin(2 * w);
+  }
   function interact(st, P) {
     // talking: two gestures at chest height per phrase, nods, the other hand on the hip
     const t = st.t, c = frac(t / 5.6 + st.seed * .1), b = (1 - cos(TAU * t / 3.9)) / 2;
@@ -161,6 +203,9 @@ DE.UI.Anim = (function () {
     P.hr = 3.5 * e1 * sin(TAU * t * 1.3) + 2 * e2 + 1.5 * wander(t * .6, st.seed);
     P.tsy = 1 + .02 * b; P.tr = .8 * b + 1.5 * e1;
     P.lL = 3; P.lR = -6; P.sR = 5;
+    // now and then a laugh: head back, shoulders shaking, a hand on the belly
+    const L = frac(t / 13 + st.seed * .31), lg = smooth((L - .1) / .04) * (1 - smooth((L - .22) / .05));
+    if (lg > 0) { const sh = sin(TAU * t * 7); P.hr = P.hr * (1 - lg) - 14 * lg; P.tr = P.tr * (1 - lg) - 4 * lg; P.tsy += .02 * sh * lg; P.b2y += 1.2 * Math.abs(sh) * lg; P.aB = P.aB * (1 - lg) - 24 * lg; P.fB = P.fB * (1 - lg) - 84 * lg; }
   }
   function eat(st, P) {
     // seated: a bite now and then, chewing, cutting in between
@@ -239,6 +284,10 @@ DE.UI.Anim = (function () {
       case 'haul': walk(st, P, dt); P.aF = -30; P.fF = -80; P.aB = -38; P.fB = -72; P.tr += 3; break;
       case 'push': walk(st, P, dt); P.aF = -40 + 2 * sin(TAU * st.p); P.fF = -16; P.aB = -48; P.fB = -12; P.tr = 13 + 1.5 * cos(2 * TAU * st.p); P.hr = -6; break;
       case 'interact': interact(st, P); break;
+      case 'farm': farm(st, P); break;
+      case 'study': study(st, P); break;
+      case 'operate': operate(st, P); break;
+      case 'cook': cook(st, P); break;
       case 'eat': eat(st, P); break;
       case 'sleep': case 'heal': sleep(st, P); break;
       case 'guard': guard(st, P, false); break;
