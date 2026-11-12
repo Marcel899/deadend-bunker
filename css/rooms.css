@@ -373,3 +373,12 @@ body.no-anim .actor .say { transition: none; }
 .dig-site.active .dig-boom { transform-box: fill-box; transform-origin: 2% 92%; animation: dig-peck 2.4s ease-in-out infinite; } @keyframes dig-peck { 50% { transform: rotate(-1.2deg); } }
 .dig-gauge { transform-box: fill-box; transform-origin: 50% 100%; animation: dig-gauge 1.7s ease-in-out infinite; } @keyframes dig-gauge { 0%, 100% { transform: rotate(-30deg); } 50% { transform: rotate(40deg); } }
 .dig-site:not(.active) .dig-smoke { display: none; }
+/* infection: symptoms on the character (js/ui/actors.js), worse with the stage */
+.actor.infected .rig { filter: drop-shadow(0 0 3px rgba(130, 220, 70, .85)) drop-shadow(0 3px 2px rgba(0, 0, 0, .5)) saturate(.85); }
+.actor[data-inf="sick"] .rig { filter: drop-shadow(0 0 4px rgba(130, 220, 70, .95)) drop-shadow(0 3px 2px rgba(0, 0, 0, .5)) sepia(.25) hue-rotate(40deg) saturate(.9); }
+.actor[data-inf="turning"] .rig { filter: drop-shadow(0 0 6px rgba(150, 240, 60, 1)) drop-shadow(0 3px 2px rgba(0, 0, 0, .5)) sepia(.45) hue-rotate(55deg) saturate(.8) brightness(.92); }
+.actor.infected::after { content: ''; position: absolute; left: -3px; bottom: 44px; width: 5px; height: 5px; border-radius: 50%; background: #9be860; pointer-events: none;
+  box-shadow: 8px -5px 0 -1px #9be860, -7px -9px 0 -1.5px #7fd04a; opacity: 0; animation: infSpores 2.2s ease-out infinite; }
+@keyframes infSpores { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: .9; } 100% { opacity: 0; transform: translateY(-16px) scale(1.2); } }
+.actor.infected[data-inf="incubating"]::after { display: none; }
+body.no-anim .actor.infected::after { animation: none; opacity: .7; }

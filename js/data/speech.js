@@ -86,6 +86,12 @@ DE.Data.SPEECH = {
   breach: ['They\'re inside!', 'They got in!', 'Hold the corridor!', 'Barricade the doors!', 'Everyone, fall back!', 'Protect the kids!'],
   rain: ['Hear that rain on the hatch?', 'Good day for the water tanks.', 'Rain, rain, go away.', 'Smell that? Fresh rain!', 'The pipes are singing.'],
   snow: ['Brr, it\'s cold up there.', 'Snow again...', 'Anyone seen my gloves?', 'Winter is here.', 'Snowball fight later?'],
+  /* ---- the infection ---- */
+  sick: ['*cough cough*', 'I don\'t feel so good...', 'Is it hot in here?', 'My skin itches like crazy.', 'Keep away, I might be sick.', 'Everything is spinning...',
+    'I just need to lie down.', 'Why is everyone staring at me?', 'It\'s just a cold. Probably.', 'My head is pounding.'],
+  turning: ['Something... is wrong... with me...', 'So... hungry...', 'Get... away... from me...', 'I can\'t feel my hands.', 'Lock me up. Please.'],
+  patient: ['Feeling a bit better.', 'When can I go back to work?', 'The medic says I\'m improving.', 'It\'s boring behind this glass.', 'Thanks for not giving up on me.', 'The soup here is terrible.'],
+
   /* ---- banter ---- */
   chat: ['Remember when the worst thing was traffic?', 'I used to complain about Mondays.', 'Zombies: people with bad time management.',
     'I\'d tell a zombie joke, but it\'s dead.', 'Day 400. Still no pizza delivery.', 'My plants have names. Don\'t judge.', 'Who keeps stealing my socks?',

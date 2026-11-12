@@ -33,6 +33,7 @@ DE.Survivors = (function () {
     if (def && def.profession === s.profession) e *= 1.25;
     e *= 1 + traitSum(s, 'prod');
     if (s.hp < 50) e *= 0.5;
+    if (s.infection && DE.Infection) e *= DE.Infection.efficiencyMult(s);
     return e * (fx ? fx.workerEff : 1);
   }
 
@@ -81,6 +82,7 @@ DE.Survivors = (function () {
     const s = state.survivors[survivorId];
     if (!s) return { ok: false, reason: 'No such survivor' };
     if (s.assignment && s.assignment.kind === 'expedition') return { ok: false, reason: 'Away on expedition' };
+    if (target && s.infection && s.infection.ward) return { ok: false, reason: s.name + ' is in quarantine' };
     if (target && target.kind === 'room') {
       const room = state.rooms[target.id];
       if (!room) return { ok: false, reason: 'No such room' };

@@ -5,7 +5,7 @@ const root = path.join(__dirname, '..');
 const FILES = [
   'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/finds.js', 'js/data/events.js', 'js/data/sprites.js', 'js/data/scenes.js', 'js/data/icons.js', 'js/data/room_icons.js',
   'js/core/util.js', 'js/core/season.js', 'js/core/effects.js', 'js/core/state.js', 'js/core/save.js', 'js/core/economy.js', 'js/core/bunker.js',
-  'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
+  'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/infection.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
   'js/core/prestige.js', 'js/core/sim.js', 'js/core/offline.js',
 ];
 // minimal localStorage shim
@@ -362,10 +362,11 @@ t('guards contribute damage', () => {
 
 console.log('Expeditions');
 t('needs garage; sends and returns loot', () => {
-  Object.values(S.survivors).forEach(sv => sv.hp = 100); // earlier breach test may have injured them
+  Object.values(S.survivors).forEach(sv => { sv.hp = 100; sv.infection = null; }); // earlier fights may have injured or infected them
   const ids = Object.keys(S.survivors).slice(0, 2);
   assert(!DE.Expeditions.send(S, 'suburbs', ids, now).ok);
   const r = DE.Bunker.build(S, 'garage', 2, 0, now); assert(r.ok, r.reason); now = run(S, r.room.construction.duration + 1, now, 1); S._fx = null;
+  ids.forEach(id => { S.survivors[id].infection = null; S.survivors[id].hp = 100; });   // the waves during the build may have bitten someone
   const s = DE.Expeditions.send(S, 'suburbs', ids, now); assert(s.ok, s.reason);
   assert(S.survivors[ids[0]].assignment.kind === 'expedition');
   assert(!DE.Survivors.assign(S, ids[0], null).ok, 'cannot reassign while away');
@@ -382,7 +383,7 @@ t('at most two decisions wait: no new events or road encounters beyond that', ()
   E.events.push({ id: 'old', kind: 'bunker', choices: [] }); DE.Events.tick(E, 0.1, now); assert(E.events.length === 2, 'old saves trimmed to two');
 });
 t('road encounters change the trip that is still out; finds and notes reach the report', () => {
-  Object.values(S.survivors).forEach(sv => sv.hp = 100);
+  Object.values(S.survivors).forEach(sv => { sv.hp = 100; sv.infection = null; });
   const ids = Object.keys(S.survivors).filter(id => !S.survivors[id].assignment || S.survivors[id].assignment.kind !== 'expedition').slice(0, 2);
   const r = DE.Expeditions.send(S, 'suburbs', ids, now); assert(r.ok, r.reason);
   const trip = S.expeditions.active[S.expeditions.active.length - 1];
@@ -542,6 +543,42 @@ t('every diggable depth belongs to a layer; deeper layers are harder', () => {
   const ids = DE.Data.STRATA.map(x => x.id); assert(ids.join() === 'topsoil,clay,limestone,granite,basalt,magma');
   for (let i = 1; i < DE.Data.STRATA.length; i++) assert(DE.Data.STRATA[i].mine > DE.Data.STRATA[i - 1].mine && DE.Data.RESEARCH[DE.Data.STRATA[i].research], 'each layer needs more');
   for (let i = 1; i < DE.Data.STRATA.length; i++) assert(DE.Data.STRATA[i].hardness > DE.Data.STRATA[i - 1].hardness);
+});
+
+console.log('Infection');
+t('infection: hidden at first, symptoms show, gets worse, turns if left alone', () => {
+  const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E); const sv = Object.values(E.survivors)[0];
+  const orig = Math.random; Math.random = () => 0; assert(DE.Infection.expose(E, sv, .5)); Math.random = orig;
+  assert(sv.infection && !sv.infection.known, 'quiet at first'); assert(DE.Infection.stage(sv).id === 'incubating');
+  for (let i = 0; i < 400; i++) { DE.Infection.tick(E, 1, E._fx); E.playtime += 1; }
+  assert(sv.infection.known, 'symptoms after ~6 min'); assert(DE.Survivors.efficiency(sv, null, E._fx) < DE.Survivors.efficiency(Object.values(E.survivors)[1], null, E._fx) * 1.3);
+  let turned = false; for (let i = 0; i < 1600 && E.survivors[sv.id]; i++) { E._events = []; DE.Infection.tick(E, 1, E._fx); E.playtime += 1; if (E._events.some(e => e.type === 'turned')) turned = true; }
+  assert(turned && !E.survivors[sv.id], 'turned and lost after ~25 min untreated');
+});
+t('infection: isolation stops it and the ward cures it; the survivor goes back to work', () => {
+  const E = DE.State.create(null, now); for (const k in E.resources) E.resources[k] = 1e6;
+  const q = DE.Bunker.placeRoom(E, 'quarantine', 1, 6, 2, now); E._fx = DE.Effects.compute(E);
+  const sv = Object.values(E.survivors).find(v => v.assignment && v.assignment.kind === 'room'), job = Object.assign({}, sv.assignment);
+  sv.infection = { sev: .6, known: true, ward: null, prev: null, since: 0 };
+  assert(!DE.Expeditions.send(E, 'suburbs', [sv.id], now).ok, 'infected stay home');
+  const r = DE.Infection.isolate(E, sv.id); assert(r.ok && r.room.id === q.id, r.reason);
+  assert(!sv.assignment && sv.infection.ward === q.id, 'off duty, in the ward');
+  assert(!DE.Survivors.assign(E, sv.id, { kind: 'guard' }).ok, 'cannot be put to work while isolated');
+  DE.Needs.tick(E, 1, E._fx); assert(sv.act.kind === 'heal' && sv.act.room === q.id, 'lies in the ward');
+  let cured = false; for (let i = 0; i < 600 && sv.infection; i++) { E._events = []; DE.Infection.tick(E, 1, E._fx); E.playtime += 1; if (E._events.some(e => e.type === 'cured')) cured = true; }
+  assert(cured && !sv.infection, 'cured in the ward'); assert(sv.immuneUntil > E.playtime, 'immune for a while');
+  assert(sv.assignment && sv.assignment.kind === job.kind, 'back to the old job');
+  assert(!DE.Infection.expose(E, sv, 1), 'immune right after');
+});
+t('infection: survives save/load; the sick pass it on', () => {
+  const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E); const [a, b] = Object.values(E.survivors);
+  a.infection = { sev: .9, known: true, ward: null, prev: null, since: 3 }; b.immuneUntil = 999;
+  const L = DE.Save.sanitize(JSON.parse(JSON.stringify(E)));
+  assert(L.survivors[a.id].infection && Math.abs(L.survivors[a.id].infection.sev - .9) < 1e-9 && L.survivors[a.id].infection.known); assert(L.survivors[b.id].immuneUntil === 999);
+  Object.values(E.survivors).forEach(v => { v.act.room = 'r1'; v.immuneUntil = 0; }); a.hp = 100; a.infection.sev = .6;
+  const orig = Math.random; Math.random = () => .0001; let spread = 0;
+  try { for (let i = 0; i < 3; i++) { E._events = []; DE.Infection.tick(E, 1, E._fx); E.playtime += 1; spread += E._events.filter(e => e.type === 'spread').length; } } finally { Math.random = orig; }
+  assert(spread >= 1, 'spread to a roommate');
 });
 
 console.log('Prestige');

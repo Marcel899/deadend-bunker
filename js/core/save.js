@@ -146,6 +146,12 @@ DE.Save = (function () {
           energy: U().clamp(N(v.energy, 100), 0, 100), hunger: U().clamp(N(v.hunger, 0), 0, 100),
           act: U().isObj(v.act) && typeof v.act.kind === 'string' ? { kind: v.act.kind.slice(0, 12), until: NN(v.act.until, 0), room: typeof v.act.room === 'string' ? v.act.room : null, ...(Number.isInteger(v.act.bed) && v.act.bed >= 0 ? { bed: v.act.bed } : {}) } : { kind: 'idle', until: 0, room: null }, bonds: {} };
         if (U().isObj(v.bonds)) for (const o in v.bonds) if (typeof o === 'string') sv.bonds[o] = U().clamp(N(v.bonds[o], 0), 0, 100);
+        if (U().isObj(v.infection)) {
+          const i = v.infection, p = U().isObj(i.prev) ? i.prev : null;
+          sv.infection = { sev: U().clamp(N(i.sev, .05), 0, 1), known: !!i.known, ward: typeof i.ward === 'string' && s.rooms[i.ward] ? i.ward : null, since: NN(i.since, 0),
+            prev: p && (p.kind === 'guard' || p.kind === 'dig' || (p.kind === 'room' && typeof p.id === 'string')) ? (p.kind === 'room' ? { kind: 'room', id: p.id } : { kind: p.kind }) : null };
+        }
+        if (Number.isFinite(+v.immuneUntil) && +v.immuneUntil > 0) sv.immuneUntil = +v.immuneUntil;
         if (U().isObj(v.assignment)) {
           const a = v.assignment;
           if (a.kind === 'room' && s.rooms[a.id]) sv.assignment = { kind: 'room', id: a.id };

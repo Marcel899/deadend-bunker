@@ -260,7 +260,7 @@ DE.Events = (function () {
         case 'hurry': if (trip) { const cut = Math.min(v * 1000, Math.max(0, trip.endsAt - Date.now() - 5000)); trip.endsAt -= cut; trip.duration = Math.max(1, trip.duration - cut / 1000); if (cut > 0) out.push('home ' + U().fmtTime(cut / 1000) + ' sooner'); } break;
         case 'gamble': { const win = U().chance(v[0]); out.push(fill(win ? (v[3] || 'it worked') : (v[4] || 'it went wrong'), ctx)); const sub = applyEffects(state, (win ? v[1] : v[2]) || {}, ctx); if (sub) out.push(sub); break; }
         case 'noiseCalm': state.defense.calmUntil = Math.max(state.defense.calmUntil || 0, state.playtime + v); out.push('the horde is quieter for ' + Math.round(v / 60) + ' min'); break;
-        case 'injure': { const pool = members.length ? members : Object.values(state.survivors); pool.forEach(s => { if (U().chance(v[0])) { DE.Survivors.injure(s, v[1]); out.push(s.name + ' injured'); } }); break; }
+        case 'injure': { const pool = members.length ? members : Object.values(state.survivors); pool.forEach(s => { if (U().chance(v[0])) { DE.Survivors.injure(s, v[1]); out.push(s.name + ' injured'); if (DE.Infection && DE.Infection.expose) DE.Infection.expose(state, s, .1); } }); break; }
         case 'heal': Object.values(state.survivors).forEach(s => { s.hp = Math.min(100, s.hp + v); }); out.push('everyone healed +' + v); break;
         case 'rescue': case 'recruit': if (v && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state)) { const sv = DE.Survivors.spawn(state); state.stats.recruited++; out.push(sv.name + ' joined'); } else if (v) out.push('no free housing — they moved on'); break;
         case 'artifact': { const id = v === 'random' ? randomArtifact(state) : v; if (id) { state.artifacts[id] = true; state._fx = null; out.push('Artifact found: ' + DE.Data.ARTIFACTS[id].name); } else out.push('nothing new inside'); break; }
@@ -285,7 +285,12 @@ DE.Events = (function () {
         case 'mat': for (const m in v) { const n = Math.round(v[m] * (trip ? 1 : 1)); if (!DE.Data.MATERIALS[m] || n <= 0) continue; if (trip) { trip.mats = trip.mats || {}; trip.mats[m] = (trip.mats[m] || 0) + n; out.push('+' + n + ' ' + DE.Data.MATERIALS[m].short + ' loaded'); } else { DE.Expeditions.addMat(state, m, n); out.push('+' + n + ' ' + DE.Data.MATERIALS[m].short); } } break;
         case 'collect': { const locId = (trip && trip.location) || ctx.location; const c = locId ? DE.Expeditions.grantCollectible(state, locId, true) : null; if (c) { out.push('found: ' + c.name); state._events = state._events || []; state._events.push({ type: 'collected', ids: [c.id], sets: DE.Expeditions.setDone(state, c.set) ? [c.set] : [] }); } else { gainRes(state, 'scrap', worth(state, 'scrap', 3)); out.push('nothing rare — some scrap'); } break; }
         case 'explore': { const locId = (trip && trip.location) || ctx.location; if (!locId) break; if (trip) trip.explore = (trip.explore || 0) + v; else { DE.Expeditions.ensure(state); state.explore[locId] = Math.min(DE.Expeditions.MAX_EXPLORE, (state.explore[locId] || 0) + v); } out.push('map +' + v); break; }
-        case 'risk': if (U().chance(v[0])) { if (v[1] === 'shock') state.defense.shock = Math.max(state.defense.shock, v[2]); out.push('he was infected — morale shaken'); } break;
+        case 'risk': if (U().chance(v[0])) {
+          // somebody brought the infection in: the newcomer if one just joined, else the person involved
+          if (v[1] === 'shock') state.defense.shock = Math.max(state.defense.shock, v[2]);
+          const ids = Object.keys(state.survivors), who = fx.recruit || fx.rescue ? state.survivors[ids[ids.length - 1]] : A;
+          if (who && DE.Infection && DE.Infection.expose(state, who, 1, .08)) out.push('someone may be carrying the infection'); else out.push('a scare — morale shaken');
+        } break;
         case 'buff': { if (v[0] !== '*' && !DE.Data.ROOMS[v[0]]) break; state.buffs.push({ room: v[0], mult: v[1], until: state.playtime + v[2] }); state._fx = null; out.push((v[0] === '*' ? 'all production' : DE.Data.ROOMS[v[0]].name) + ' ' + (v[1] >= 0 ? '+' : '−') + Math.round(Math.abs(v[1]) * 100) + '% for ' + Math.round(v[2] / 60) + ' min'); break; }
         default: break;
       }

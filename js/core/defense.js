@@ -142,7 +142,7 @@ DE.Defense = (function () {
     result.killed = Math.ceil(killedFraction * total);
     state.stats.zombiesKilled += result.killed;
     // toxic zombies poison guards even when they die at range
-    if (comp.toxic > 0) DE.Survivors.guards(state).forEach(g => { if (U().chance(Math.min(0.6, 0.12 * comp.toxic) * (1 - (fx.toxicResist || 0)))) { DE.Survivors.injure(g, 15); result.injured.push(g.name); } });
+    if (comp.toxic > 0) DE.Survivors.guards(state).forEach(g => { if (U().chance(Math.min(0.6, 0.12 * comp.toxic) * (1 - (fx.toxicResist || 0)))) { DE.Survivors.injure(g, 15); result.injured.push(g.name); if (DE.Infection && DE.Infection.expose(state, g, .3)) result.infected = (result.infected || 0) + 1; } });
     if (power.total >= hp) {
       result.outcome = 'victory';
       state.stats.wavesSurvived++;
@@ -152,14 +152,14 @@ DE.Defense = (function () {
       result.wallDamage = Math.min(state.defense.wall.hp, dmg);
       state.defense.wall.hp -= result.wallDamage;
       // guards get hurt when the horde reaches the wall
-      DE.Survivors.guards(state).forEach(g => { if (U().chance(0.5)) { DE.Survivors.injure(g, 25); if (!result.injured.includes(g.name)) result.injured.push(g.name); } });
+      DE.Survivors.guards(state).forEach(g => { if (U().chance(0.5)) { DE.Survivors.injure(g, 25); if (!result.injured.includes(g.name)) result.injured.push(g.name); if (DE.Infection && DE.Infection.expose(state, g, .18)) result.infected = (result.infected || 0) + 1; } });
       if (state.defense.wall.hp <= 0) {
         state.defense.wall.hp = 0;
         result.breach = true; result.outcome = 'breach';
         state.stats.breaches++;
         ['food', 'water', 'scrap', 'fuel'].forEach(r => { const loss = Math.floor(state.resources[r] * 0.12); state.resources[r] -= loss; result.losses[r] = loss; });
         const pool = Object.values(state.survivors).filter(s => !s.assignment || s.assignment.kind !== 'expedition');
-        for (let i = 0; i < Math.min(3, pool.length); i++) { const v = U().pick(pool); DE.Survivors.injure(v, 40); if (!result.injured.includes(v.name)) result.injured.push(v.name); }
+        for (let i = 0; i < Math.min(3, pool.length); i++) { const v = U().pick(pool); DE.Survivors.injure(v, 40); if (!result.injured.includes(v.name)) result.injured.push(v.name); if (DE.Infection && DE.Infection.expose(state, v, .3)) result.infected = (result.infected || 0) + 1; }
         state.defense.shock = 25;
       } else {
         result.outcome = 'held';

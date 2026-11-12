@@ -211,6 +211,12 @@ DE.UI.Actors = (function () {
   function topicFor(a, sv, s, now) {
     const act = sv.act || {}, k = act.kind, room = act.room && s.rooms[act.room];
     if (k === 'sleep' && a.segEnd === 0 && !a.queue.length) return null;           // asleep: z z z only
+    if (sv.infection && sv.infection.known) {
+      const st = DE.Infection.stage(sv);
+      if (sv.infection.ward) return Math.random() < .15 ? { t: 'patient' } : null;
+      if (st.id === 'turning') return { t: 'turning', cls: 'alarm', urgent: true };
+      if (st.id !== 'incubating') return Math.random() < .6 ? { t: 'sick', cls: 'bad', urgent: true } : null;
+    }
     if (sv.hp < 45 && k !== 'heal') return { t: 'hurt', cls: 'bad', urgent: true };
     if (sv.hunger > 84 && k !== 'eat') return { t: 'starving', cls: 'bad', urgent: true };
     const R = s._rates, waterLow = s.resources.water < 25 || (R && R.net && R.net.water < 0 && s.resources.water < 70);
@@ -371,6 +377,9 @@ DE.UI.Actors = (function () {
       }
       talk(a, sv, s, now);
       a.el.classList.toggle('hurt', sv.hp < 50);
+      // symptoms show on the character: a sickly glow, worse with the stage, spores while still about
+      const ist = sv.infection && sv.infection.known ? DE.Infection.stage(sv).id : '';
+      if ((a.el.dataset.inf || '') !== ist) { a.el.dataset.inf = ist; a.el.classList.toggle('infected', !!ist); }
       a.el.classList.toggle('paused', a.y < viewTop || a.y > viewBot);
       a.el.title = sv.name + ' · ' + DE.Needs.describe(sv) + (sv.act && sv.act.room && s.rooms[sv.act.room] ? ' in ' + DE.Data.ROOMS[s.rooms[sv.act.room].type].name : '');
     }

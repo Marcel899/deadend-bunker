@@ -102,6 +102,13 @@ DE.Game = (function () {
  case 'built': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> built on B' + e.room.floor, 'ok', 3200, DE.Icons.room(d.id)); log(d.name + ' built on B' + e.room.floor + '.'); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-built', d.name.toUpperCase() + ' READY!'); DE.Audio.sfx('complete'); break; }
  case 'upgraded': { const d = DE.Data.ROOMS[e.room.type], was = e.room.level - (e.levels || 1), Sc = DE.Scenes; const big = Sc.gradeOf(was) !== Sc.gradeOf(e.room.level) || Sc.tierOf(was) !== Sc.tierOf(e.room.level);
  DE.UI.toast('<b>' + d.name + '</b> upgraded to level ' + e.room.level + (big ? ' — new look!' : ''), 'ok', 3200, DE.Icons.room(d.id), { key: 'up:' + e.room.id }); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-upgraded', (big ? 'NEW LOOK · ' : '') + 'LEVEL ' + e.room.level, big); DE.Audio.sfx(big ? 'complete' : 'levelup'); break; }
+ // infection: nobody notices a fresh bite; symptoms, a screening, getting worse, a cure and the worst case do
+ case 'symptoms': DE.UI.toast('<b>' + DE.UI.esc(e.name) + '</b> is showing symptoms of the infection — isolate them before it spreads.', 'warn', 6000, 'biohazard', { key: 'inf:' + e.id }); log(e.name + ' shows symptoms of the infection.'); DE.Audio.sfx('error'); DE.UI.refresh(); break;
+ case 'detected': DE.UI.toast('Medical screening: <b>' + DE.UI.esc(e.name) + '</b> carries the infection. Isolate them early.', 'warn', 5500, 'biohazard', { key: 'inf:' + e.id }); log('Screening found the infection in ' + e.name + '.'); DE.UI.refresh(); break;
+ case 'worse': DE.UI.toast('<b>' + DE.UI.esc(e.name) + '</b> is getting worse (' + e.stage.toLowerCase() + ').', e.stage === 'Turning' ? 'err' : 'warn', 5000, 'biohazard', { key: 'inf:' + e.id }); break;
+ case 'cured': DE.UI.toast('<b>' + DE.UI.esc(e.name) + '</b> has recovered and is back on their feet.', 'ok', 4500, 'medkit'); log(e.name + ' recovered from the infection.'); DE.Audio.sfx('done'); DE.UI.refresh(); break;
+ case 'turned': DE.UI.toast('<b>' + DE.UI.esc(e.name) + '</b> turned. The others had to put them down.', 'err', 7000, 'skull'); log(e.name + ' was lost to the infection.'); DE.Audio.sfx('bigdie'); DE.UI.refresh(); break;
+ case 'infected': case 'spread': break;
  case 'expanded': DE.UI.toast('B' + e.depth + ' widened: ' + DE.CONFIG.WING_CELLS + ' new cells', 'ok', 3400, 'dig'); log('Floor B' + e.depth + ' widened.'); DE.UI.refresh(); break;
       case 'research': {
         DE.UI.toast('Research complete: <b>' + esc(e.node.name) + '</b>', 'ok', 4500, 'research'); log('Researched ' + e.node.name + '.');
@@ -124,6 +131,8 @@ DE.Game = (function () {
  const loot = r.reward && Object.keys(r.reward).length ? ' Salvaged ' + U().costText(r.reward) + '.' : '';
  if (loot) setTimeout(() => DE.UI.Bunker.collectAt('#wall', r.reward), 1200);
  if (r.refugee) { DE.UI.toast('<b>' + esc(r.refugee) + '</b> saw you hold the gate and joined', 'ok', 5000, 'pop'); log(r.refugee + ' joined after wave ' + r.wave + '.'); }
+ // bites in the fight: who is infected is not known yet (a medic on duty screens for it)
+ if (r.infected) setTimeout(() => DE.UI.toast('Some of the wounded were bitten. Watch for symptoms' + (DE.Infection.hasWard(DE.Game.state) ? '' : ' — a Medical Bay or Quarantine Ward can screen and treat') + '.', 'warn', 6000, 'biohazard', { key: 'bites' }), 1800);
  if (r.outcome === 'victory') { DE.UI.toast('<b>' + (r.boss ? 'BOSS wave ' : 'Wave ') + r.wave + ' repelled</b>' + (r.streak > 1 ? ' · ' + r.streak + ' in a row' : '') + (r.reward && Object.keys(r.reward).length ? ' · ' + U().costText(r.reward) : ''), 'ok', 4500, 'trophy'); log('Wave ' + r.wave + ' repelled.'); }
  else if (r.outcome === 'held') { DE.UI.toast('<b>Wave ' + r.wave + ' held</b> · wall −' + U().fmt(r.wallDamage) + (r.injured.length ? ' · ' + r.injured.length + ' injured' : '') + (r.reward && Object.keys(r.reward).length ? ' · ' + U().costText(r.reward) : ''), 'warn', 5000, 'wallicon'); log('Wave ' + r.wave + ': wall damaged (−' + r.wallDamage + ').'); }
  else {

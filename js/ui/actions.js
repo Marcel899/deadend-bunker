@@ -45,6 +45,8 @@ DE.Actions = (function () {
  A.startPlace = (p, el, ev) => { DE.UI.Placement.start({ type: p.type }, ev && ev.type === 'pointerdown' ? ev : null); };
  A.startMove = (p, el, ev) => { DE.UI.Placement.start({ roomId: p.id }, null); };
  A.moveRoom = (p) => { const r = DE.Bunker.move(S(), p.id, +p.depth, +p.slot); if (!r.ok) return fail(r); if (r.cost) UI().purchased(null, null, 'Room relocated'); UI().ui.selection = { type: 'room', id: p.id }; done(); };
+ A.isolate = (p) => { const r = DE.Infection.isolate(S(), p.id); if (!r.ok) return fail(r); UI().toast(UI().esc(S().survivors[p.id].name) + ' isolated in the ' + DE.Data.ROOMS[r.room.type].name + '.', 'ok', 3000, 'biohazard'); DE.Audio.sfx('done'); done(); };
+ A.isolateAll = () => { const r = DE.Infection.isolateAll(S()); if (!r.ok) return fail(r); UI().toast(r.count + ' infected survivor' + (r.count > 1 ? 's' : '') + ' isolated.', 'ok', 3000, 'biohazard'); DE.Audio.sfx('done'); done(); };
  A.nextEvent = () => { const ev = (S().events || [])[0]; if (ev) UI().eventModal(ev); };
  A.eventChoice = (p, el) => {
  const ev = (S().events || []).find(e => e.id === p.id); const r = DE.Events.choose(S(), p.id, +p.i); if (!r.ok) return fail(r);

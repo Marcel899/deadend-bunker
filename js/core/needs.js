@@ -74,7 +74,14 @@ DE.Needs = (function () {
       if (a.kind !== 'eat') sv.hunger = Math.min(100, sv.hunger + hungerRate * dt);
       // decide
       let kind = a.kind, room = a.room, bed = a.bed == null ? null : a.bed;
-      if (kind === 'sleep' && sv.energy < 98 && bedValid(state, a)) { /* keep sleeping in the same berth */ }
+      const ward = sv.infection && sv.infection.ward && state.rooms[sv.infection.ward];
+      if (ward) {
+        // isolated: in a ward bed, looked after there (fed, resting)
+        kind = 'heal'; room = ward.id;
+        if (!(a.kind === 'heal' && a.room === ward.id && bedValid(state, a))) { const b = freeBed(state, sv, [ward.type], 'heal'); bed = b && b.room === ward.id ? b.bed : null; }
+        sv.energy = Math.min(100, sv.energy + sleepRate * .5 * dt);
+      }
+      else if (kind === 'sleep' && sv.energy < 98 && bedValid(state, a)) { /* keep sleeping in the same berth */ }
       else if (kind === 'eat' && t < a.until) { /* keep eating */ }
       else if (kind === 'heal' && sv.hp < 90 && state.rooms[a.room]) { /* keep resting in the ward */ }
       else {

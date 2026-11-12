@@ -1608,3 +1608,8 @@ body.no-anim #modal-root .modal, body.no-anim #modal-root .modal *, body.no-anim
 #modal-root .modal.event .btn.choice.chosen, #modal-root .modal.event .btn.choice.chosen:disabled { opacity: 1 !important; cursor: default;
   filter: drop-shadow(0 0 7px rgba(127, 220, 62, .85)) drop-shadow(0 3px 0 rgba(0, 0, 0, .4)) !important; }
 #modal-root .modal.event.picked .ev-later { visibility: hidden; }
+/* infection in the survivors drawer */
+.inf-tag { display: inline-flex; align-items: center; gap: 3px; margin-left: 4px; padding: 0 6px; border-radius: 7px; font-size: 10px; font-weight: 900; color: #10200a; background: #9be860; border: 1.5px solid #1c1020; white-space: nowrap; }
+.inf-tag .ico-inline { width: 12px; height: 12px; }
+.inf-tag.inf-sick { background: #e8c040; } .inf-tag.inf-turning { background: #ff6a5a; color: #fff; }
+.inf-ward { font-size: 11px; font-weight: 800; color: #9be860; }

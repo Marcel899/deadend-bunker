@@ -78,6 +78,7 @@ DE.Expeditions = (function () {
       if (!s) return { ok: false, reason: 'Unknown survivor' };
       if (s.assignment && s.assignment.kind === 'expedition') return { ok: false, reason: s.name + ' is already away' };
       if (s.hp < 50) return { ok: false, reason: s.name + ' is too injured' };
+      if (s.infection && s.infection.known) return { ok: false, reason: s.name + ' is infected' };
     }
     return { ok: true };
   }
@@ -117,7 +118,7 @@ DE.Expeditions = (function () {
     members.forEach(s => {
       s.assignment = null;
       s.xp += 60 * fx.xpMult;
-      if (U().chance(p.danger)) { DE.Survivors.injure(s, U().randInt(25, 50)); result.injured.push(s.name); }
+      if (U().chance(p.danger)) { DE.Survivors.injure(s, U().randInt(25, 50)); result.injured.push(s.name); if (DE.Infection && DE.Infection.expose) DE.Infection.expose(state, s, .15); }
     });
     if (U().chance(p.rescue) && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state)) {
       const sv = DE.Survivors.spawn(state); state.stats.recruited++; result.rescued = sv.name;

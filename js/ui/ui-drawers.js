@@ -96,13 +96,17 @@ DE.UI.Drawers = (function () {
    const en = sv.energy == null ? 100 : sv.energy, fed = 100 - (sv.hunger || 0);
    const traits = (sv.traits || []).map(t => DE.Data.TRAITS[t]).filter(Boolean).map(d => `<i title="${esc(d.name + ': ' + d.desc)}">${esc(d.name)}</i>`).join('');
    const bar = (cls, v, label) => `<span class="svb ${cls}" title="${label} ${Math.round(v)}%"><i style="width:${tens(v)}%"></i></span>`;
+   // infection (once it shows, or a screening found it): stage, severity, and the way out
+   const inf = sv.infection && sv.infection.known ? sv.infection : null, ist = inf && DE.Infection.stage(sv);
+   const infTag = inf ? `<span class="inf-tag inf-${ist.id}" title="Infected — ${ist.name}${inf.ward ? ', isolated and being treated' : ''}">${DE.Icons.img('biohazard', 'ico-inline')}${ist.name} ${Math.round(inf.sev * 100)}%${inf.ward ? ' · ward' : ''}</span>` : '';
+   const pick = !inf ? jobSelect(s, sv) : inf.ward ? `<span class="inf-ward">In treatment</span>` : `<button class="btn tiny danger" data-action="isolate" data-id="${sv.id}">${DE.Icons.img('biohazard', 'ico-inline')} Isolate</button>`;
    return `<div class="sv-row rar-${rar.id}${sv.hp < 50 ? ' hurt' : ''}${ui().focusSurvivor === sv.id ? ' focus' : ''}" style="--rc:${rar.color}" data-sv="${sv.id}">
      <button class="sv-ava" data-action="svDetail" data-sid="${sv.id}" title="Details">${DE.Icons.prof(sv.profession, 'ava')}<b>${sv.level}</b></button>
      <div class="sv-id"><b data-action="svDetail" data-sid="${sv.id}">${esc(sv.name)}</b><small>${esc(P()[sv.profession].name)} · <span style="color:${rar.color}">${esc(rar.name)}</span>${traits ? ' · ' : ''}<span class="sv-tr">${traits}</span></small></div>
-     <div class="sv-do"><span class="act-tag act-${sv.act ? sv.act.kind : 'idle'}">${DE.Needs.describe(sv)}</span><small>${assignmentText(s, sv)}</small></div>
+     <div class="sv-do"><span class="act-tag act-${sv.act ? sv.act.kind : 'idle'}">${DE.Needs.describe(sv)}</span>${infTag}<small>${assignmentText(s, sv)}</small></div>
      <div class="sv-vit">${bar('hp', sv.hp, 'Health')}${bar('en', en, 'Energy')}${bar('fd', fed, 'Fed')}</div>
      <div class="sv-num"><b class="${mood >= 50 ? 'pos' : mood >= 30 ? 'warn' : 'neg'}" title="Mood">${mood}</b><small title="Skill at the current job">${sk.t}</small></div>
-     <div class="sv-pick">${jobSelect(s, sv)}</div></div>`;
+     <div class="sv-pick">${pick}</div></div>`;
  }
  /** Problems with the crew, each with a fix. */
  function svWarnings(s) {
@@ -117,6 +121,9 @@ DE.UI.Drawers = (function () {
    if (idle && !empty.length && !short.length) out.push({ sev: 'info', ic: I('pop'), t: `<b>${idle} idle</b> and every station is full — build or upgrade rooms, post guards or miners.` });
    const gOpen = fx.guardCap - DE.Survivors.guards(s).length; if (gOpen > 0 && s.defense.wave > 1) out.push({ sev: 'info', ic: I('guards'), t: `<b>${gOpen} guard post${gOpen > 1 ? 's' : ''}</b> empty.`, btn: idle ? `<button class="btn tiny" data-action="fillGuards">Post guards</button>` : '' });
    const mOpen = DE.Excavation.minerCap(s) - DE.Excavation.miners(s).length; if (s.excavation && mOpen > 0) out.push({ sev: 'info', ic: I('dig'), t: `<b>${mOpen} mining post${mOpen > 1 ? 's' : ''}</b> open while B${s.excavation.depth} is being dug.`, btn: idle ? `<button class="btn tiny" data-action="fillMiners">Send miners</button>` : '' });
+   const sick = DE.Infection.loose(s), pats = DE.Infection.infected(s).filter(v => v.infection.ward);
+   if (sick.length) out.unshift({ sev: 'crit', ic: I('biohazard'), t: `<b>${sick.length} infected</b> still about — they work badly and can pass it on. Isolate them${DE.Infection.hasWard(s) ? '' : ' (build a Quarantine Ward or a Medical Bay)'}.`, btn: `<button class="btn tiny primary" data-action="isolateAll">Isolate</button>` });
+   if (pats.length) out.push({ sev: 'info', ic: I('biohazard'), t: `<b>${pats.length} in isolation</b> — being treated (a medic on duty and a better ward cure faster).` });
    const hurt = Object.values(s.survivors).filter(v => v.hp < 50).length; const ward = DE.Needs.findRoom(s, DE.Needs.HEAL_ROOMS);
    if (hurt) out.push({ sev: ward ? 'info' : 'warn', ic: I('medkit'), t: `<b>${hurt} badly hurt</b> — they work at half pace${ward ? ' and are being treated' : '. A Medical Bay would treat them'}.` });
    const beds = DE.Needs.BED_ROOMS ? Object.values(s.rooms).filter(r => r.level > 0 && DE.Needs.BED_ROOMS.includes(r.type)).reduce((n, r) => n + DE.Data.bedsFor(r.type, r.level).length, 0) : 99;

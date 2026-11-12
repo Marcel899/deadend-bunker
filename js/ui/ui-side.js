@@ -35,6 +35,8 @@ DE.UI.Side = (function () {
  const tips = [];
  const act = (label, attrs) => ` <button class="tip-btn" ${attrs}>${label}</button>`;
  if (idle > 0) tips.push(` ${idle} survivor${idle > 1 ? 's' : ''} idle — assign them to rooms.` + act('Put to work', 'data-action="assignIdle"'));
+ const sick = DE.Infection ? DE.Infection.loose(s).length : 0;
+ if (sick) tips.unshift(` <b class="neg">${sick} infected</b> walking about — isolate them before it spreads.` + act('Isolate', 'data-action="isolateAll"'));
  if (pop >= cap) tips.push(' Housing is full — upgrade Living Quarters to recruit more.');
  if (rates.powerFactor < 1) tips.push(' Brownout! Build or upgrade generators, or get fuel.');
  if (s.resources.fuel <= 0) tips.push(' Out of fuel — generators run at 30%. Build a Refinery or send an expedition to a Gas Station.');
