@@ -68,8 +68,8 @@ DE.UI.Bunker = (function () {
       <div class="door"></div>
       <div class="room-scene"></div>
       <div class="builder">${DE.Chars.crew('engineer', { anim: 'repair', h: 48 })}</div>
-      <div class="room-head"><span class="room-name">${esc(def.name)}</span><span class="room-lvl"></span></div>
-      <div class="room-foot"><span class="room-rate"></span><span class="room-flag"></span></div>
+      <div class="room-head"><span class="room-name">${esc(def.name)}</span><span class="room-lvl"></span><span class="room-flag"></span></div>
+      <div class="room-foot"><span class="room-rate"></span></div>
       <div class="room-progress"><i></i><span></span></div>
     </div>`;
   }

@@ -1270,3 +1270,9 @@ img.ico-face.ava { width: 40px; height: 40px; border-width: 2.5px; box-shadow: 0
 /* room status flag never runs past the room's edge */
 .room .room-foot { overflow: hidden; padding-right: 18px !important; }
 .room-flag { min-width: 0; max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+
+/* room status flag lives in the header, where survivors never walk over it */
+.room .room-head { display: flex; align-items: center; }
+.room-head .room-flag { margin: 0 0 0 auto; align-self: center; flex: 0 1 auto; min-width: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--display); font-size: 9px; letter-spacing: .5px; line-height: 1.5; color: #2b1600; text-shadow: none; background: linear-gradient(180deg, #ffd25a, #f0a020); border: 2px solid #0d0b12; border-radius: 7px; padding: 0 6px; }
+.room-head .room-flag:empty { display: none; }
