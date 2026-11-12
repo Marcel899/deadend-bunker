@@ -79,7 +79,9 @@ DE.Game = (function () {
  DE.UI.toast('<b>Wave ' + s.defense.wave + '</b> is on its way — ' + ['your defense should hold', 'the wall will take hits', 'they will break in, reinforce now!'][risk], ['info', 'warn', 'err'][risk], 5200, 'wave', { key: 'wavewarn' });
  if (risk) DE.Audio.sfx('alarm');
  }
- if (s.events && s.events.length && document.getElementById('modal-root').classList.contains('hidden') && !(DE.UI.Placement && DE.UI.Placement.active())) { if (!G._evShownAt || now - G._evShownAt > 1500) { G._evShownAt = now; DE.UI.eventModal(s.events[0]); } }
+ // decisions pop up only at a quiet moment (no drawer, no recent input, no fight, not too soon after
+ // the last one, not while snoozed); until then they wait in the pill on the surface
+ if (s.events && s.events.length && document.getElementById('modal-root').classList.contains('hidden') && now >= (G._evSnoozeUntil || 0) && DE.UI.eventQuiet(now)) { if (!G._evShownAt || now - G._evShownAt > 1500) { G._evShownAt = now; DE.UI.eventModal(s.events[0]); } }
  if (s.settings.autosave && now - G._lastAutosave > C().AUTOSAVE_SEC * 1000) { G.save(); G._lastAutosave = now; }
  };
 

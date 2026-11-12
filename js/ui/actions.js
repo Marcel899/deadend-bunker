@@ -48,9 +48,14 @@ DE.Actions = (function () {
  A.nextEvent = () => { const ev = (S().events || [])[0]; if (ev) UI().eventModal(ev); };
  A.eventChoice = (p, el) => {
  const ev = (S().events || []).find(e => e.id === p.id); const r = DE.Events.choose(S(), p.id, +p.i); if (!r.ok) return fail(r);
- UI().closeModal(); UI().toast((ev ? '<b>' + UI().esc(ev.title) + '</b> · ' : '') + UI().esc(r.summary || 'Done.'), 'ok', 4500, 'scroll');
+ DE.Audio.sfx('choice');
+ // the card shows the outcome for a moment and slides away; the log keeps it as a toast
+ UI().eventPicked(el, r.summary || 'Done.');
+ UI().toast((ev ? '<b>' + UI().esc(ev.title) + '</b> · ' : '') + UI().esc(r.summary || 'Done.'), 'ok', 4000, 'scroll');
  done();
  };
+ /** Park the decision: it waits in the decisions pill, and no popup comes back for a couple of minutes. */
+ A.eventLater = () => { DE.Game._evSnoozeUntil = Date.now() + 120000; UI().closeModal(); UI().refresh(); };
  A.busUpgrade = (p, el) => { const next = DE.Events.busNext(S()); const r = DE.Events.upgradeBus(S()); if (!r.ok) return fail(r); UI().purchased(el, r.cost, 'New vehicle: ' + next.name); S().log.push({ t: Date.now(), msg: 'Expedition vehicle upgraded to ' + next.name + '.' }); done(); };
  A.selectNone = () => { UI().ui.selection = null; UI().refresh(true); };
  /** Replay the intro (the game is paused behind it: its loop stops and restarts afterwards). */

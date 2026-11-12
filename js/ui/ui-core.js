@@ -16,6 +16,7 @@ DE.UI = (function () {
  expedition: { location: 'suburbs', members: [] },
  survivorFilter: 'all',
  lastDrawerHtml: '', lastSideHtml: '',
+ lastInput: 0, evClosedAt: 0,   // event popups wait for a quiet moment (see eventQuiet)
  };
 
  function state() { return DE.Game.state; }
@@ -50,7 +51,9 @@ DE.UI = (function () {
  const k = KEYS[(e.key || '').toLowerCase()]; if (!k || $('#game-screen').classList.contains('hidden')) return;
  if (k === 'bunker') closeDrawer(); else if (ui.drawer === k) closeDrawer(); else openDrawer(k);
  });
- document.addEventListener('keydown', e => { if (/^[1-4]$/.test(e.key)) { const b = document.querySelectorAll('#modal-root .choice')[+e.key - 1]; if (b && !b.disabled) { b.click(); return; } } if (e.key === 'Escape') { if (!$('#modal-root').classList.contains('hidden')) closeModal(); else closeDrawer(); } });
+ document.addEventListener('keydown', e => { if (/^[1-4]$/.test(e.key)) { const b = document.querySelectorAll('#modal-root .choice')[+e.key - 1]; if (b && !b.disabled) { b.click(); return; } } if (e.key === 'Escape') { if ($('#modal-root .modal.event')) DE.Actions.eventLater(); else if (!$('#modal-root').classList.contains('hidden')) closeModal(); else closeDrawer(); } });
+ // the player's last touch, click or key: event popups never cut into active play
+ ['pointerdown', 'keydown', 'wheel'].forEach(t => document.addEventListener(t, () => { ui.lastInput = Date.now(); }, { capture: true, passive: true }));
  renderResbar();
  }
 
@@ -288,31 +291,58 @@ DE.UI = (function () {
  }
 
  /* ---------- modal ---------- */
+ let modalToken = 0;
  function modal(opts) {
- const root = $('#modal-root');
+ modalToken++;
+ const root = $('#modal-root'); root.classList.remove('leaving');
  const buttons = (opts.buttons && !opts.buttons.length ? [] : (opts.buttons || [{ label: 'OK', action: 'closeModal', cls: 'primary' }]))
  .map(b => `<button class="btn ${b.cls || ''}" data-action="${b.action || 'closeModal'}" ${Object.keys(b.params || {}).map(k => `data-${k}="${esc(b.params[k])}"`).join('')}>${b.label}</button>`).join('');
  root.innerHTML = `<div class="modal-backdrop" data-action="${opts.locked ? 'noop' : 'closeModal'}"></div>
- <div class="modal panel ${opts.cls || ''}"><div class="modal-head"><h3>${opts.icon ? DE.Icons.img(opts.icon, 'ico-title') : ''}${opts.title || ''}</h3>${opts.locked ? '' : '<button class="btn close" data-action="closeModal">✕</button>'}</div>
+ <div class="modal panel ${opts.cls || ''}"><div class="modal-head">${opts.head != null ? opts.head : `<h3>${opts.icon ? DE.Icons.img(opts.icon, 'ico-title') : ''}${opts.title || ''}</h3>${opts.locked ? '' : '<button class="btn close" data-action="closeModal">✕</button>'}`}</div>
  <div class="modal-body">${opts.html || ''}</div><div class="modal-foot">${buttons}</div></div>`;
  root.classList.remove('hidden');
  }
- /** A decision card: title, story text, one big button per choice. */
+ /** A decision card: the people involved and the title in a compact header, the story, one button
+  *  per choice with its consequences as chips. It slides in, the choices follow one by one; picking
+  *  one stamps it, shows the outcome in the card and slides the card away. "Later" (or Esc) parks it
+  *  in the decisions-waiting pill. */
  function eventModal(ev) {
  DE.Audio.sfx('event');
  const s = state(); const buttons = ev.choices.map((c, i) => {
  const tr = c.trade ? DE.Events.tradeAmounts(s, c.trade) : null; const can = DE.Events.canChoose(s, ev, i).ok;
  const label = tr ? `Give ${U().costText(tr.give)} for ${U().costText(tr.get)}` : esc(c.label);
  const chips = consequences(s, c).map(x => `<i class="cq ${x.cls}">${x.ic || ''}${x.t}</i>`).join('');
- return `<button class="btn choice ${i === 0 ? 'primary' : ''} ${can ? '' : 'cant'}" data-action="eventChoice" data-id="${ev.id}" data-i="${i}" ${can ? '' : 'disabled'}><kbd>${i + 1}</kbd><span><b>${label}</b>${c.desc ? `<small>${esc(c.desc)}</small>` : ''}<span class="cqs">${chips}</span></span></button>`; }).join('');
- // the people involved stand in the header scene
+ return `<button class="btn choice ${i === 0 ? 'primary' : ''} ${can ? '' : 'cant'}" data-action="eventChoice" data-id="${ev.id}" data-i="${i}" ${can ? '' : 'disabled'}><kbd>${i + 1}</kbd><span class="ch-main"><b>${label}</b>${c.desc ? ` <small>${esc(c.desc)}</small>` : ''}</span><span class="cqs">${chips}</span></button>`; }).join('');
  const ids = ev.kind === 'expedition' ? (ev.ctx.members || []) : [ev.ctx.aId, ev.ctx.bId];
- const people = ids.map(id => s.survivors[id]).filter(Boolean).slice(0, 4);
- const cast = people.map((sv, i) => `<figure>${DE.Chars.portrait(sv.profession, { cls: i % 2 ? 'flip' : '' })}<figcaption>${esc(sv.name.split(' ')[0])}</figcaption></figure>`).join('');
+ const people = ids.map(id => s.survivors[id]).filter(Boolean).slice(0, 3);
+ const cast = people.map((sv, i) => `<figure title="${esc(sv.name)}">${DE.Chars.portrait(sv.profession, { cls: i % 2 ? 'flip' : '' })}<figcaption>${esc(sv.name.split(' ')[0])}</figcaption></figure>`).join('');
  const eloc = ev.kind === 'expedition' && ev.ctx && DE.Expeditions.location(ev.ctx.location);
  const kind = ev.kind === 'expedition' ? 'On the road' + (eloc ? ' · ' + esc(eloc.name) : '') : 'Bunker event';
- modal({ title: `<span class="ev-kind">${kind}</span>${esc(ev.title)}`, icon: ev.kind === 'expedition' ? 'map' : 'scroll', cls: 'event ' + ev.kind, locked: true,
- html: `<div class="ev-stage ${ev.kind}">${cast || DE.Icons.img(ev.kind === 'expedition' ? 'map' : 'warning', 'ev-emblem')}</div><p class="story">${esc(ev.text)}</p><div class="choices">${buttons}</div>`, buttons: [] });
+ const waiting = (s.events || []).length;
+ modal({ cls: 'event ' + ev.kind, locked: true, buttons: [],
+   head: `<div class="ev-cast ${people.length ? '' : 'none'}">${cast || DE.Icons.img(ev.kind === 'expedition' ? 'map' : 'scroll', 'ev-emblem')}</div>
+     <div class="ev-titles"><span class="ev-kind">${kind}${waiting > 1 ? ` · 1 of ${waiting}` : ''}</span><h3>${esc(ev.title)}</h3></div>
+     <button class="btn small ev-later" data-action="eventLater" title="Decide later (Esc)">Later</button>`,
+   html: `<p class="story">${esc(ev.text)}</p><div class="choices">${buttons}</div><div class="ev-outcome" hidden></div>` });
+ }
+ /** The chosen option: stamp it, fade the others, show what happened, then slide the card away. */
+ function eventPicked(btn, summary) {
+ const m = $('#modal-root .modal.event'); if (!m) return closeModal();
+ m.classList.add('picked'); m.querySelectorAll('.choice').forEach(b => { b.disabled = true; });
+ if (btn) btn.classList.add('chosen');
+ const out = m.querySelector('.ev-outcome'); if (out && summary) { out.innerHTML = `${DE.Icons.img('check', 'ico-inline')}<span>${esc(summary)}</span>`; out.hidden = false; }
+ const tok = modalToken;
+ setTimeout(() => { if (tok === modalToken) closeModal(); }, document.body.classList.contains('no-anim') ? 0 : 1500);
+ }
+ /** Is now a good moment for a popup? Not while a drawer is open, the player is in the middle of
+  *  something (touched the game in the last few seconds), a fight plays out on the surface, the intro
+  *  runs or a room is being placed; and not right after the last popup closed. */
+ function eventQuiet(now) {
+ now = now || Date.now();
+ if (ui.drawer || (DE.UI.Placement && DE.UI.Placement.active()) || (DE.UI.Intro && DE.UI.Intro.running())) return false;
+ if (now - ui.lastInput < 4000 || now - ui.evClosedAt < 25000) return false;
+ const sf = document.getElementById('surface'); if (sf && sf.classList.contains('fight')) return false;
+ return true;
  }
 
  /** What a choice will do, as small coloured chips: gains green, costs red (dim when you cannot
@@ -369,7 +399,16 @@ DE.UI = (function () {
  return out;
  }
 
- function closeModal() { const root = $('#modal-root'); root.classList.add('hidden'); root.innerHTML = ''; }
+ /** Close the popup with a short slide-out (instantly without animations). A modal opened meanwhile
+  *  (modal() bumps the token) is never wiped by a pending close. */
+ function closeModal(instant) {
+ const root = $('#modal-root'); if (root.classList.contains('hidden')) return;
+ if (root.querySelector('.modal.event')) ui.evClosedAt = Date.now();
+ const tok = ++modalToken;
+ const finish = () => { if (tok !== modalToken) return; root.classList.add('hidden'); root.classList.remove('leaving'); root.innerHTML = ''; };
+ if (instant === true || document.body.classList.contains('no-anim')) return finish();
+ root.classList.add('leaving'); setTimeout(finish, 230);
+ }
  function confirmModal(title, html, onYes, yesLabel) {
  DE.UI._confirmCb = onYes;
  modal({ title, html, cls: 'confirm', icon: 'warning', buttons: [{ label: 'Cancel', action: 'closeModal', cls: 'danger' }, { label: yesLabel || 'Confirm', action: 'confirmYes', cls: 'green' }] });
@@ -415,6 +454,6 @@ DE.UI = (function () {
  renderDrawer(force);
  }
 
- return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, flyCost, unlockBanner, floatText, floatAt, modal, eventModal, closeModal, confirmModal,
+ return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, flyCost, unlockBanner, floatText, floatAt, modal, eventModal, eventPicked, eventQuiet, closeModal, confirmModal,
  openDrawer, closeDrawer, renderDrawer, refresh, state, scrollBusy  };
 })();

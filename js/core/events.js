@@ -6,7 +6,7 @@ var DE = globalThis.DE = globalThis.DE || {};
 
 DE.Events = (function () {
   const U = () => DE.Util;
-  const EVENT_MIN = 240, EVENT_MAX = 480;   // seconds between bunker events
+  const EVENT_MIN = 330, EVENT_MAX = 660;   // seconds between bunker events (5½–11 minutes)
 
   function ensure(state) {
     state.events = state.events || [];

@@ -34,6 +34,7 @@ DE.UI.Bunker = (function () {
           </div>
           <div class="entrance-sign">DEAD END</div>
           <div class="wave-info" id="wave-info" data-action="openDrawer" data-drawer="defense"></div>
+          <button class="ev-pill" id="ev-pill" data-action="nextEvent" hidden></button>
         </div>
       </div>
     </div>`;
@@ -247,6 +248,18 @@ DE.UI.Bunker = (function () {
     surface.classList.toggle('incoming', incoming && !fighting);
     surface.classList.toggle('fight', fighting);
     DE.UI.Battlefield.sync(s, { incoming, fighting });
+    // decisions waiting (events not answered yet): a pill on the surface, while no popup is open
+    const pill = document.getElementById('ev-pill');
+    if (pill) {
+      const n = (s.events || []).length, show = n > 0 && document.getElementById('modal-root').classList.contains('hidden');
+      if (pill.hidden === show) pill.hidden = !show;
+      const k = show ? n + ':' + s.events[0].id : '';
+      if (show && pill.dataset.k !== k) {
+        pill.dataset.k = k; const ex = s.events[0].kind === 'expedition';
+        pill.innerHTML = `${Ic().img(ex ? 'map' : 'events', 'ico-inline')}<span>${n} decision${n > 1 ? 's' : ''} waiting</span>`;
+        pill.classList.remove('fresh'); void pill.offsetWidth; pill.classList.add('fresh');
+      }
+    }
     DE.UI.DayCycle.update(s);
   }
 

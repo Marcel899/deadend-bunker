@@ -68,6 +68,8 @@ DE.Audio = (function () {
     boom: (t) => { noise(t, .9, .55, 600, .5, 'lowpass', 60); tone(70, t, .6, 'sine', .35, null, 30); },
     alarm: (t) => { for (let i = 0; i < 3; i++) { tone(620, t + i * .6, .3, 'sawtooth', .07, null, 880); tone(880, t + i * .6 + .3, .3, 'sawtooth', .07, null, 620); } },
     event: (t) => { tone(988, t, .6, 'sine', .12); tone(1319, t + .12, .7, 'sine', .08); tone(1976, t + .12, .5, 'sine', .03); },
+    // a decision taken: a soft stamp and a rising two-note answer
+    choice: (t) => { noise(t, .06, .16, 500, .9, 'lowpass', 160); tone(140, t, .08, 'sine', .14, null, 70); tone(659, t + .07, .16, 'triangle', .1); tone(988, t + .15, .26, 'triangle', .09); },
     dig: (t) => { noise(t, .18, .25, 300, .8, 'lowpass', 120); tone(80, t, .12, 'triangle', .12); },
     hit: (t) => { noise(t, .06, .15, 1200, 1.5); },
     // combat

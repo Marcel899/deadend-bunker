@@ -1536,3 +1536,75 @@ img.cl-ric { width: 40px; height: 40px; border-radius: 8px; }
   .build-card > .bc-actions { flex-direction: column !important; align-self: center !important; }
   .bc-actions .btn.bc-build { flex-direction: column; gap: 2px; }
 }
+
+/* ---------- event popups v3: compact card, lighter backdrop, slide in / stamp / slide out ---------- */
+#modal-root.leaving { pointer-events: none; }
+#modal-root .modal-backdrop { animation: bdIn .25s ease-out both; }
+#modal-root.leaving .modal-backdrop { animation: bdOut .22s ease-in forwards; }
+#modal-root .modal { animation: mdIn .26s cubic-bezier(.2, 1.25, .4, 1) both; }
+#modal-root.leaving .modal { animation: mdOut .22s ease-in forwards; }
+@keyframes bdIn { from { opacity: 0; } } @keyframes bdOut { to { opacity: 0; } }
+@keyframes mdIn { from { opacity: 0; transform: translateY(14px) scale(.95); } }
+@keyframes mdOut { to { opacity: 0; transform: translateY(16px) scale(.95); } }
+#modal-root:has(.modal.event) .modal-backdrop { background: rgba(12, 8, 18, .4); backdrop-filter: none; }
+#modal-root .modal.event { width: min(500px, 94vw); animation: evIn .42s cubic-bezier(.2, 1.3, .35, 1) both; }
+@keyframes evIn { from { opacity: 0; transform: translateY(30px) scale(.9); } 60% { opacity: 1; } }
+#modal-root .modal.event .modal-head { display: flex; align-items: center; gap: 10px; padding: 8px 10px 8px 12px; border-bottom: 3px solid var(--ink); border-radius: 0;
+  background: linear-gradient(180deg, var(--gold), var(--gold2)); color: #2b1600; }
+#modal-root .modal.event.expedition .modal-head { background: linear-gradient(180deg, #7ad0ff, #2a7fb8); color: #0a1a2a; }
+#modal-root .modal.event .ev-titles { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+#modal-root .modal.event .ev-titles h3 { margin: 0; padding: 0; background: none; border: 0; width: auto; font-size: 20px; line-height: 1.1; color: inherit; text-shadow: 0 1px 0 rgba(255, 255, 255, .35); display: block; }
+#modal-root .modal.event .ev-kind { font-family: var(--body); font-size: 10.5px; font-weight: 900; letter-spacing: 1.4px; text-transform: uppercase; opacity: .72; flex-basis: auto; order: 0; }
+.ev-cast { display: flex; align-items: flex-end; gap: 2px; flex: none; height: 54px; padding: 0 2px; border-radius: 10px; background: rgba(0, 0, 0, .18); border: 2px solid rgba(28, 16, 32, .5); overflow: hidden; }
+.ev-cast figure { margin: 0; position: relative; height: 52px; display: flex; align-items: flex-end; animation: castIn .5s .12s cubic-bezier(.2, 1.4, .4, 1) backwards; }
+.ev-cast figure:nth-child(2) { animation-delay: .2s; } .ev-cast figure:nth-child(3) { animation-delay: .28s; }
+.ev-cast figure > :first-child { height: 52px; width: auto; }
+.ev-cast figure svg, .ev-cast figure img { height: 52px !important; width: auto !important; }
+.ev-cast figcaption { position: absolute; left: 50%; bottom: 1px; transform: translateX(-50%); font: 800 9px var(--body); color: #fff; background: rgba(0, 0, 0, .6); padding: 0 5px; border-radius: 6px; white-space: nowrap; }
+.ev-cast.none { background: none; border: 0; align-items: center; }
+.ev-cast .ev-emblem { width: 42px; height: 42px; filter: drop-shadow(0 2px 0 rgba(0, 0, 0, .4)); }
+@keyframes castIn { from { opacity: 0; transform: translateY(14px); } }
+#modal-root .modal.event .ev-later { flex: none; align-self: flex-start; font-size: 12px; padding: 3px 10px; }
+#modal-root .modal.event .modal-body { padding: 0 0 12px; }
+#modal-root .modal.event .story { margin: 10px 12px 10px; padding: 8px 12px; font-size: 13.5px; line-height: 1.45; }
+#modal-root .modal.event .choices { margin: 0 12px; gap: 6px; }
+#modal-root .modal.event .btn.choice { display: grid !important; grid-template-columns: 22px minmax(0, 1fr); column-gap: 9px; row-gap: 3px; align-items: center; border-width: 8px 10px !important; border-image-width: 8px 10px !important; padding: 0 2px 1px !important;
+  animation: chIn .38s cubic-bezier(.2, 1.25, .4, 1) backwards; transition: opacity .2s, transform .2s, filter .2s; }
+#modal-root .modal.event .btn.choice:nth-child(1) { animation-delay: .1s; } #modal-root .modal.event .btn.choice:nth-child(2) { animation-delay: .16s; }
+#modal-root .modal.event .btn.choice:nth-child(3) { animation-delay: .22s; } #modal-root .modal.event .btn.choice:nth-child(4) { animation-delay: .28s; }
+@keyframes chIn { from { opacity: 0; transform: translateX(-16px); } }
+#modal-root .modal.event .choice kbd { grid-row: 1 / span 2; width: 22px; height: 22px; flex: none; }
+#modal-root .modal.event .choice .ch-main { display: block; line-height: 1.25; }
+#modal-root .modal.event .choice .ch-main b { font-size: 14px; }
+#modal-root .modal.event .choice .ch-main small { font-family: var(--body); font-weight: 700; font-size: 11.5px; opacity: .9; margin-left: 4px; }
+#modal-root .modal.event .choice .cqs { grid-column: 2; display: flex; flex-wrap: wrap; gap: 3px; margin: 0; }
+/* the pick: chosen choice stamps, the others step back */
+#modal-root .modal.event.picked .btn.choice:not(.chosen) { opacity: .3; transform: scale(.97); filter: grayscale(.6); }
+#modal-root .modal.event .btn.choice.chosen { animation: chosen .5s ease-out; position: relative; }
+#modal-root .modal.event .btn.choice.chosen::after { content: '✓'; position: absolute; right: 4px; top: 50%; width: 30px; height: 30px; margin-top: -15px; border-radius: 50%; display: grid; place-items: center;
+  font: 900 18px var(--body); color: #fff; background: #3fae3a; border: 3px solid var(--ink); text-shadow: none; animation: stamp .35s .05s cubic-bezier(.2, 1.6, .4, 1) backwards; }
+@keyframes chosen { 0% { transform: scale(1); } 30% { transform: scale(1.04); filter: brightness(1.3); } 100% { transform: scale(1); } }
+@keyframes stamp { from { opacity: 0; transform: scale(2.2) rotate(-25deg); } }
+#modal-root .modal.event .ev-outcome { margin: 10px 12px 0; padding: 8px 12px; border-radius: 10px; background: rgba(63, 174, 58, .16); border: 2px solid rgba(127, 220, 62, .55); color: #d8f5c8; font-weight: 800; font-size: 13px; display: flex; gap: 8px; align-items: center; animation: outIn .3s .12s ease-out backwards; }
+#modal-root .modal.event .ev-outcome[hidden] { display: none; }
+@keyframes outIn { from { opacity: 0; transform: translateY(8px); } }
+body.no-anim #modal-root .modal, body.no-anim #modal-root .modal *, body.no-anim #modal-root .modal-backdrop { animation: none !important; }
+/* decisions waiting: a pill on the surface */
+.ev-pill { position: absolute; left: 10px; top: 40px; z-index: 6; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px 4px 8px; border-radius: 14px; cursor: pointer; pointer-events: auto;
+  font: 800 12px var(--body); color: #2b1600; background: linear-gradient(180deg, #ffd76a, #e0a020); border: 2px solid var(--ink); box-shadow: 0 3px 0 rgba(0, 0, 0, .4); animation: pillPulse 2.4s ease-in-out infinite; }
+.ev-pill[hidden] { display: none; }
+.ev-pill .ico-inline { width: 18px; height: 18px; }
+.ev-pill.fresh { animation: pillIn .45s cubic-bezier(.2, 1.4, .4, 1), pillPulse 2.4s .45s ease-in-out infinite; }
+@keyframes pillPulse { 50% { box-shadow: 0 3px 0 rgba(0, 0, 0, .4), 0 0 0 5px rgba(255, 211, 74, .28); } }
+@keyframes pillIn { from { opacity: 0; transform: translateX(-30px) scale(.8); } }
+/* event card fixes: chips flow in a row; the cast shows head-and-shoulders portraits */
+#modal-root .modal.event .choice > .cqs { flex-direction: row; align-items: center; }
+#modal-root .modal.event .choice > .ch-main { display: block; }
+.ev-cast { height: 56px; gap: 3px; padding: 0 3px; align-items: flex-start; }
+.ev-cast figure { width: 46px; height: 56px; overflow: hidden; align-items: flex-start; justify-content: center; border-radius: 8px; }
+.ev-cast figure > :first-child { height: 118px !important; width: auto; margin-top: 2px; flex: none; }
+.ev-cast figure svg, .ev-cast figure img { height: 118px !important; width: auto !important; }
+.ev-cast figcaption { display: none; }
+#modal-root .modal.event .btn.choice.chosen, #modal-root .modal.event .btn.choice.chosen:disabled { opacity: 1 !important; cursor: default;
+  filter: drop-shadow(0 0 7px rgba(127, 220, 62, .85)) drop-shadow(0 3px 0 rgba(0, 0, 0, .4)) !important; }
+#modal-root .modal.event.picked .ev-later { visibility: hidden; }
