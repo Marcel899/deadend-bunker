@@ -210,7 +210,7 @@ DE.Data.MUTATIONS = [
 /* ---- objective ladder: short, medium and long-term goals with rewards ---- */
 /* Objectives, shown three at a time in this order: a guided path from the first room to the endgame. */
 DE.Data.GOALS = [
-  { id: 'g_farm', tier: 1, name: 'Grow your own food', desc: 'Build a Hydroponic Farm — the stores will not last forever.', check: (s) => Object.values(s.rooms).some(r => r.type === 'farm' && r.level > 0), reward: { scrap: 40, food: 60 } },
+  { id: 'g_farm', tier: 1, name: 'Grow your own food', desc: 'Build a Small Farm — the stores will not last forever.', check: (s) => Object.values(s.rooms).some(r => r.type === 'farm' && r.level > 0), reward: { scrap: 40, food: 60 } },
   { id: 'g_water', tier: 1, name: 'Clean water', desc: 'Build a Water Purifier.', check: (s) => Object.values(s.rooms).some(r => r.type === 'water' && r.level > 0), reward: { scrap: 40, water: 60 } },
   { id: 'g_shop', tier: 1, name: 'Scrap from scrap', desc: 'Build a Workshop to salvage building material.', check: (s) => Object.values(s.rooms).some(r => r.type === 'workshop' && r.level > 0), reward: { scrap: 80 } },
   { id: 'g_lab', tier: 1, name: 'Turn on the lab', desc: 'Build a Research Laboratory.', check: (s) => Object.values(s.rooms).some(r => r.type === 'lab' && r.level > 0), reward: { scrap: 120, research: 30 } },

@@ -433,20 +433,33 @@ DE.UI.Battlefield = (function () {
     if (result.breach) { const live = st.zombies.filter(z => !z.dead); live.forEach((z, i) => { if (i % 5 < 2) z.survivor = true; }); }
     if (!running) { st.zombies.forEach(z => z.survivor ? (z.el.remove(), z.dead = true) : kill(z)); endFight(); }
   }
-  /** The fight ends when the field is clear — or, if nobody can shoot, the horde gives up and leaves. */
+  /** The fight ends when the field is clear. Zombies never turn back: whatever the guards and turrets
+   * leave standing at the wall is finished off by the crew from the wall top, one at a time
+   * (a shot from the parapet), so the horde always comes in, attacks and dies at the bunker. */
   function checkFightEnd() {
     const now = performance.now(), age = (now - st.fightStart) / 1000;
     const live = st.zombies.filter(z => !z.dead && !z.through && !z.retreat);
     if (!live.length) { endFight(); return; }
     const shooters = Object.keys(st.guards).length + st.turrets.length + (st.launcher ? 1 : 0);
-    if (age > (shooters ? 25 : 9)) {
-      live.forEach(z => { if (shooters && !z.survivor) kill(z); else if (!(st.result && st.result.breach && z.survivor)) { z.retreat = true; } });
-      if (age > 30) endFight();
+    // give the defenders their moment first; then the wall crew clears the ones hammering at it
+    if (age > (shooters ? 16 : 7) && now >= (st.wallShotAt || 0)) {
+      const z = live.filter(z => !(st.result && st.result.breach && z.survivor) && z.delay <= 0 && (z.x < (st.front || 700) + 140 || age > 26)).sort((a, b) => a.x - b.x)[0];
+      if (z) { wallShot(z); st.wallShotAt = now + (age > 26 ? 120 : 420 + Math.random() * 300); }
     }
+    if (age > 34) { live.forEach(z => { if (!(st.result && st.result.breach && z.survivor)) kill(z); }); endFight(); }
+  }
+  /** A survivor on the wall top fires down at a zombie. */
+  function wallShot(z) {
+    const L = OW().LAYOUT, x0 = L.wallR - 8, y0 = L.roofY + 8;
+    tracer(x0, y0, z.x, z.y - z.h * .55, z.big);
+    DE.Audio.sfx('shot', 60);
+    if (z.big && !z.wallHit) { z.wallHit = true; blood(z.x, z.y - z.h * .5, 5, z.toxic); return; }   // big ones take two
+    kill(z);
   }
   function endFight() {
-    st.fighting = false; st.resolved = false;
-    st.zombies.forEach(z => { if (!z.dead && !z.through && !z.retreat) z.retreat = true; });
+    st.fighting = false; st.resolved = false; st.wallShotAt = 0;
+    // anything still out there (stragglers that never reached the wall) falls where it stands
+    st.zombies.forEach(z => { if (!z.dead && !z.through && !z.retreat) kill(z); });
     st.wave = -1;
   }
   function status() { return { zombies: st.zombies.filter(z => !z.dead).length, turrets: st.turrets.map(t => ({ x: t.px, y: t.py, a: +t.a.toFixed(1), target: t.target ? t.target.x : null })), launcher: st.launcher ? { a: st.launcher.a, cd: st.launcher.cd } : null, missiles: st.missiles.length, guards: Object.values(st.guards).map(g => ({ x: +g.x.toFixed(1), y: g.y })), fighting: st.fighting, incoming: st.incoming, front: st.front, kills: st.kills, budget: st.killBudget, zs: st.zombies.filter(z => !z.dead).map(z => ({ id: z.id, x: Math.round(z.x), lane: z.lane, mode: z.mode, d: +z.delay.toFixed(1), t: z.through, r: z.retreat })) }; }
