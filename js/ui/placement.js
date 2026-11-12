@@ -49,7 +49,7 @@ DE.UI.Placement = (function () {
     let reason = place.ok ? '' : place.reason;
     let cost;
     if (mode.roomId) { cost = DE.Bunker.moveCost(s, s.rooms[mode.roomId]); if (place.ok && !DE.Util.canAfford(s.resources, cost)) reason = 'Not enough resources to relocate'; }
-    else { cost = DE.Bunker.buildCost(s, mode.type); if (!DE.Bunker.isUnlocked(s, mode.type)) reason = DE.Bunker.lockReason(s, mode.type); else if (place.ok && !DE.Util.canAfford(s.resources, cost)) reason = 'Not enough resources'; }
+    else { cost = DE.Bunker.buildCost(s, mode.type); if (!DE.Bunker.isUnlocked(s, mode.type)) reason = DE.Bunker.lockReason(s, mode.type); else if (place.ok && !DE.Util.canAfford(s.resources, cost)) reason = 'Not enough resources'; else if (place.ok && !DE.Expeditions.hasRare(s, DE.Data.ROOMS[mode.type].rare)) reason = 'Needs rare materials from expeditions'; }
     mode.valid = !reason; mode.floor = hit.depth; mode.slot = slot;
     const g = mode.ghost; g.style.display = ''; g.style.left = (hit.r.left - base.left + slot * CELL) + 'px'; g.style.top = (hit.r.top - base.top) + 'px'; g.style.height = hit.r.height + 'px';
     g.classList.toggle('valid', mode.valid); g.classList.toggle('invalid', !mode.valid);

@@ -246,6 +246,30 @@ DE.Data = DE.Data || {};
       upgradeDesc: '+20 housing, +20 morale, +4 food & +4 water per second per level',
       cost: { scrap: 22000, concrete: 6000, research: 5000 }, buildTime: 1200, workers: 2, profession: 'farmer', powerUse: 3.0, produces: { food: 4, water: 4 }, effects: { housing: 20, morale: 20, sleepSpeed: 0.1 }, maxLevel: 20 }),
 
+    /* ---- Exclusive rooms: built from blueprints recovered on expeditions (blueprint = where, explore =
+       how well the team must know the place), with rare materials on top of the usual cost ---- */
+    mushroom: T(6, { id: 'mushroom', name: 'Mushroom Cavern', icon: '🍄', category: 'production', size: 2, blueprint: 'farmland', explore: 2, maxLevel: 100,
+      desc: 'Damp beds of oyster mushrooms in the dark. Food without grow lamps — it draws no power at all.', upgradeDesc: 'Raises food output',
+      cost: { scrap: 400, concrete: 60 }, rare: { chem: 2 }, buildTime: 90, workers: 2, profession: 'farmer', powerUse: 0, produces: { food: 0.9 } }),
+    condenser: T(6, { id: 'condenser', name: 'Atmospheric Condenser', icon: '🌫️', category: 'production', size: 2, blueprint: 'waterplant', explore: 2, maxLevel: 100,
+      desc: 'Pulls clean water out of the damp tunnel air. Runs itself — no staff needed.', upgradeDesc: 'Raises water output',
+      cost: { scrap: 500, concrete: 80 }, rare: { alloy: 2, circuits: 1 }, buildTime: 100, workers: 0, powerUse: 0.35, produces: { water: 0.8 } }),
+    museum: T(6, { id: 'museum', name: 'Trophy Hall', icon: '🏆', category: 'support', size: 4, blueprint: 'mall', explore: 2, maxLevel: 20,
+      desc: 'Glass cases for everything the teams brought home. Every collectible on display lifts the whole bunker.', upgradeDesc: '+4 morale per level; +1% production per collectible on display (more with levels)',
+      cost: { scrap: 600, concrete: 120 }, rare: { circuits: 1, alloy: 1 }, buildTime: 120, workers: 0, powerUse: 0.1, effects: { morale: 4, trophies: 0.01 } }),
+    signal: T(6, { id: 'signal', name: 'Signal Tower', icon: '📡', category: 'support', size: 2, blueprint: 'police', explore: 3, maxLevel: 20,
+      desc: 'A relay that talks to the teams in the field: one more team on the road, faster trips and better finds.', upgradeDesc: '+1 expedition team; +3% trip speed and +3% find chance per level',
+      cost: { scrap: 900, concrete: 160 }, rare: { circuits: 3, alloy: 2 }, buildTime: 150, workers: 1, profession: 'scout', powerUse: 0.4, effects: { extraTeam: 1, expeditionSpeed: 0.03, findBonus: 0.03 } }),
+    smelter: T(6, { id: 'smelter', name: 'Scrap Smelter', icon: '🔥', category: 'production', size: 2, blueprint: 'factory', explore: 3, maxLevel: 100,
+      desc: 'An induction furnace from the factory floor: melts scrap and crushed stone into concrete.', upgradeDesc: 'Raises concrete output',
+      cost: { scrap: 1200, concrete: 200 }, rare: { alloy: 4 }, buildTime: 160, workers: 2, profession: 'engineer', powerUse: 0.6, produces: { concrete: 0.8 }, consumes: { scrap: 0.4 } }),
+    chemlab: T(6, { id: 'chemlab', name: 'Chemistry Lab', icon: '⚗️', category: 'production', size: 2, blueprint: 'hospital', explore: 3, maxLevel: 100,
+      desc: 'Fume hoods and a still from the hospital pharmacy. Turns fuel into research.', upgradeDesc: 'Raises research output',
+      cost: { scrap: 1000, concrete: 200 }, rare: { chem: 4, circuits: 2 }, buildTime: 160, workers: 2, profession: 'scientist', powerUse: 0.4, produces: { research: 0.9 }, consumes: { fuel: 0.06 } }),
+    solar: T(6, { id: 'solar', name: 'Solar Array', icon: '☀️', category: 'production', size: 2, blueprint: 'radiotower', explore: 3, maxLevel: 100,
+      desc: 'The control room for panels hidden on the surface: clean power without a drop of fuel, and no staff.', upgradeDesc: 'Raises power output',
+      cost: { scrap: 1500, concrete: 250 }, rare: { cells: 3, circuits: 3 }, buildTime: 180, workers: 0, powerUse: 0, produces: { electricity: 2 } }),
+
     /* ---- Unique rooms, found in abandoned facilities ---- */
     geothermal: T(0, { id: 'geothermal', name: 'Geothermal Plant', icon: '🌋', category: 'production', size: 2, unique: true,
       desc: 'Taps a volcanic vent. Free power, forever.', upgradeDesc: 'Raises power output',
@@ -277,8 +301,10 @@ DE.Data = DE.Data || {};
     // tier 4
     'reactor', 'genetics', 'autofarm', 'hospital', 'dronehangar', 'heavyweapons', 'tactical', 'cryo', 'seismic', 'defcontrol',
     // tier 5
-    'fusion', 'bioeng', 'reservoir', 'aicommand', 'autoplant', 'warroom', 'uplink', 'medresearch', 'silo', 'ark'];
+    'fusion', 'bioeng', 'reservoir', 'aicommand', 'autoplant', 'warroom', 'uplink', 'medresearch', 'silo', 'ark',
+    // recovered blueprints
+    'mushroom', 'condenser', 'museum', 'signal', 'smelter', 'chemlab', 'solar'];
 
   DE.Data.CATEGORY_LABELS = { production: 'Production', housing: 'Housing', support: 'Support', defense: 'Defense' };
-  DE.Data.TIER_LABELS = { 1: 'Basic Survival', 2: 'Improved Infrastructure', 3: 'Advanced Facilities', 4: 'High-Tech Facilities', 5: 'Ultimate Facilities' };
+  DE.Data.TIER_LABELS = { 1: 'Basic Survival', 2: 'Improved Infrastructure', 3: 'Advanced Facilities', 4: 'High-Tech Facilities', 5: 'Ultimate Facilities', 6: 'Recovered Blueprints' };
 })();

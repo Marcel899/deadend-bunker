@@ -321,6 +321,9 @@ DE.UI = (function () {
      case 'recruitN': { const free = Math.max(0, DE.Bunker.housingCapacity(s) - DE.Bunker.population(s)); const n = Math.min(v, free); out.push({ cls: n ? 'good' : 'warn', ic: im('pop'), t: n ? '+' + n + ' survivor' + (n > 1 ? 's' : '') : 'No free beds!' }); break; }
      case 'waveHp': out.push({ cls: v > 1 ? 'bad' : 'good', ic: im('wave'), t: 'Next wave ' + (v > 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + '%' }); break;
      case 'chain': out.push({ cls: 'risk', ic: im('warning'), t: v[4] || 'This may come back' }); break;
+     case 'mat': for (const m in v) if (DE.Data.MATERIALS[m]) out.push({ cls: 'gold', ic: DE.Icons.mat(m), t: '+' + v[m] + ' ' + DE.Data.MATERIALS[m].short }); break;
+     case 'collect': out.push({ cls: 'gold', ic: im('artifacts'), t: 'A collectible' }); break;
+     case 'explore': out.push({ cls: 'good', ic: im('map'), t: 'Map +' + v }); break;
      case 'noiseCalm': out.push({ cls: 'good', ic: im('noise'), t: 'Horde quieter ' + Math.round(v / 60) + 'm' }); break;
      case 'delay': out.push({ cls: 'bad', ic: im('timer'), t: '+' + U().fmtTime(v) + ' trip' }); break;
      case 'hurry': out.push({ cls: 'good', ic: im('timer'), t: '−' + U().fmtTime(v) + ' trip' }); break;

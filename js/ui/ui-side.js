@@ -182,10 +182,10 @@ DE.UI.Side = (function () {
  html += `<details class="tier-group" ${unlockedCount ? 'open' : ''}><summary><span class="tag tier-${t}">Tier ${t}</span> ${esc(DE.Data.TIER_LABELS[t])} <small class="muted">${unlockedCount}/${defs.length} unlocked${!unlockedCount && gate ? ' · ' + esc(DE.Bunker.lockReason(s, gate.id) || '') : ''}</small></summary>`;
  defs.forEach(def => {
  const type = def.id; const unlocked = DE.Bunker.isUnlocked(s, type);
- const place = DE.Bunker.canPlace(s, type, depth, slot); const cost = DE.Bunker.buildCost(s, type); const afford = U().canAfford(s.resources, cost);
+ const place = DE.Bunker.canPlace(s, type, depth, slot); const cost = DE.Bunker.buildCost(s, type); const rareOk = DE.Expeditions.hasRare(s, def.rare); const afford = U().canAfford(s.resources, cost) && rareOk;
  const ok = unlocked && place.ok && afford;
  const fits = def.size <= free;
- const reason = !unlocked ? DE.Bunker.lockReason(s, type) : !place.ok ? (fits ? place.reason : `Needs ${def.size} free cells here (${free} free) — or drag it elsewhere`) : !afford ? 'Not enough resources' : '';
+ const reason = !unlocked ? DE.Bunker.lockReason(s, type) : !place.ok ? (fits ? place.reason : `Needs ${def.size} free cells here (${free} free) — or drag it elsewhere`) : !rareOk ? 'Needs rare materials from expeditions' : !afford ? 'Not enough resources' : '';
  let outputs = def.produces ? Object.keys(def.produces).map(r => `<span>+${def.produces[r]}${DE.Icons.res(r, 'ico-inline')}/s</span>`).join('') : '';
  if (def.effects && def.upgradeDesc) outputs += `<span>${esc(def.upgradeDesc)}</span>`;
  const chips = `<i class="bc-chip ${fits ? '' : 'bad'}" title="${def.size} cells wide">${Array.from({ length: def.size }, () => '<em></em>').join('')}${def.size}</i>`
@@ -194,7 +194,7 @@ DE.UI.Side = (function () {
  html += `<div class="build-card cat-${def.category} ${unlocked ? '' : 'locked'} ${fits ? '' : 'nofit'}" data-fp="${def.size}" data-fok="${place.ok ? 1 : 0}" data-depth="${depth}" data-slot="${slot}"><div class="bc-icon">${DE.Icons.room(def.id, 'ico-inline')}</div>
  <div class="bc-body"><b>${esc(def.name)}</b><div class="bc-chips">${chips}</div>
  <div class="bc-desc">${esc(def.desc)}</div>${outputs ? `<div class="bc-out">${outputs}</div>` : ''}${reason ? `<div class="bc-reason">${esc(reason)}</div>` : ''}</div>
- <div class="bc-actions"><button class="btn primary small ${ok ? '' : 'cant'}" data-action="build" data-type="${type}" data-depth="${depth}" data-slot="${slot}" ${ok ? '' : 'disabled'}>Build here<span class="cost">${U().costText(cost)}</span><small>${U().fmtTime(DE.Bunker.buildTime(s, type))}</small></button>${unlocked ? `<button class="btn small drag-handle" data-place="${type}" title="Drag onto the bunker">${DE.Icons.img('move4', 'ico-inline')} Drag</button>` : ''}</div></div>`;
+ <div class="bc-actions"><button class="btn primary small ${ok ? '' : 'cant'}" data-action="build" data-type="${type}" data-depth="${depth}" data-slot="${slot}" ${ok ? '' : 'disabled'}>Build here<span class="cost">${U().costText(cost)}${DE.Icons.rare(def.rare, s.materials)}</span><small>${U().fmtTime(DE.Bunker.buildTime(s, type))}</small></button>${unlocked ? `<button class="btn small drag-handle" data-place="${type}" title="Drag onto the bunker">${DE.Icons.img('move4', 'ico-inline')} Drag</button>` : ''}</div></div>`;
  });
  html += `</details>`;
  });

@@ -217,6 +217,20 @@ DE.Scenes = (function () {
   }
   function tierOf(level) { return level >= 50 ? 4 : level >= 25 ? 3 : level >= 10 ? 2 : 1; }
 
+  /** Trophy Hall: a plinth for every collectible the teams found, the item on top (more plinths with levels). */
+  function exhibits(state, W, level) {
+    const got = state && state.collection ? Object.keys(state.collection).filter(id => DE.Data.COLLECTIBLES[id]) : [];
+    const slots = Math.min(got.length, 4 + Math.floor(level / 2), 10); let s = '';
+    for (let i = 0; i < slots; i++) {
+      const c = DE.Data.COLLECTIBLES[got[i]], px = (DE.Data.SPRITES || {})[c.sprite]; if (!px) continue;
+      const x = 46 + (W - 92) * (slots > 1 ? i / (slots - 1) : .5), h = 26, w = Math.min(34, h * px[0] / px[1]), hh = w * px[1] / px[0];
+      s += `<g class="exhibit"><rect x="${(x - 15).toFixed(1)}" y="${FLOOR - 40}" width="30" height="40" rx="2" fill="#4a3a6a" ${S2}/><rect x="${(x - 18).toFixed(1)}" y="${FLOOR - 44}" width="36" height="6" rx="2" fill="#6a5a8a" ${S2}/>`
+        + `<ellipse cx="${x.toFixed(1)}" cy="${FLOOR - 44}" rx="16" ry="3" fill="#fff" opacity=".18"/><image href="assets/sprites/${c.sprite}.png" x="${(x - w / 2).toFixed(1)}" y="${(FLOOR - 44 - hh).toFixed(1)}" width="${w.toFixed(1)}" height="${hh.toFixed(1)}"><title>${c.name}</title></image></g>`;
+    }
+    if (!slots) s += txt(W / 2, FLOOR - 50, 'EMPTY — EXPLORE TO FILL IT', 9, '#e0b0ff');
+    return s;
+  }
+
   /** Full scene markup for a room. */
   function render(room, def, state) {
     const layout = DE.Data.SCENES[def.id] || DE.Data.SCENES._default;
@@ -240,6 +254,7 @@ DE.Scenes = (function () {
       const opts = Object.assign({}, o || {}); if (opts.v == null) opts.v = tier;
       s += g('prop p-' + name, fn(opts), x, y == null || GROUNDED[name] || y >= FLOOR ? FLOOR + DE.Data.FLOOR_DROP : y, opts.scale ? `scale(${opts.scale})` : '');
     });
+    if (layout.exhibits && !room.construction) s += exhibits(state, W, level);
     if (room.construction) s += g('construction', P.scaffold({ w: W - 30, h: 110 }), W / 2, FLOOR);
     s += `<rect x="0" y="${-TOP}" width="${W}" height="${180 + TOP}" fill="url(#sc-vig)" class="vig"/></svg>`;
     return s;

@@ -13,7 +13,7 @@ DE.Data.BUS = [
   { level: 1, name: 'Pickup truck', desc: 'A dented pickup. Three seats, no armour.', capacity: 3, speed: 1, safety: 0, cargo: 1, cost: null },
   { level: 2, name: 'Armoured van', desc: 'Steel plates on the doors, a roof rack. Four seats, 15% safer, 20% more cargo.', capacity: 4, speed: 0.9, safety: 0.15, cargo: 1.2, cost: { scrap: 600, concrete: 80 } },
   { level: 3, name: 'Expedition bus', desc: 'A school bus turned fortress: six seats, bunks, a mounted gun. 30% safer, faster, +50% cargo.', capacity: 6, speed: 0.75, safety: 0.3, cargo: 1.5, cost: { scrap: 2600, concrete: 500, fuel: 200 } },
-  { level: 4, name: 'Mobile base', desc: 'Bus plus trailer workshop and drone mast. Eight seats, 45% safer, double cargo, scouts spot extra sites.', capacity: 8, speed: 0.6, safety: 0.45, cargo: 2, cost: { scrap: 9000, concrete: 2000, fuel: 800, research: 600 } },
+  { level: 4, name: 'Mobile base', desc: 'Bus plus trailer workshop and drone mast. Eight seats, 45% safer, double cargo, scouts spot extra sites.', capacity: 8, speed: 0.6, safety: 0.45, cargo: 2, cost: { scrap: 9000, concrete: 2000, fuel: 800, research: 600 }, rare: { alloy: 6, circuits: 4, cells: 3 } },
 ];
 
 DE.Data.FACTIONS = {
@@ -83,6 +83,16 @@ DE.Data.ENCOUNTERS = [
     choices: [{ label: 'Salvage the engine', desc: 'Heavy, slow, worth a lot of scrap and fuel.', effects: { haul: { scrap: 6, fuel: 3 }, delay: 120 } }, { label: 'Take the flight case', desc: 'Something someone wanted badly.', effects: { gamble: [0.45, { artifact: 'random' }, { haul: { research: 3 } }, 'a pre-war relic', 'flight logs — still useful'] } }] },
   { id: 'cache', tags: ['police', 'base', 'factory', 'industrial', 'trainyard'], title: 'Spray paint on a manhole', text: 'An arrow and a number. Below: a dry tunnel, ammunition boxes, and a crowbar left in a hurry.',
     choices: [{ label: 'Clear it out', desc: 'Traps and scrap for the wall.', effects: { traps: 4, haul: { scrap: 3 } } }, { label: 'Leave a mark of your own', desc: 'Other scavengers will know you play fair.', effects: { rep: { traders: 1, militia: 1 } } }] },
+  { id: 'drone', tags: ['radiotower', 'base', 'airport', 'city', 'police'], title: 'A crashed surveillance drone', text: 'It came down in a car park, rotors snapped, the camera still blinking. Military hardware.',
+    choices: [{ label: 'Strip the electronics', desc: 'Circuit boards, and it takes a while.', effects: { mat: { circuits: 2 }, delay: 60 } }, { label: 'Pull its flight log', desc: 'It mapped the whole district.', effects: { explore: 1, gain: { research: 2 } } }] },
+  { id: 'museum', tags: ['city', 'mall', 'suburbs'], title: 'A looted museum', text: 'The front halls are stripped bare. The storerooms in the basement are locked, and dark.',
+    choices: [{ label: 'Search the storerooms', desc: 'Something the looters missed — if anything.', effects: { collect: 1, delay: 90, injure: [0.2, 20] } }, { label: 'Take the display steel', desc: 'Good alloy in those cases.', effects: { mat: { alloy: 1 }, haul: { scrap: 2 } } }] },
+  { id: 'tanker', tags: ['road', 'trainyard', 'gas', 'industrial', 'waterplant'], title: 'An overturned tanker', text: 'Hazard placards, a slow leak, the cab crushed. Whatever it carried could be useful — or burn you.',
+    choices: [{ label: 'Drain the chemicals', desc: 'Careful work with bad fumes.', effects: { mat: { chem: 2 }, injure: [0.25, 20] } }, { label: 'Cut off the tank plating', desc: 'Alloy, and nobody breathes anything.', effects: { mat: { alloy: 1 }, delay: 45 } }] },
+  { id: 'hatch', tags: ['base', 'police', 'radiotower', 'industrial'], title: 'Another bunker’s hatch', text: 'A blast hatch in a hillside, the wheel lock rusted shut. Somebody else had the same idea as you.',
+    choices: [{ label: 'Force it open', desc: 'Abandoned and stocked? Or not abandoned at all.', effects: { gamble: [0.5, { mat: { cells: 2, circuits: 1 }, collect: 1 }, { injure: [0.6, 35] }, 'abandoned — and stocked', 'not abandoned'] } }, { label: 'Leave a note', desc: 'Word gets around that you are decent.', effects: { rep: { traders: 1 }, explore: 1 } }] },
+  { id: 'surveyor', tags: ['suburbs', 'farmland', 'road', 'city', 'gas'], title: 'A surveyor’s van', text: 'Theodolites, rolls of plans, and maps of every street in the county with notes in red pen.',
+    choices: [{ label: 'Copy the maps', desc: 'The team will know this place far better.', effects: { explore: 2 } }, { label: 'Take the van battery', desc: 'A fuel cell, practically.', effects: { mat: { cells: 1 } } }] },
   { id: 'quiet', tags: ['suburbs', 'gas', 'hospital', 'mall', 'base', 'road', 'city', 'industrial', 'farmland', 'waterplant'], title: 'An uneventful trip', text: 'For once the road is empty and the team comes home singing.', choices: [{ label: 'Good', desc: '', effects: { morale: 4, bond: 10 } }] },
 ];
 

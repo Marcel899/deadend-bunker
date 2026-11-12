@@ -12,6 +12,7 @@ DE.Bunker = (function () {
   function lockReason(state, type) {
     const def = DE.Data.ROOMS[type]; if (!def) return 'Unknown room';
     if (def.unique) return 'Found only by excavation';
+    if (def.blueprint) { if (state.blueprints && state.blueprints[type]) return null; const loc = DE.Expeditions.location(def.blueprint); return 'Blueprint: explore ' + (loc ? loc.name : def.blueprint) + ' to level ' + (def.explore || 1) + ' (now ' + DE.Expeditions.explore(state, def.blueprint) + ')'; }
     const ur = DE.Effects.get(state).unlockedRooms;
     if (def.unlock && !(ur[type] || (def.unlock.startsWith('blueprints') && ur[def.unlock]))) { const n = DE.Data.RESEARCH[def.unlock]; return 'Research: ' + (n ? n.name : def.unlock); }
     if (def.minDepth && state.floors.length < def.minDepth) return 'Dig to B' + def.minDepth;
@@ -20,6 +21,7 @@ DE.Bunker = (function () {
   function isUnlocked(state, type) {
     const def = DE.Data.ROOMS[type];
     if (!def || def.unique) return false;
+    if (def.blueprint) return !!(state.blueprints && state.blueprints[type]);
     if (def.minDepth && state.floors.length < def.minDepth) return false;
     if (!def.unlock) return true;
     const ur = DE.Effects.get(state).unlockedRooms;
@@ -134,13 +136,14 @@ DE.Bunker = (function () {
   }
 
   function build(state, type, depth, slot, now) {
-    now = now || Date.now();
+    now = now || Date.now(); const def = DE.Data.ROOMS[type];
     if (!isUnlocked(state, type)) return { ok: false, reason: 'Not unlocked' };
     const place = canPlace(state, type, depth, slot);
     if (!place.ok) return place;
     const cost = buildCost(state, type);
     if (!U().canAfford(state.resources, cost)) return { ok: false, reason: 'Not enough resources' };
-    U().pay(state.resources, cost);
+    if (def.rare && !DE.Expeditions.hasRare(state, def.rare)) return { ok: false, reason: 'Needs rare materials from expeditions' };
+    U().pay(state.resources, cost); if (def.rare) DE.Expeditions.payRare(state, def.rare);
     const room = placeRoom(state, type, depth, slot, 0, now);
     const dur = buildTime(state, type);
     room.construction = { kind: 'build', endsAt: now + dur * 1000, duration: dur, levels: 1 };

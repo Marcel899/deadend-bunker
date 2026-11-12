@@ -26,7 +26,8 @@ DE.Events = (function () {
     const next = busNext(state); if (!next) return { ok: false, reason: 'Fully upgraded' };
     if (!DE.Expeditions.unlocked(state)) return { ok: false, reason: 'Build a Garage first' };
     if (!U().canAfford(state.resources, next.cost)) return { ok: false, reason: 'Not enough resources' };
-    U().pay(state.resources, next.cost); state.bus.level = next.level; return { ok: true, cost: next.cost };
+    if (next.rare && !DE.Expeditions.hasRare(state, next.rare)) return { ok: false, reason: 'Needs rare materials from expeditions' };
+    U().pay(state.resources, next.cost); if (next.rare) DE.Expeditions.payRare(state, next.rare); state.bus.level = next.level; return { ok: true, cost: next.cost };
   }
 
   /* ---------- noise: what the horde hears ---------- */
@@ -278,6 +279,9 @@ DE.Events = (function () {
         case 'waterPct': gainRes(state, 'water', state.resources.water * v); out.push('lost water'); break;
         case 'electricityPct': gainRes(state, 'electricity', state.resources.electricity * v); out.push('lost power'); break;
         case 'traps': state.defense.traps += v; out.push('+' + v + ' traps'); break;
+        case 'mat': for (const m in v) { const n = Math.round(v[m] * (trip ? 1 : 1)); if (!DE.Data.MATERIALS[m] || n <= 0) continue; if (trip) { trip.mats = trip.mats || {}; trip.mats[m] = (trip.mats[m] || 0) + n; out.push('+' + n + ' ' + DE.Data.MATERIALS[m].short + ' loaded'); } else { DE.Expeditions.addMat(state, m, n); out.push('+' + n + ' ' + DE.Data.MATERIALS[m].short); } } break;
+        case 'collect': { const locId = (trip && trip.location) || ctx.location; const c = locId ? DE.Expeditions.grantCollectible(state, locId, true) : null; if (c) { out.push('found: ' + c.name); state._events = state._events || []; state._events.push({ type: 'collected', ids: [c.id], sets: DE.Expeditions.setDone(state, c.set) ? [c.set] : [] }); } else { gainRes(state, 'scrap', worth(state, 'scrap', 3)); out.push('nothing rare — some scrap'); } break; }
+        case 'explore': { const locId = (trip && trip.location) || ctx.location; if (!locId) break; if (trip) trip.explore = (trip.explore || 0) + v; else { DE.Expeditions.ensure(state); state.explore[locId] = Math.min(DE.Expeditions.MAX_EXPLORE, (state.explore[locId] || 0) + v); } out.push('map +' + v); break; }
         case 'risk': if (U().chance(v[0])) { if (v[1] === 'shock') state.defense.shock = Math.max(state.defense.shock, v[2]); out.push('he was infected — morale shaken'); } break;
         case 'buff': { if (v[0] !== '*' && !DE.Data.ROOMS[v[0]]) break; state.buffs.push({ room: v[0], mult: v[1], until: state.playtime + v[2] }); state._fx = null; out.push((v[0] === '*' ? 'all production' : DE.Data.ROOMS[v[0]].name) + ' ' + (v[1] >= 0 ? '+' : '−') + Math.round(Math.abs(v[1]) * 100) + '% for ' + Math.round(v[2] / 60) + ' min'); break; }
         default: break;

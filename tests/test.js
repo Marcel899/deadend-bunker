@@ -3,7 +3,7 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 const FILES = [
-  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/events.js', 'js/data/sprites.js', 'js/data/scenes.js', 'js/data/icons.js', 'js/data/room_icons.js',
+  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/finds.js', 'js/data/events.js', 'js/data/sprites.js', 'js/data/scenes.js', 'js/data/icons.js', 'js/data/room_icons.js',
   'js/core/util.js', 'js/core/season.js', 'js/core/effects.js', 'js/core/state.js', 'js/core/save.js', 'js/core/economy.js', 'js/core/bunker.js',
   'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
   'js/core/prestige.js', 'js/core/sim.js', 'js/core/offline.js',
@@ -382,6 +382,39 @@ t('road encounters change the trip that is still out; finds and notes reach the 
   assert(rep.id === trip.id && rep.loot.scrap >= trip.bonus.scrap && S.resources.scrap > scrap, 'loaded scrap comes home');
   assert(Array.isArray(rep.finds) && rep.notes.length === 1, 'report has finds and notes');
 });
+
+t('expeditions explore places: blueprints, collectibles and rare materials come home', () => {
+  const E = DE.State.create(null, now); E.research.done.construction = true; E._fx = null; fill(E);
+  E.floors.push(DE.State.emptyFloor(2)); const g = DE.Bunker.build(E, 'garage', 2, 0, now); assert(g.ok, g.reason); g.room.level = 1; g.room.construction = null; E._fx = null;
+  const ids = Object.keys(E.survivors).slice(0, 2); Object.values(E.survivors).forEach(v => v.hp = 100);
+  assert(!DE.Bunker.isUnlocked(E, 'mushroom') && /Blueprint/.test(DE.Bunker.lockReason(E, 'mushroom')), 'exclusive rooms start locked');
+  let t0 = now;
+  for (let trip = 0; trip < 2; trip++) {
+    const r = DE.Expeditions.send(E, 'farmland', ids, t0); assert(r.ok, r.reason); t0 = run(E, r.duration + 2, t0, 5); ids.forEach(id => E.survivors[id].hp = 100);
+  }
+  const rep = E.expeditions.log[E.expeditions.log.length - 1];
+  assert(DE.Expeditions.explore(E, 'farmland') >= 2, 'two trips: level 2');
+  assert(E.blueprints.mushroom && rep.blueprints.includes('mushroom'), 'the mushroom plans at level 2');
+  assert(DE.Bunker.isUnlocked(E, 'mushroom'), 'now buildable');
+  assert(E.materials.chem > 0, 'chemicals from the farmland');
+  E.materials.chem = 0; let b = DE.Bunker.build(E, 'mushroom', 2, 6, t0); assert(!b.ok && /rare/.test(b.reason), 'needs its rare materials');
+  E.materials.chem = 5; b = DE.Bunker.build(E, 'mushroom', 2, 6, t0); assert(b.ok, b.reason); assert(E.materials.chem === 3, 'paid 2 chemicals');
+  // a complete set changes the effects
+  const before = DE.Effects.compute(E).moraleBonus;
+  Object.values(DE.Data.COLLECTIBLES).filter(c => c.set === 'memories').forEach(c => E.collection[c.id] = true); E._fx = null;
+  assert(DE.Expeditions.setDone(E, 'memories') && DE.Effects.compute(E).moraleBonus === before + 8, 'Life Before: +8 morale');
+  // the save keeps it all
+  const L = DE.Save.sanitize(JSON.parse(JSON.stringify(E)));
+  assert(L.blueprints.mushroom && L.materials.chem === 3 && L.explore.farmland === E.explore.farmland && Object.keys(L.collection).length === Object.keys(E.collection).length, 'saved');
+  // road effects: materials, a collectible, map knowledge
+  const sent = DE.Expeditions.send(E, 'suburbs', ids, t0); assert(sent.ok, sent.reason); const tr = E.expeditions.active[0];
+  DE.Events.applyEffects(E, { mat: { circuits: 2 }, explore: 1 }, { members: ids, expId: tr.id });
+  assert(tr.mats.circuits === 2 && tr.explore === 1, 'loaded on the truck');
+  const c = DE.Expeditions.grantCollectible(E, 'gas', true); assert(c && c.where === 'gas', 'a collectible from the place');
+  every = Object.values(DE.Data.COLLECTIBLES); assert(every.length === 24 && DE.Data.COLLECTION_ORDER.every(k => DE.Expeditions.setSize(k) === 4), '6 sets of 4');
+  assert(Object.values(DE.Data.ROOMS).filter(d => d.blueprint).every(d => DE.Expeditions.location(d.blueprint) && d.rare), 'every blueprint has a place and a rare cost');
+});
+var every;
 
 console.log('Offline');
 t('offline progression credits production and caps', () => {

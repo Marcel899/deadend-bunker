@@ -121,7 +121,11 @@ DE.Game = (function () {
  DE.UI.toast('<b>Team back from ' + esc(loc.name) + '</b>' + (Object.keys(r.loot).length ? ' · ' + U().costText(r.loot) : '') + (r.rescued ? ' · rescued ' + esc(r.rescued) : '') + (r.injured.length ? ' · ' + r.injured.length + ' injured' : '') + ((r.finds || []).length ? ' · found: ' + esc(r.finds[0].split(' — ')[0]) : ''), 'ok', 5000, 'vehicle');
  log('Expedition to ' + loc.name + ' returned.' + (r.rescued ? ' Rescued ' + r.rescued + '.' : ''));
  DE.UI.Bunker.collectAt('.hatch', r.loot);
+ if (r.mats && Object.keys(r.mats).length) DE.UI.toast('Rare materials: ' + Object.keys(r.mats).map(m => DE.Icons.mat(m) + '+' + r.mats[m] + ' ' + DE.Data.MATERIALS[m].short).join(' '), 'ok', 4200, 'artifacts');
+ if ((r.collected && r.collected.length) || (r.blueprints && r.blueprints.length)) G.showFinds(r.collected || [], r.sets || [], r.blueprints || [], loc.name);
  break;
+ }
+ case 'collected': { G.showFinds(e.ids || [], e.sets || [], [], ''); break;
  }
  case 'goal': DE.UI.toast('Objective complete: <b>' + esc(e.goal.name) + '</b> · ' + U().costText(e.goal.reward), 'ok', 4500, 'star'); DE.UI.Bunker.collectAt('#chip-pop', e.goal.reward); break;
  case 'friends': DE.UI.toast('<b>' + esc(e.a) + '</b> and <b>' + esc(e.b) + '</b> are friends now — they work better together', 'info', 4000, 'pop'); break;
@@ -155,4 +159,16 @@ DE.Game = (function () {
  return G;
 })();
 
+/** A team brought home something unique: show it off (collectibles, finished sets, blueprints). */
+DE.Game.showFinds = function (ids, sets, bps, where) {
+  const esc = (x) => DE.Util.escapeHtml(x), X = DE.Expeditions, s = DE.Game.state; if (!s) return;
+  const items = ids.map(id => DE.Data.COLLECTIBLES[id]).filter(Boolean), rooms = bps.map(id => DE.Data.ROOMS[id]).filter(Boolean);
+  let html = '<div class="fd-list">';
+  items.forEach(c => { const st = DE.Data.COLLECTIONS[c.set]; html += `<div class="fd-item"><span class="fd-art"><img src="assets/sprites/${c.sprite}.png" alt=""></span><div><b>${esc(c.name)}</b><small>${esc(c.desc)}</small><em>${esc(st.name)} · ${X.setCount(s, c.set)}/${X.setSize(c.set)}</em></div></div>`; });
+  rooms.forEach(d => { html += `<div class="fd-item bp"><span class="fd-art">${DE.Icons.room(d.id, 'fd-room')}</span><div><b>Blueprint: ${esc(d.name)}</b><small>${esc(d.desc)}</small><em>Build it from any free cell · needs ${DE.Icons.rare(d.rare)}</em></div></div>`; });
+  sets.map(k => DE.Data.COLLECTIONS[k]).filter(Boolean).forEach(st => { html += `<div class="fd-set">${DE.Icons.img('trophy', 'ico-inline')} <b>${esc(st.name)}</b> complete — ${esc(st.bonusText)}, for good.</div>`; });
+  html += '</div>';
+  DE.Audio.sfx('done');
+  DE.UI.modal({ title: (where ? esc(where) + ': ' : '') + (rooms.length ? 'Blueprint recovered!' : 'A rare find!'), icon: rooms.length ? 'scroll' : 'artifacts', cls: 'finds', html, buttons: [{ label: 'Wonderful', action: 'closeModal', cls: 'primary' }] });
+};
 document.addEventListener('DOMContentLoaded', () => DE.Game.init());

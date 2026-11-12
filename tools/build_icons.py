@@ -86,6 +86,13 @@ SIG = {
     'aquifer': [('f3_crystal', .81, .26, .42), ('f3_water', .40, .46, .62)],
     'orevein': [('f3_minecart', .74, .40, .40), ('f3_ore', .32, .40, .52)],
     'minehead': [('f3_minecart', .66, .44, .36), ('pickaxe', .30, .34, .50), ('drill', .82, .22, .34)],
+    'mushroom': [('f3_traytower', .72, .36, .66), ('f3_planter', .34, .56, .40)],
+    'condenser': [('f3_filter', .80, .26, .62), ('watertank2', .40, .40, .66)],
+    'museum': [('f3_glass', .32, .40, .66), ('katana', .72, .46, .20), ('clock', .72, .30, .30, .44)],
+    'signal': [('f3_dish', .76, .34, .56), ('radiodesk', .36, .54, .56)],
+    'smelter': [('f3_lava', .78, .32, .30), ('furnace', .38, .48, .64)],
+    'chemlab': [('fumehood', .30, .36, .68), ('labbench', .70, .42, .46)],
+    'solar': [('powercell', .32, .34, .64), ('powercell', .66, .34, .64), ('f3_cablebox', .88, .16, .22, .44)],
     'server': [('serverrack', .70, .30, .62), ('serverrack', .36, .32, .68)],
     'cache': [('supplyshelf', .70, .42, .52), ('boxes', .30, .34, .40)],
 }

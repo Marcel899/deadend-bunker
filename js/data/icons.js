@@ -41,6 +41,12 @@ DE.Icons = (function () {
     return `<img class="ico ico-face ico-${kind} ${cls || ''}" src="assets/chars/face-${f}.png" alt="" draggable="false"${al ? ` style="filter:${al[1]}"` : ''}${title ? ` title="${title}"` : ''}>`;
   }
 
+  /* Rare materials: small drawn icons in the same outlined style (no image file needed). */
+  const K = '%231c1020', svg = (body) => 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">${body}</svg>`).replace(/%23/g, '%23');
+  MAP['mat.circuits'] = svg(`<rect x="8" y="12" width="48" height="40" rx="5" fill="#2f8a4a" stroke="#1c1020" stroke-width="4"/><path d="M16 22h10v8h8M48 22h-8v14h-10M16 42h14v-6M48 44h-12" fill="none" stroke="#f3c23a" stroke-width="3" stroke-linecap="round"/><rect x="24" y="26" width="16" height="12" rx="2" fill="#2a2a34" stroke="#1c1020" stroke-width="3"/><circle cx="16" cy="22" r="3" fill="#f3c23a"/><circle cx="48" cy="44" r="3" fill="#f3c23a"/><path d="M11 15h42" stroke="#fff" stroke-opacity=".35" stroke-width="3"/>`);
+  MAP['mat.alloy'] = svg(`<path d="M6 40 L22 18 H58 L42 40 Z" fill="#9fb6d6" stroke="#1c1020" stroke-width="4" stroke-linejoin="round"/><path d="M6 40 H42 V50 H6 Z" fill="#6a82a6" stroke="#1c1020" stroke-width="4" stroke-linejoin="round"/><path d="M42 40 L58 18 V28 L42 50 Z" fill="#4e6488" stroke="#1c1020" stroke-width="4" stroke-linejoin="round"/><circle cx="22" cy="30" r="2.6" fill="#1c1020"/><circle cx="40" cy="30" r="2.6" fill="#1c1020"/><path d="M24 22 H50" stroke="#fff" stroke-opacity=".55" stroke-width="3" stroke-linecap="round"/>`);
+  MAP['mat.chem'] = svg(`<path d="M24 6 h16 v16 l14 26 a6 6 0 0 1 -5 8 h-34 a6 6 0 0 1 -5 -8 l14 -26 z" fill="#e8f2f6" stroke="#1c1020" stroke-width="4" stroke-linejoin="round"/><path d="M16 38 h32 l6 10 a5 5 0 0 1 -4 6 h-36 a5 5 0 0 1 -4 -6 z" fill="#b6e03a"/><rect x="21" y="3" width="22" height="7" rx="2" fill="#f0a020" stroke="#1c1020" stroke-width="3"/><circle cx="28" cy="46" r="3" fill="#fff" fill-opacity=".7"/><circle cx="38" cy="43" r="2" fill="#fff" fill-opacity=".7"/><path d="M14 52 h36" stroke="#1c1020" stroke-width="4"/>`);
+  MAP['mat.cells'] = svg(`<rect x="14" y="10" width="36" height="46" rx="7" fill="#3a3f4e" stroke="#1c1020" stroke-width="4"/><rect x="24" y="4" width="16" height="8" rx="2" fill="#8a8e98" stroke="#1c1020" stroke-width="3"/><rect x="21" y="18" width="22" height="30" rx="4" fill="#2ad6e8" stroke="#1c1020" stroke-width="3"/><path d="M34 22 l-6 12 h6 l-4 10" fill="none" stroke="#fff" stroke-width="3" stroke-linejoin="round" stroke-linecap="round"/><path d="M18 14 v34" stroke="#fff" stroke-opacity=".25" stroke-width="3"/>`);
   function src(key) { return MAP[key] || MAP.brand; }
   function img(key, cls, title) {
     return `<img class="ico ${cls || ''}" src="${src(key)}" alt="" draggable="false"${title ? ` title="${title}"` : ''}>`;
@@ -51,6 +57,9 @@ DE.Icons = (function () {
   const branch = (b, cls) => img('branch.' + b, cls);
   function prof(p, cls, title) { return face(DE.Data.PROFESSIONS && DE.Data.PROFESSIONS[p] ? p : 'scavenger', cls, 'prof', title); }
   function zombie(id, cls, title) { return face(id || 'walker', cls, 'zombie', title); }
+  const mat = (m, cls) => img('mat.' + m, cls || 'ico-inline');
+  /** Rare-material cost chips, red when short. */
+  function rare(r, have) { if (!r) return ''; return Object.keys(r).map(m => `<span class="rare-cost${have && (have[m] || 0) < r[m] ? ' short' : ''}" title="${(DE.Data.MATERIALS[m] || {}).name || m}">${mat(m)}${r[m]}</span>`).join(''); }
 
-  return { MAP, src, img, res, room, nav, branch, prof, zombie };
+  return { MAP, src, img, res, room, nav, branch, prof, zombie, mat, rare };
 })();

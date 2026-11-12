@@ -204,6 +204,8 @@ DE.Save = (function () {
           trip.bonus = {}; if (U().isObj(e.bonus)) for (const r in e.bonus) if (DE.Data.RESOURCES[r]) trip.bonus[r] = NN(e.bonus[r], 0);
           trip.notes = Array.isArray(e.notes) ? e.notes.filter(x => typeof x === 'string').slice(0, 6) : [];
           trip.seen = Array.isArray(e.seen) ? e.seen.filter(x => typeof x === 'string').slice(0, 10) : [];
+          trip.mats = {}; if (U().isObj(e.mats)) for (const m in e.mats) if (DE.Data.MATERIALS[m]) trip.mats[m] = Math.floor(NN(e.mats[m], 0));
+          trip.explore = U().clamp(Math.floor(N(e.explore, 0)), 0, 5);
           s.expeditions.active.push(trip);
         });
         if (Array.isArray(src.expeditions.log)) s.expeditions.log = src.expeditions.log.filter(U().isObj).slice(-20);
@@ -226,6 +228,10 @@ DE.Save = (function () {
       if (U().isObj(src.settings)) { s.settings.autosave = src.settings.autosave !== false; s.settings.animations = src.settings.animations !== false; }
       if (Array.isArray(src.events)) s.events = src.events.filter(e => U().isObj(e) && typeof e.title === 'string' && Array.isArray(e.choices)).slice(0, 6).map(e => ({ id: typeof e.id === 'string' ? e.id : 'e' + (s.nextId++), kind: e.kind === 'expedition' ? 'expedition' : 'bunker', def: String(e.def || ''), title: String(e.title).slice(0, 120), text: String(e.text || '').slice(0, 600), ctx: U().isObj(e.ctx) ? e.ctx : {}, choices: e.choices.filter(U().isObj).slice(0, 4).map(c => ({ label: String(c.label || 'OK').slice(0, 60), desc: String(c.desc || '').slice(0, 200), effects: U().isObj(c.effects) ? c.effects : {}, trade: U().isObj(c.trade) ? c.trade : undefined })) }));
       if (U().isObj(src.artifacts)) for (const id in src.artifacts) if (DE.Data.ARTIFACTS[id]) s.artifacts[id] = true;
+      if (U().isObj(src.materials)) for (const m of DE.Data.MATERIAL_ORDER) s.materials[m] = Math.floor(NN(src.materials[m], 0));
+      if (U().isObj(src.collection)) for (const id in src.collection) if (DE.Data.COLLECTIBLES[id]) s.collection[id] = true;
+      if (U().isObj(src.blueprints)) for (const id in src.blueprints) if (DE.Data.ROOMS[id] && DE.Data.ROOMS[id].blueprint) s.blueprints[id] = true;
+      if (U().isObj(src.explore)) for (const id in src.explore) if (DE.Data.LOCATIONS.some(l => l.id === id)) s.explore[id] = U().clamp(Math.floor(N(src.explore[id], 0)), 0, 5);
       if (U().isObj(src.rep)) for (const f in DE.Data.FACTIONS) s.rep[f] = U().clamp(N(src.rep[f], 0), -5, 5);
       if (U().isObj(src.bus)) s.bus.level = U().clamp(N(src.bus.level, 1), 1, DE.Data.BUS.length);
       if (U().isObj(src.goals) && U().isObj(src.goals.done)) for (const id in src.goals.done) if (DE.Data.GOALS.some(g => g.id === id)) s.goals.done[id] = true;

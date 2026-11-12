@@ -31,7 +31,7 @@ DE.Effects = (function () {
       expeditionSpeed: 0, expeditionSafety: 0, waterSave: 0, defenseFlat: 0, bossWeaken: 0, cryoSlots: 0,
       allLocations: false, autoAssign: 0, toxicResist: 0, sleepSpeed: 0, eatSpeed: 0, hungerSlow: 0,
       noiseMult: 1,
-      minerSlots: C().MINERS_BASE, digSpeed: 0,
+      minerSlots: C().MINERS_BASE, digSpeed: 0, findBonus: 0, extraTeam: 0,
     };
   }
 
@@ -149,6 +149,9 @@ DE.Effects = (function () {
           case 'workerEff': fx.workerEff += per * room.level; break;
           case 'digBonus': fx.excavationCostMult -= per * room.level; fx.excavationTimeMult -= per * room.level; break;
           case 'minerSlots': fx.minerSlots = Math.min(12, fx.minerSlots + Math.floor(per * room.level)); break;
+          case 'trophies': { const n = state.collection ? Object.keys(state.collection).filter(id => DE.Data.COLLECTIBLES && DE.Data.COLLECTIBLES[id]).length : 0; fx.globalMult += per * n * (1 + 0.1 * (room.level - 1)); break; }
+          case 'findBonus': fx.findBonus = Math.min(0.4, (fx.findBonus || 0) + per * room.level); break;
+          case 'extraTeam': fx.extraTeam = 1; break;
           case 'digSpeed': fx.digSpeed += per * room.level; break;
           default: break;
         }
@@ -157,6 +160,12 @@ DE.Effects = (function () {
     // artifacts, factions and temporary buffs
     if (state.artifacts && DE.Data.ARTIFACTS) for (const id in state.artifacts) { const a = DE.Data.ARTIFACTS[id]; if (a) a.effects.forEach(e => applyEffect(fx, e, 1)); }
     if (state.rep && DE.Data.FACTIONS) for (const f in DE.Data.FACTIONS) { const r = state.rep[f] || 0; if (r >= 3) { const b = DE.Data.FACTIONS[f].bonus; for (const t in b) { if (t === 'roomMult') applyEffect(fx, { type: 'roomMult', room: b.roomMult, value: b.value }, 1); else if (t !== 'value') applyEffect(fx, { type: t, value: b[t] }, 1); } } }
+    // complete collections from expeditions
+    if (state.collection && DE.Data.COLLECTIONS) for (const k in DE.Data.COLLECTIONS) {
+      const items = Object.values(DE.Data.COLLECTIBLES).filter(c => c.set === k);
+      if (items.length && items.every(c => state.collection[c.id])) DE.Data.COLLECTIONS[k].effects.forEach(e => applyEffect(fx, e, 1));
+    }
+    if (fx.extraTeam && fx.expeditionSlots > 0) fx.expeditionSlots += fx.extraTeam;
     if (state.buffs) state.buffs.forEach(b => applyEffect(fx, b.room === '*' ? { type: 'globalMult', value: b.mult } : { type: 'roomMult', room: b.room, value: b.mult }, 1));
     // overworld structures
     if (state.overworld && DE.Data.OVERWORLD) for (const k in DE.Data.OVERWORLD) {

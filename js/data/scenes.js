@@ -334,6 +334,14 @@ DE.Data.SCENES = {
   /* ---- unique facilities ---- */
   geothermal: { theme: 'rock', props: [['lava', 100, 150, { w: 60 }], ['pipe', 100, null, { w: 190, y: -128, color: '#ff9a3c' }], ['generator', 60, 100, { w: 60, color: '#8a8e98' }], ['rock', 20, null, { w: 18 }], ['rock', 180, null, { w: 16 }], ['console', 160, null, { w: 50, screen: '#ff9a3c' }]], lv10: [['tank', 20, 96, { w: 22, h: 40, color: '#ff9a3c' }]], lv25: [['vent', 100, 40]], lv50: [['robotarm', 190, 96, { color: '#ff9a3c' }]], stations: { work: [160], rest: [40] } },
   aquifer: { theme: 'rock', props: [['water', 110, null, { w: 80 }], ['pump', 180], ['pipe', 100, null, { w: 190, y: -128, color: '#3a7fb8' }], ['railing', 110, null, { w: 120 }], ['rock', 20, null, { w: 16 }], ['crystal', 30, 100]], lv10: [['filtercol', 40, 100, { n: 1 }]], lv25: [['watertank', 40, null, { w: 30, h: 50 }]], lv50: [['neon', 100, 36, { w: 150, color: '#7fe3ff' }]], stations: { work: [180], rest: [40] } },
+  /* rooms from recovered blueprints */
+  mushroom: { theme: 'green', props: [['planter', 40], ['traytower', 100], ['planter', 160], ['sprinkler', 100, 40], ['lamp', 50, 14, { drop: 16, color: '#c9a0ff' }], ['lamp', 150, 14, { drop: 16, color: '#c9a0ff' }]], lv10: [['barrel', 190, null, { color: '#5a7a3a' }]], lv25: [['planter', 10]], lv50: [['robotarm', 180, null, { color: '#6a8a4a' }]], stations: { work: [60, 140], rest: [100] } },
+  condenser: { theme: 'cold', props: [['watertank', 50, null, { w: 50, h: 76 }], ['filtercol', 112], ['pump', 160], ['pipe', 100, null, { w: 190, y: -124, color: '#3a7fb8' }], ['vent', 150, 40]], lv10: [['watertank', 190]], lv25: [['tank', 20, null, { w: 24, h: 50, color: '#7fd6ff' }]], lv50: [['neon', 100, 34, { w: 120, color: '#9fe3ff' }]], stations: { work: [100], rest: [60] } },
+  museum: { theme: 'purple', props: [['sign', 200, 50, { text: 'TROPHY HALL', color: '#7a4ac9' }], ['plant', 14, null, { h: 30 }], ['plant', 386, null, { h: 30 }]], lv10: [['neon', 200, 30, { w: 160, color: '#e0b0ff' }]], lv25: [['flag', 30]], lv50: [['hologram', 370, 100]], stations: { work: [200], rest: [120, 280] }, exhibits: true },
+  signal: { theme: 'dark', props: [['radio', 56], ['dish', 160], ['cablebox', 20], ['mapscreen', 110, 70]], lv10: [['serverrack', 190, null, { n: 1 }]], lv25: [['neon', 100, 34, { w: 120, color: '#4aa0e0' }]], lv50: [['hologram', 110, 100]], stations: { work: [56], rest: [150] } },
+  smelter: { theme: 'danger', props: [['forge', 40], ['lava', 96], ['anvil', 140], ['barrel', 180, null, { color: '#8a6a3a' }], ['conveyor', 120, 100, { w: 80 }]], lv10: [['press', 185]], lv25: [['robotarm', 150, null, { color: '#c93a3a' }]], lv50: [['forge', 160]], stations: { work: [50, 130], rest: [180] } },
+  chemlab: { theme: 'lab', props: [['fumehood', 36], ['labbench', 120], ['testtubes', 110, 100], ['centrifuge', 140, 100], ['barrel', 186, null, { color: '#b6e03a' }], ['sign', 120, 56, { text: 'CHEM', color: '#2f8a4a' }]], lv10: [['tank', 186, null, { w: 24, h: 50, color: '#b6e03a' }]], lv25: [['microscope', 100, 100]], lv50: [['dnascreen', 60, 70]], stations: { work: [60, 130], rest: [180] } },
+  solar: { theme: 'default', props: [['powercell', 36], ['powercell', 78], ['console', 140], ['cablebox', 186, 60], ['sign', 60, 50, { text: 'SOLAR', color: '#f0a020' }]], lv10: [['reactorbox', 186]], lv25: [['powercell', 118]], lv50: [['neon', 100, 34, { w: 120, color: '#ffe27a' }]], stations: { work: [140], rest: [100] } },
   minehead: { theme: 'rock', props: [['locker', 24, null, { n: 2 }], ['toolboard', 70, 100, { w: 60 }], ['minecart', 110], ['pickaxe', 150, 96], ['rock', 178, null, { w: 18 }], ['lamp', 100, 14, { drop: 18, color: '#ffb070' }], ['sign', 150, 58, { text: 'MINING', color: '#c98a2a' }]],
     lv10: [['drillrig', 60], ['lantern', 40, 80]], lv25: [['gascyl', 150], ['pulley', 120, 70]], lv50: [['ore', 180], ['robotarm', 30, null, { color: '#c9a24a' }]],
     stations: { work: [80, 140], rest: [100] } },
@@ -376,6 +384,8 @@ DE.Data.SPRITE_PROPS = {
   punchbag: { s: 'f3_punchbag', h: 64 }, arcade: { s: 'f3_arcade', h: 62 }, dronepad: { s: 'f3_dronepad', h: 20 },
   // mining gear (Mining Station, dig site)
   pickaxe: { s: 'pickaxe', h: 32, wall: true }, drillrig: { s: 'drill', h: 40 }, lantern: { s: 'lantern', h: 28, wall: true }, pulley: { s: 'pulley', h: 40, wall: true }, gascyl: { s: 'gascylinders', h: 44 },
+  // blueprint rooms
+  fumehood: { s: 'fumehood', h: 70 }, powercell: { s: 'powercell', h: 60 }, reactorbox: { s: 'reactorbox', h: 48 },
 };
 
 /* Room layout for sprite furniture: a pure function (no DOM) shared by the renderer and the bed
