@@ -83,8 +83,8 @@ DE.Game = (function () {
  const s = G.state; if (!events || !events.length) return;
  events.forEach(e => {
  switch (e.type) {
- case 'built': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> built on B' + e.room.floor, 'ok', 3200, DE.Icons.room(d.id)); log(d.name + ' built on B' + e.room.floor + '.'); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-built'); break; }
- case 'upgraded': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> upgraded to level ' + e.room.level, 'ok', 3200, DE.Icons.room(d.id), { key: 'up:' + e.room.id }); DE.UI.Bunker.flashRoom(e.room.id, 'just-upgraded'); break; }
+ case 'built': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> built on B' + e.room.floor, 'ok', 3200, DE.Icons.room(d.id)); log(d.name + ' built on B' + e.room.floor + '.'); DE.UI.refresh(); DE.UI.Bunker.flashRoom(e.room.id, 'just-built', 'NEW!'); DE.Audio.sfx('done'); break; }
+ case 'upgraded': { const d = DE.Data.ROOMS[e.room.type]; DE.UI.toast('<b>' + d.name + '</b> upgraded to level ' + e.room.level, 'ok', 3200, DE.Icons.room(d.id), { key: 'up:' + e.room.id }); DE.UI.Bunker.flashRoom(e.room.id, 'just-upgraded', 'LEVEL ' + e.room.level); DE.Audio.sfx('done'); break; }
  case 'expanded': DE.UI.toast('B' + e.depth + ' widened: ' + DE.CONFIG.WING_CELLS + ' new cells', 'ok', 3400, 'dig'); log('Floor B' + e.depth + ' widened.'); DE.UI.refresh(); break;
       case 'research': DE.UI.toast('Research complete: <b>' + esc(e.node.name) + '</b>', 'ok', 4500, 'research'); log('Researched ' + e.node.name + '.'); break;
  case 'excavated':

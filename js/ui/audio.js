@@ -79,6 +79,7 @@ DE.Audio = (function () {
     casing: (t) => { tone(4200 + Math.random() * 600, t, .05, 'sine', .025); tone(3100, t + .07, .04, 'sine', .015); },
     // UI
     hover: (t) => { tone(1900, t, .035, 'sine', .018); },
+    done: (t) => { tone(784, t, .16, 'triangle', .07); tone(1175, t + .08, .3, 'triangle', .07); tone(1568, t + .16, .25, 'sine', .04); },
     reveal: (t) => { [523, 659, 784, 1047, 1319].forEach((f, i) => tone(f, t + i * .09, .45, 'triangle', .09)); noise(t + .4, .5, .06, 6000, 2, 'highpass'); },
     tick: (t) => { tone(1400 + Math.random() * 200, t, .025, 'square', .02); },
   };

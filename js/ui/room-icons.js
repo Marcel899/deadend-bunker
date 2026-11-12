@@ -1,4 +1,6 @@
-/* Build icons: an individually composed icon for every buildable room and surface structure.
+/* Build icons. Rooms use the icons composed from the furniture sprites by tools/build_icons.py
+ * (assets/rooms/icons, listed in DE.Data.ROOM_ICONS); the vector icons below remain the fallback.
+ * Originally: an individually composed icon for every buildable room and surface structure.
  * Room icons are drawn from the same vector props the room itself shows (DE.Scenes.P), so an
  * icon always matches the room's actual look: each room has a hand-picked "signature" of one to
  * three props, set in a framed mini-cutaway with the room's wall/floor theme colours. Every icon
@@ -84,7 +86,10 @@ DE.UI.RoomIcons = (function () {
   function install() {
     if (!DE.Icons || DE.Icons._roomIcons) return;
     DE.Icons._roomIcons = true;
-    DE.Icons.room = (type, cls) => { const s = roomSrc(type); return s ? `<img class="ico ico-room ${cls || ''}" src="${s}" alt="" draggable="false">` : DE.Icons.img('room.' + type, cls || 'ico-room'); };
+    // composed sprite icons (tools/build_icons.py) first; the vector mini-cutaway is the fallback
+    const PNG = new Set((DE.Data && DE.Data.ROOM_ICONS) || []);
+    DE.Icons.roomSrc = (type) => PNG.has(type) ? 'assets/rooms/icons/' + type + '.png' : roomSrc(type);
+    DE.Icons.room = (type, cls) => { const s = DE.Icons.roomSrc(type); return s ? `<img class="ico ico-room ${cls || ''}" src="${s}" alt="" draggable="false">` : DE.Icons.img('room.' + type, cls || 'ico-room'); };
     DE.Icons.structure = (key, cls) => { const s = structSrc(key); return s ? `<img class="ico ico-struct ${cls || ''}" src="${s}" alt="" draggable="false">` : ''; };
   }
   install();

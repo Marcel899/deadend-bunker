@@ -38,6 +38,7 @@ DE.Actions = (function () {
  A.openDrawer = (p) => UI().openDrawer(p.drawer);
  A.closeDrawer = () => UI().closeDrawer();
  A.selectRoom = (p) => { UI().ui.selection = { type: 'room', id: p.id }; UI().closeDrawer(); UI().refresh(true); };
+ A.buildCat = (p) => { UI().ui.buildCat = p.cat; DE.UI.Side.render(true); };
  A.selectSlot = (p) => { UI().ui.selection = { type: 'slot', depth: +p.depth, slot: +p.slot }; UI().closeDrawer(); UI().refresh(true); };
  A.selectSurvivor = (p) => { UI().ui.survivorFilter = 'all'; UI().ui.focusSurvivor = p.sid; UI().openDrawer('survivors'); };
  A.expandFloor = (p, el) => { const cost = DE.Bunker.expansionCost(S(), +p.depth); const r = DE.Bunker.expand(S(), +p.depth); if (!r.ok) return fail(r); UI().purchased(el, cost, 'Digging a new wing on B' + p.depth); done(); };

@@ -196,11 +196,26 @@ DE.UI.Bunker = (function () {
   }
 
 
-  function flashRoom(id, cls) {
+  /** Highlight a room after it is built or upgraded; with a label, a ribbon and a burst of stars. */
+  function flashRoom(id, cls, label) {
     const el = document.getElementById('room-' + id); if (!el) return;
     el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
     setTimeout(() => el.classList.remove(cls), 1500);
+    if (!label || !DE.UI.state().settings.animations) return;
+    const b = document.createElement('div'); b.className = 'lvl-burst ' + cls;
+    b.innerHTML = `<b>${label}</b>` + Array.from({ length: 10 }, (_, i) => `<i style="--a:${i * 36 + (Math.random() * 16 - 8)}deg;--d:${50 + Math.random() * 40}px;animation-delay:${(Math.random() * .12).toFixed(2)}s"></i>`).join('');
+    el.appendChild(b); setTimeout(() => b.remove(), 1700);
   }
+  /** Footprint preview on the grid (build menu hover): the cells a room of `size` would take. */
+  function previewFootprint(depth, slot, size, ok) {
+    clearFootprint();
+    const cells = document.querySelector(`.floor[data-depth="${depth}"] .cells`); if (!cells) return;
+    const el = document.createElement('div'); el.className = 'fp-preview ' + (ok ? 'ok' : 'bad');
+    el.style.left = (slot * 100) + 'px'; el.style.width = (size * 100) + 'px';
+    el.innerHTML = `<span>${ok ? '' : '✕ '}${size} cell${size > 1 ? 's' : ''}</span>`;
+    cells.appendChild(el);
+  }
+  function clearFootprint() { document.querySelectorAll('.fp-preview').forEach(e => e.remove()); }
   function revealFloor(depth) {
     const el = document.querySelector(`.floor[data-depth="${depth}"]`); if (!el) return;
     el.classList.add('revealing'); setTimeout(() => el.classList.remove('revealing'), 1800);
@@ -227,5 +242,5 @@ DE.UI.Bunker = (function () {
     const el = document.querySelector(`.floor[data-depth="${depth}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  return { render, update, playWave, scrollToFloor, flashRoom, revealFloor, collectAt };
+  return { render, update, playWave, scrollToFloor, flashRoom, previewFootprint, clearFootprint, revealFloor, collectAt };
 })();

@@ -162,10 +162,18 @@ DE.UI.Side = (function () {
  }
 
  /* ---------- build menu ---------- */
+ // Category tabs, how much room the selected spot has, then one card per room: icon, name, size /
+ // staff / power chips, a two-line description, output, and Build here / Drag. Hovering (or
+ // touching) a card previews its footprint on the grid in green or red.
+ const BM_CATS = [['all', 'All', 'build'], ['production', 'Production', 'chart'], ['housing', 'Housing', 'home'], ['support', 'Support', 'gear'], ['defense', 'Defense', 'shield']];
  function renderBuild(s, depth, slot) {
- let html = `<div class="panel-head"><h3>Build on B${depth}, cell ${slot + 1}</h3><p class="muted">"Build here" places the room from this cell; "Drag" lets you drop it anywhere on the grid.</p></div>`;
+ bindPreview();
+ const ui = DE.UI.ui, cat = ui.buildCat || 'all', floor = DE.Bunker.getFloor(s, depth);
+ let free = 0; for (let k = slot; k < floor.slots.length && floor.slots[k] == null; k++) free++;
+ let html = `<div class="panel-head bm-head"><h3>Build on B${depth} · cell ${slot + 1}</h3><p class="bm-free">${DE.Icons.img('rooms', 'ico-inline')} <b>${free}</b> free cell${free === 1 ? '' : 's'} from here · drag a room to place it anywhere</p></div>
+ <div class="bm-tabs">${BM_CATS.map(([id, label, ic]) => `<button class="bm-tab ${cat === id ? 'on' : ''}" data-action="buildCat" data-cat="${id}">${DE.Icons.img(ic, 'ico-inline')}<span>${label}</span></button>`).join('')}</div>`;
  const tiers = {};
- DE.Data.ROOM_BUILD_ORDER.forEach(type => { const def = DE.Data.ROOMS[type]; (tiers[def.tier] = tiers[def.tier] || []).push(def); });
+ DE.Data.ROOM_BUILD_ORDER.forEach(type => { const def = DE.Data.ROOMS[type]; if (cat !== 'all' && def.category !== cat) return; (tiers[def.tier] = tiers[def.tier] || []).push(def); });
  Object.keys(tiers).sort().forEach(t => {
  const defs = tiers[t]; const unlockedCount = defs.filter(d => DE.Bunker.isUnlocked(s, d.id)).length;
  const gate = defs.find(d => d.unlock && d.unlock.startsWith('blueprints'));
@@ -174,18 +182,34 @@ DE.UI.Side = (function () {
  const type = def.id; const unlocked = DE.Bunker.isUnlocked(s, type);
  const place = DE.Bunker.canPlace(s, type, depth, slot); const cost = DE.Bunker.buildCost(s, type); const afford = U().canAfford(s.resources, cost);
  const ok = unlocked && place.ok && afford;
- const reason = !unlocked ? DE.Bunker.lockReason(s, type) : !place.ok ? place.reason : !afford ? 'Not enough resources' : '';
- let outputs = def.produces ? Object.keys(def.produces).map(r => `+${def.produces[r]}${DE.Icons.res(r, 'ico-inline')}/s`).join('') : '';
- if (def.effects) outputs += (outputs ? ' · ' : '') + esc(def.upgradeDesc);
- html += `<div class="build-card cat-${def.category} ${unlocked ? '' : 'locked'}"><div class="bc-icon">${DE.Icons.room(def.id, 'ico-inline')}</div>
- <div class="bc-body"><b>${esc(def.name)}</b> <small class="muted">${def.size} slot${def.size > 1 ? 's' : ''} · ${def.workers ? def.workers + ' ' + (def.profession ? DE.Data.PROFESSIONS[def.profession].name.toLowerCase() + 's' : 'workers') : 'no staff'}${def.powerUse ? ' · ' + def.powerUse + ' power' : ''}</small>
- <div class="bc-desc">${esc(def.desc)}</div><div class="bc-out">${outputs}</div>${reason ? `<div class="bc-reason">${esc(reason)}</div>` : ''}</div>
- <div class="bc-actions"><button class="btn primary small ${ok ? '' : 'cant'}" data-action="build" data-type="${type}" data-depth="${depth}" data-slot="${slot}" ${ok ? '' : 'disabled'}>Build here<span class="cost">${U().costText(cost)}</span><small>${U().fmtTime(DE.Bunker.buildTime(s, type))}</small></button>${unlocked ? `<button class="btn small drag-handle" data-place="${type}" title="Drag onto the bunker">${DE.Icons.img('home', 'ico-inline')} Drag</button>` : ''}</div></div>`;
+ const fits = def.size <= free;
+ const reason = !unlocked ? DE.Bunker.lockReason(s, type) : !place.ok ? (fits ? place.reason : `Needs ${def.size} free cells here (${free} free) — or drag it elsewhere`) : !afford ? 'Not enough resources' : '';
+ let outputs = def.produces ? Object.keys(def.produces).map(r => `<span>+${def.produces[r]}${DE.Icons.res(r, 'ico-inline')}/s</span>`).join('') : '';
+ if (def.effects && def.upgradeDesc) outputs += `<span>${esc(def.upgradeDesc)}</span>`;
+ const chips = `<i class="bc-chip ${fits ? '' : 'bad'}" title="${def.size} cells wide">${Array.from({ length: def.size }, () => '<em></em>').join('')}${def.size}</i>`
+   + (def.workers ? `<i class="bc-chip">${DE.Icons.img('pop', 'ico-inline')}${def.workers}${def.profession ? ' ' + esc(DE.Data.PROFESSIONS[def.profession].name.toLowerCase()) + (def.workers > 1 ? 's' : '') : ''}</i>` : '<i class="bc-chip">no staff</i>')
+   + (def.powerUse ? `<i class="bc-chip">${DE.Icons.res('electricity', 'ico-inline')}${def.powerUse}</i>` : '');
+ html += `<div class="build-card cat-${def.category} ${unlocked ? '' : 'locked'} ${fits ? '' : 'nofit'}" data-fp="${def.size}" data-fok="${place.ok ? 1 : 0}" data-depth="${depth}" data-slot="${slot}"><div class="bc-icon">${DE.Icons.room(def.id, 'ico-inline')}</div>
+ <div class="bc-body"><b>${esc(def.name)}</b><div class="bc-chips">${chips}</div>
+ <div class="bc-desc">${esc(def.desc)}</div>${outputs ? `<div class="bc-out">${outputs}</div>` : ''}${reason ? `<div class="bc-reason">${esc(reason)}</div>` : ''}</div>
+ <div class="bc-actions"><button class="btn primary small ${ok ? '' : 'cant'}" data-action="build" data-type="${type}" data-depth="${depth}" data-slot="${slot}" ${ok ? '' : 'disabled'}>Build here<span class="cost">${U().costText(cost)}</span><small>${U().fmtTime(DE.Bunker.buildTime(s, type))}</small></button>${unlocked ? `<button class="btn small drag-handle" data-place="${type}" title="Drag onto the bunker">${DE.Icons.img('move4', 'ico-inline')} Drag</button>` : ''}</div></div>`;
  });
  html += `</details>`;
  });
  html += `<button class="btn ghost" data-action="selectNone">← Back to overview</button>`;
  return html;
+ }
+ /** Footprint preview while a build card is hovered or touched. */
+ let previewBound = false;
+ function bindPreview() {
+ if (previewBound) return; previewBound = true;
+ const panel = document.getElementById('sidepanel'); if (!panel) return;
+ panel.addEventListener('pointerover', (e) => {
+   const card = e.target.closest && e.target.closest('.build-card[data-fp]');
+   if (!card) { DE.UI.Bunker.clearFootprint(); return; }
+   DE.UI.Bunker.previewFootprint(+card.dataset.depth, +card.dataset.slot, +card.dataset.fp, card.dataset.fok === '1');
+ });
+ panel.addEventListener('pointerleave', () => DE.UI.Bunker.clearFootprint());
  }
 
  return { render, bar, costBtn };
