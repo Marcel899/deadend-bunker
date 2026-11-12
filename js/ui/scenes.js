@@ -313,18 +313,13 @@ DE.Scenes = (function () {
     return list;
   }
 
-  /** A building site over a room: scaffolding (all of it for a new room, one bay for an upgrade), a
-   *  crane hook lowering a girder, welding sparks, dust, warning barriers and a work lamp. */
+  /** A building site over a room: scaffolding (all of it for a new room, one bay for an upgrade),
+   *  welding sparks, dust, warning barriers and a work lamp. */
   function overlay(room, def) {
     const size = def.size, W = CELL * size, build = room.construction && room.construction.kind === 'build';
     let s = `<svg class="scene site" viewBox="0 ${-TOP} ${W} ${180 + TOP}" preserveAspectRatio="none" aria-hidden="true">`;
     const sw = build ? W - 30 : Math.min(120, W * .5);
     s += g('construction', P.scaffold({ w: sw, h: build ? 116 : 96 }), build ? W / 2 : W - sw / 2 - 12, FLOOR);
-    // crane: a trolley on the ceiling beam, a cable, a hook carrying a girder up and down
-    const cx = build ? W * .32 : W * .3;
-    // (the moving parts are inner groups: a CSS animation would replace a transform attribute)
-    s += `<g transform="translate(${cx} 0)"><g class="crane"><rect x="-14" y="-2" width="28" height="9" rx="2" fill="#f0a020" ${S2}/><circle cx="-7" cy="8" r="3" fill="${INK}"/><circle cx="7" cy="8" r="3" fill="${INK}"/>
-      <g class="crane-load"><path d="M0 9 V54" stroke="${INK}" stroke-width="2"/><path d="M-4 54 h8 l-2 8 q-2 4 -6 0" fill="none" ${S2}/><rect x="-26" y="62" width="52" height="9" rx="1" fill="#c93a3a" ${S2}/><path d="M-22 66.5 h44" stroke="#fff" stroke-width="1.4" opacity=".35"/></g></g></g>`;
     // sparks where the welder works, dust at the base, barriers and a lamp
     const wx = build ? W * .62 : W - sw / 2 - 12;
     s += `<g class="sparks" transform="translate(${wx} ${FLOOR - 70})">${Array.from({ length: 7 }, (_, i) => `<circle r="${(1.4 + (i % 3) * .5).toFixed(1)}" fill="${i % 2 ? '#fff4a8' : '#ffb02a'}" style="--sx:${((i - 3) * 9).toFixed(0)}px;--sy:${(-14 - (i % 4) * 7)}px;animation-delay:${(i * .13).toFixed(2)}s"/>`).join('')}<circle class="weld" r="5" fill="#fff8d0"/></g>`;

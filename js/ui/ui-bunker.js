@@ -64,7 +64,7 @@ DE.UI.Bunker = (function () {
 
   /** A room's art. A new room assembles from the floor up while it is built: its finished look is
    *  shown as a blueprint, the built part rises with the progress (--bp, set every tick), and the
-   *  building site (scaffold, crane, sparks, dust) stands in front. An upgrade gets a smaller site. */
+   *  building site (scaffold, sparks, dust) stands in front. An upgrade gets a smaller site. */
   function sceneHtml(room, def, s) {
     const c = room.construction;
     if (!c) return DE.Scenes.render(room, def, s);
