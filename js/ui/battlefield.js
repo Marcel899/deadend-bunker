@@ -322,11 +322,13 @@ DE.UI.Battlefield = (function () {
     const list = DE.Survivors.guards(s).slice(0, 8); const seen = {};
     list.forEach((g, i) => {
       seen[g.id] = true; let u = st.guards[g.id];
-      if (!u || u.prof !== g.profession) {
+      // the guard carries the weapon handed out in the Armory (or their own duty weapon)
+      const w = DE.Gear ? DE.Gear.itemsOf(s, g.id).weapon : null, item = w && w.dur > 0 ? DE.Data.WEAPONS[w.type].item : DE.Chars.dutyWeapon(g.profession);
+      if (!u || u.prof !== g.profession || u.item !== item) {
         if (u) u.el.remove();
-        const el = unit(DE.Chars.crew(g.profession, { anim: 'walk', h: 64, phase: Math.random() * 4, item: DE.Chars.dutyWeapon(g.profession), title: g.name }), 'bf-guard');
+        const el = unit(DE.Chars.crew(g.profession, { anim: 'walk', h: 64, phase: Math.random() * 4, item, title: g.name }), 'bf-guard');
         el.style.width = (64 * 140 / 225) + 'px'; el.style.height = '64px'; el.title = g.name + ' · on guard';
-        u = st.guards[g.id] = { el, rig: el.querySelector('.rig'), prof: g.profession, x: PATROL[0] + Math.random() * (PATROL[1] - PATROL[0]), y: OW().GROUND + 8, dir: Math.random() < .5 ? -1 : 1, pause: 0, cd: Math.random() };
+        u = st.guards[g.id] = { el, rig: el.querySelector('.rig'), prof: g.profession, item, x: PATROL[0] + Math.random() * (PATROL[1] - PATROL[0]), y: OW().GROUND + 8, dir: Math.random() < .5 ? -1 : 1, pause: 0, cd: Math.random() };
       }
       u.i = i; u.n = list.length;
     });

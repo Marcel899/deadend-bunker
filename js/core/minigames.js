@@ -73,6 +73,7 @@ DE.Minigames = (function () {
       case 'sort': {
         const items = ctx.sorted || {}; let any = false;
         for (const r in items) if (DE.Data.RESOURCES[r]) { give(r, items[r] * 6 * k); any = true; }
+        if (items.medicine) { Object.values(state.survivors).forEach(v => { v.hp = Math.min(100, v.hp + 3 * items.medicine); }); out.lines.push('Medicine stored: everyone patched up a little'); }
         if (items.ammo) { DE.Gear.ensure(state).ammo += Math.round(items.ammo * 2 * k); out.lines.push('+' + Math.round(items.ammo * 2 * k) + ' rounds of ammo'); }
         if (items.rare && score >= .6) { const m = U().pick(DE.Data.MATERIAL_ORDER); state.materials[m] = (state.materials[m] || 0) + 1; out.lines.push('+1 ' + DE.Data.MATERIALS[m].short + ' found among the junk'); }
         if (state.flags.haulBonus) { const h = state.flags.haulBonus; for (const r in h) give(r, h[r] * (.15 + .25 * score)); out.lines.push('The last expedition\'s haul, properly stored'); state.flags.haulBonus = null; }

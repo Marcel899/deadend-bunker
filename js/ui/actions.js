@@ -286,6 +286,9 @@ DE.Actions = (function () {
  UI().closeModal(); UI().closeDrawer();
  DE.Game.loadState(r.state); UI().toast('Save imported', 'ok');
  };
+ A.playGame = (p) => { DE.UI.MG.open(p.game); };
+ A.openForge = () => DE.UI.MG.forge();
+ A.openArmory = () => DE.UI.MG.armory();
  A.setTab = (p) => { UI().ui.settingsTab = p.tab; UI().renderDrawer(true); };
  A.setPref = (p) => { DE.UI.Settings.set(p.key, p.val); DE.Audio.sfx('click'); UI().renderDrawer(true); };
  A.togglePref = (p) => { DE.UI.Settings.set(p.key, !DE.UI.Settings.get(p.key)); DE.Audio.sfx('click'); UI().renderDrawer(true); };

@@ -47,7 +47,7 @@ DE.UI = (function () {
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-move]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ roomId: el.dataset.move }, e); });
  const KEYS = { b: 'bunker', s: 'survivors', r: 'research', x: 'excavate', d: 'defense', e: 'expeditions', t: 'economy', l: 'legacy', o: 'settings' };
  document.addEventListener('keydown', e => {
- if (e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') || !$('#modal-root').classList.contains('hidden') || !state()) return;
+ if (e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') || !$('#modal-root').classList.contains('hidden') || !state() || (DE.UI.MG && DE.UI.MG.active())) return;
  const k = KEYS[(e.key || '').toLowerCase()]; if (!k || $('#game-screen').classList.contains('hidden')) return;
  if (k === 'bunker') closeDrawer(); else if (ui.drawer === k) closeDrawer(); else openDrawer(k);
  });
@@ -339,7 +339,7 @@ DE.UI = (function () {
   *  runs or a room is being placed; and not right after the last popup closed. */
  function eventQuiet(now) {
  now = now || Date.now();
- if (ui.drawer || (DE.UI.Placement && DE.UI.Placement.active()) || (DE.UI.Intro && DE.UI.Intro.running())) return false;
+ if (ui.drawer || (DE.UI.Placement && DE.UI.Placement.active()) || (DE.UI.Intro && DE.UI.Intro.running()) || (DE.UI.MG && DE.UI.MG.active())) return false;
  if (now - ui.lastInput < 4000 || now - ui.evClosedAt < 25000) return false;
  const sf = document.getElementById('surface'); if (sf && sf.classList.contains('fight')) return false;
  return true;

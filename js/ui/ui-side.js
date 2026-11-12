@@ -89,6 +89,21 @@ DE.UI.Side = (function () {
  }
 
  /* ---------- room detail ---------- */
+ /** The room's minigame (and the forge/armory screens), right under the description. */
+ const PAYS = { forge: 'weapons, armour and ammo for the guards', grid: 'power now and hotter generators', radio: 'survivors, places, research, blueprint leads', sort: 'supplies (and the last expedition haul)', triage: 'heals the injured and infected', range: 'drills the guards for the next fights' };
+ function gameCard(s, room, def) {
+ if (room.level < 1 || room.construction) return '';
+ let extra = '';
+ if (room.type === 'armory') { const gd = DE.Survivors.guards(s), eq = gd.filter(v => DE.Gear.itemsOf(s, v.id).weapon).length; extra = `<button class="btn primary" data-action="openArmory">${DE.Icons.img('guards', 'ico-btn')} Open the armory <small>${eq}/${gd.length} armed · ${DE.Gear.ensure(s).ammo} rounds</small></button>`; }
+ const g = DE.Minigames.gameFor(room.type);
+ if (!g) return extra ? `<div class="card mg-card">${extra}</div>` : '';
+ const G = DE.Minigames.GAMES[g], lv = DE.Minigames.level(s, g), t = DE.Minigames.tier(s, g, room), best = (s.mg && s.mg.best[g]) || 0;
+ if (g === 'forge') return `<div class="card mg-card"><div class="mg-top"><b>The forge</b><span class="mg-tier">Mastery ${lv}</span></div><div class="mg-meta">Makes ${PAYS.forge}. ${DE.Gear.ensure(s).items.length} item(s) in stock, ${DE.Gear.ensure(s).ammo} rounds.</div><button class="btn primary" data-action="openForge">${DE.Icons.img('repair2', 'ico-btn')} Forge something</button>${extra}</div>`;
+ const ready = DE.Minigames.ready(s, g), wait = DE.Minigames.waitFor(s, g);
+ return `<div class="card mg-card"><div class="mg-top"><b>${esc(G.name)}</b><span class="mg-tier" title="Difficulty">${'★'.repeat(t)}${'☆'.repeat(4 - t)}</span></div>
+   <div class="mg-meta">Pays: ${PAYS[g]}. Mastery ${lv}${best ? ' · best ' + Math.round(best * 100) + '%' : ''}.</div>
+   <button class="btn ${ready ? 'primary' : 'cant'}" data-action="playGame" data-game="${g}" ${ready ? '' : 'disabled'}>${ready ? '▶ ' + esc(G.verb) : 'Ready in ' + U().fmtTime(wait)}</button>${extra}</div>`;
+ }
  function renderRoom(s, room) {
  const def = DE.Data.ROOMS[room.type]; const ui = DE.UI.ui; const now = Date.now();
  const info = s._rates && s._rates.perRoom[room.id];
@@ -102,6 +117,7 @@ DE.UI.Side = (function () {
  html += `<div class="card"><h4>${c.kind === 'build' ? ' Building' : ' Upgrading +' + c.levels}</h4>${bar(pct, 'orange')}<small class="muted">${U().fmtTime((c.endsAt - now) / 1000)} remaining</small></div>`;
  }
 
+ html += gameCard(s, room, def);
  // production / effects
  if (room.level > 0 && info && def.produces) {
  html += `<div class="card"><h4>Output</h4>`;
