@@ -40,6 +40,7 @@ DE.UI.Anim = (function () {
     const st = {
       el, H, J: { body: q('body'), body2: q('body2'), torso: q('torso'), head: q('head'), armF: q('armF'), foreF: q('foreF'), armB: q('armB'), foreB: q('foreB'), legL: q('legL'), shinL: q('shinL'), legR: q('legR'), shinR: q('shinR') },
       muzzle: el.querySelector('.muzzle'), id: d.c || '', zombie: d.k === 'zombie', big: d.big === '1',
+      gun: d.hold === 'gun' || d.hold === 'pistol', H0: DE.Chars && DE.Chars.pose ? DE.Chars.pose('none') : H,
       T: +d.t || 1, la: +d.la || 20, aa: +d.aa || 14, bob: +d.bob || 5, leg: +d.leg || 50, h: +d.h || 48,
       seed, t: seed * 1.7, ta: 0, p: frac(seed * .37), anim: '', cls: null, visible: true, from: null, blend: 1, pose: null, last: {},
     };
@@ -100,7 +101,8 @@ DE.UI.Anim = (function () {
     else { P.aF = -16 - 36 * c; P.aB = -16 + 36 * c; P.fF = -86 + 10 * c; P.fB = -86 - 10 * c; }
   }
   function idle(st, P) {
-    const H = st.H, t = st.t, b = (1 - cos(TAU * t / 3.9)) / 2;
+    // standing still, only a gun stays in hand: other tools are put away, so the arms hang relaxed
+    const H = st.zombie || st.gun ? st.H : st.H0, t = st.t, b = (1 - cos(TAU * t / 3.9)) / 2;
     if (st.zombie) {
       const s = (1 + sin(TAU * t / 3.6)) / 2;
       P.tr = H.lean + 6 + 5 * s; P.hr = -4 + 14 * (1 + sin(TAU * t / 3.6 + 1.2)) / 2 + 2 * wander(t, st.seed);

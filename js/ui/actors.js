@@ -11,6 +11,7 @@ DE.UI.Actors = (function () {
   const actors = {};                 // survivorId → actor
   const WALK = 34, RIDE = 110;       // px per second (walking pace matches the stride of a 54px survivor)
   const SHAFT_X = 40;                // elevator column centre within a floor
+  const WORK_LIFT = 9;               // workers stand this much higher at their station than on the floor
   let last = 0, layer = null;
 
   function ensureLayer() {
@@ -308,7 +309,9 @@ DE.UI.Actors = (function () {
       if (a.prof !== sv.profession) { a.el.remove(); delete actors[id]; a = make(sv); }
       const t = target(s, sv);
       const key = (t.room || 'none') + ':' + t.kind + ':' + (t.sx | 0) + (t.bed ? ':' + t.bed.y : '');
-      const pointFor = () => t.site ? sitePoint(t.sx) : t.room ? (t.bed ? bedPoint(t.room, t.bed) : roomPoint(t.room, t.sx)) : shaftPoint(t.floor || 1);
+      // at a work station they stand a step up, at the machine (they step up when they arrive)
+      const atWork = t.kind === 'work' && t.room && !t.bed && !t.site;
+      const pointFor = () => { const q = t.site ? sitePoint(t.sx) : t.room ? (t.bed ? bedPoint(t.room, t.bed) : roomPoint(t.room, t.sx)) : shaftPoint(t.floor || 1); if (q && atWork) q.y -= WORK_LIFT; return q; };
       // mid-ride survivors finish the ride before re-planning; ones still waiting just leave the queue
       const riding = a.lift && a.lift.ticket.state !== 'wait';
       if (a.snap && !riding) {
@@ -325,6 +328,10 @@ DE.UI.Actors = (function () {
             // walk along the floor to the bed, then climb onto the berth
             const foot = roomPoint(t.room, t.bed.x); plan(a, foot || dest);
             if (foot) a.queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: 0.35, climb: true });
+          } else if (atWork && a.placed) {
+            // walk along the floor to the station, then the small step up to it
+            plan(a, { x: dest.x, y: dest.y + WORK_LIFT, floor: dest.floor });
+            a.queue.push({ x: dest.x, y: dest.y, floor: dest.floor, dur: 0.25, climb: true });
           } else plan(a, dest);
           a.pendingAnim = t.anim; a.segEnd = 0; bubble(a, '', '');
         }
