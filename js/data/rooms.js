@@ -95,6 +95,10 @@ DE.Data = DE.Data || {};
       desc: 'Weapon racks, ammo lockers and body armour. Guards hit harder, more turret slots.',
       upgradeDesc: '+25% guard damage, +1 turret slot per level',
       cost: { scrap: 240, concrete: 50 }, buildTime: 90, workers: 1, profession: 'soldier', powerUse: 0.1, effects: { guardDmg: 0.25, turretCap: 1 }, unlock: 'defense1', minDepth: 1, maxLevel: 20 }),
+    forge: t2({ id: 'forge', name: 'Blacksmith Forge', icon: '⚒️', category: 'defense', size: 2,
+      desc: 'A coal furnace, an anvil and a grinding wheel. Blacksmiths forge weapons, armour and ammo for the guards.',
+      upgradeDesc: 'Harder recipes, steadier hands: wider timing in the forge, +3% weapon quality per level',
+      cost: { scrap: 260, concrete: 40 }, buildTime: 90, workers: 2, profession: 'mechanic', powerUse: 0.3, effects: {}, unlock: 'metalwork', minDepth: 1, maxLevel: 20 }),
     barracks: t2({ id: 'barracks', name: 'Guard Barracks', icon: '🎖️', category: 'defense', size: 4,
       desc: 'Bunks for the night watch. More survivors can stand guard, and they rest between waves.',
       upgradeDesc: '+2 guard posts, +4 housing, +10% guard damage per level',
@@ -295,7 +299,7 @@ DE.Data = DE.Data || {};
     // tier 1
     'quarters', 'cafeteria', 'storage', 'generator', 'watertank', 'workshop', 'medbay', 'radio', 'farm', 'security', 'water', 'concrete', 'minehead',
     // tier 2
-    'kitchen', 'hydroponics', 'purification', 'armory', 'barracks', 'advworkshop', 'infirmary', 'garage', 'training', 'comms',
+    'kitchen', 'hydroponics', 'purification', 'armory', 'forge', 'barracks', 'advworkshop', 'infirmary', 'garage', 'training', 'comms',
     // tier 3
     'lab', 'refinery', 'greenhouse', 'recycling', 'seccontrol', 'vehicleshop', 'ammofactory', 'coldstorage', 'quarantine', 'intel',
     // tier 4

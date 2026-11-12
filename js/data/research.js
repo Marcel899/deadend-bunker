@@ -31,6 +31,10 @@ DE.Data.RESEARCH = {
   /* ---------------- Engineering ---------------- */
   construction: { id: 'construction', branch: 'engineering', name: 'Reinforced Construction', icon: '🧱', cost: 50, time: 50, requires: [],
     desc: 'Unlocks the Concrete Mixer and Garage. Build time -15%.', effects: [{ type: 'unlockRoom', room: 'concrete' }, { type: 'unlockRoom', room: 'garage' }, { type: 'buildTimeMult', value: -0.15 }] },
+  metalwork: { id: 'metalwork', branch: 'engineering', name: 'Metalwork', icon: '⚒️', cost: 110, time: 80, requires: ['construction'],
+    desc: 'A furnace and an anvil: unlocks the Blacksmith Forge with machetes, pistols, vests and ammo; shotguns, rifles and riot armour once the forge is upgraded.', effects: [{ type: 'unlockRoom', room: 'forge' }] },
+  gunsmith: { id: 'gunsmith', branch: 'engineering', name: 'Gunsmithing', icon: '🔫', cost: 650, time: 240, requires: ['metalwork', 'machinery'],
+    desc: 'Rifled barrels and alloy plate: assault carbines, marksman rifles and alloy armour at the forge (rare materials from expeditions).', effects: [] },
   excavation1: { id: 'excavation1', branch: 'engineering', name: 'Excavation I', icon: '⛏️', cost: 120, time: 90, requires: ['construction'],
     desc: 'Picks and timber shoring for the clay layer: dig down to B4 (also needs a Mining Station).', effects: [{ type: 'maxFloor', value: 4 }] },
   electricity: { id: 'electricity', branch: 'engineering', name: 'Power Grid', icon: '🔌', cost: 200, time: 120, requires: ['construction'],

@@ -3,9 +3,9 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 const FILES = [
-  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/finds.js', 'js/data/events.js', 'js/data/sprites.js', 'js/data/scenes.js', 'js/data/icons.js', 'js/data/room_icons.js',
+  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/finds.js', 'js/data/crafting.js', 'js/data/events.js', 'js/data/sprites.js', 'js/data/scenes.js', 'js/data/icons.js', 'js/data/room_icons.js',
   'js/core/util.js', 'js/core/season.js', 'js/core/effects.js', 'js/core/state.js', 'js/core/save.js', 'js/core/economy.js', 'js/core/bunker.js',
-  'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/infection.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
+  'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/infection.js', 'js/core/gear.js', 'js/core/minigames.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
   'js/core/prestige.js', 'js/core/sim.js', 'js/core/offline.js',
 ];
 // minimal localStorage shim
@@ -579,6 +579,45 @@ t('infection: survives save/load; the sick pass it on', () => {
   const orig = Math.random; Math.random = () => .0001; let spread = 0;
   try { for (let i = 0; i < 3; i++) { E._events = []; DE.Infection.tick(E, 1, E._fx); E.playtime += 1; spread += E._events.filter(e => e.type === 'spread').length; } } finally { Math.random = orig; }
   assert(spread >= 1, 'spread to a roommate');
+});
+
+console.log('Gear & minigames');
+t('forge: research gates recipes; quality follows the score; armory gear makes guards stronger', () => {
+  const E = DE.State.create(null, now); for (const k in E.resources) E.resources[k] = 1e6; E._fx = DE.Effects.compute(E);
+  assert(!DE.Gear.canCraft(E, 'pistol').ok, 'needs a forge');
+  DE.Bunker.placeRoom(E, 'forge', 1, 6, 1, now); E._fx = null;
+  assert(DE.Gear.canCraft(E, 'pistol').ok); assert(!DE.Gear.canCraft(E, 'rifle').ok && DE.Gear.canCraft(E, 'rifle').locked, 'rifle needs metalwork + forge 5');
+  const lo = DE.Gear.craft(E, 'pistol', .1), hi = DE.Gear.craft(E, 'pistol', .97);
+  assert(lo.ok && lo.quality.id === 'crude' && hi.quality.id === 'master', lo.quality.id + '/' + hi.quality.id); assert(hi.item.max > lo.item.max, 'better durability');
+  const g = Object.values(E.survivors)[0]; DE.Survivors.assign(E, g.id, { kind: 'guard' }); E._fx = null;
+  const p0 = DE.Defense.defensePower(E).guardDps;
+  DE.Gear.equip(E, hi.item.id, g.id); E.gear.ammo = 50; const p1 = DE.Defense.defensePower(E).guardDps;
+  assert(p1 > p0 * 1.25, 'pistol helps ' + p0.toFixed(1) + ' → ' + p1.toFixed(1));
+  E.gear.ammo = 0; assert(DE.Defense.defensePower(E).guardDps < p1, 'no ammo, less use');
+  E.gear.ammo = 50; const before = hi.item.dur; const w = DE.Gear.afterWave(E, { breach: false, injured: [] });
+  assert(hi.item.dur === before - 1 && w.rounds === 1 && E.gear.ammo === 49, 'wear and rounds');
+  assert(DE.Gear.craft(E, 'ammo', .5).amount > 0);
+  const L = DE.Save.sanitize(JSON.parse(JSON.stringify(E))); assert(L.gear.items.length === 2 && L.gear.items.find(i => i.id === hi.item.id).owner === g.id, 'gear saved');
+});
+t('minigames: cooldown, mastery, tier; grid pays power and a generator buff; range drills guards', () => {
+  const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E); E.resources.electricity = 0;
+  assert(DE.Minigames.canPlay(E, 'grid').ok, 'generator room plays the grid');
+  const r = DE.Minigames.finish(E, 'grid', .95, {}); assert(r.rewards.electricity > 0 && E.buffs.some(b => b.room === 'generator'), 'power and buff');
+  assert(!DE.Minigames.canPlay(E, 'grid').ok, 'cooldown'); E.playtime += 400; assert(DE.Minigames.canPlay(E, 'grid').ok, 'ready again');
+  assert(DE.Minigames.level(E, 'grid') >= 1 && E.mg.best.grid === .95);
+  assert(!DE.Minigames.canPlay(E, 'range').ok, 'needs a training room');
+  DE.Bunker.placeRoom(E, 'training', 1, 6, 1, now); const g = Object.values(E.survivors)[0]; DE.Survivors.assign(E, g.id, { kind: 'guard' }); E._fx = null;
+  const p0 = DE.Defense.defensePower(E).guardDps; DE.Minigames.finish(E, 'range', .9, {});
+  assert(g.training >= 1 && g.drill.until > E.playtime, 'trained and drilled'); assert(DE.Defense.defensePower(E).guardDps > p0, 'stronger after a drill');
+});
+t('minigames: triage heals the real injured and treats infection; radio can bring a survivor', () => {
+  const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E); DE.Bunker.placeRoom(E, 'medbay', 1, 6, 1, now); E._fx = null;
+  const [a, b] = Object.values(E.survivors); a.hp = 30; b.infection = { sev: .5, known: true, ward: null, prev: null, since: 0 };
+  DE.Minigames.finish(E, 'triage', .8, { treated: [{ id: a.id, ok: true }, { id: b.id, ok: true, cure: true }] });
+  assert(a.hp > 60, 'healed'); assert(!b.infection || b.infection.sev < .3, 'infection pushed back');
+  const q = Object.values(E.rooms).find(r => r.type === 'quarters'); q.level = 5; E._fx = null; const n = Object.keys(E.survivors).length;
+  DE.Bunker.placeRoom(E, 'radio', 1, 8, 1, now); DE.Minigames.finish(E, 'radio', .9, { signal: 'survivor' });
+  assert(Object.keys(E.survivors).length === n + 1, 'a survivor followed the directions');
 });
 
 console.log('Prestige');

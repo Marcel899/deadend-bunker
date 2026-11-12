@@ -116,7 +116,8 @@ DE.Defense = (function () {
   function defensePower(state) {
     const fx = DE.Effects.get(state);
     const guards = DE.Survivors.guards(state);
-    const guardDps = guards.reduce((s, g) => s + DE.Survivors.guardPower(g, fx), 0);
+    // weapons from the forge, drills and training on the range all count
+    const guardDps = guards.reduce((s, g) => s + DE.Survivors.guardPower(g, fx) * (DE.Gear ? DE.Gear.guardMult(state, g) : 1), 0);
     const turretDps = state.defense.turrets * turretDmg(state) * (state._rates ? state._rates.powerFactor : 1);
     const missileDps = (fx.missileDps || 0) * (state._rates ? state._rates.powerFactor : 1);
     const trapsUsed = Math.min(state.defense.traps, C().TRAPS_PER_WAVE);
@@ -142,7 +143,7 @@ DE.Defense = (function () {
     result.killed = Math.ceil(killedFraction * total);
     state.stats.zombiesKilled += result.killed;
     // toxic zombies poison guards even when they die at range
-    if (comp.toxic > 0) DE.Survivors.guards(state).forEach(g => { if (U().chance(Math.min(0.6, 0.12 * comp.toxic) * (1 - (fx.toxicResist || 0)))) { DE.Survivors.injure(g, 15); result.injured.push(g.name); if (DE.Infection && DE.Infection.expose(state, g, .3)) result.infected = (result.infected || 0) + 1; } });
+    if (comp.toxic > 0) DE.Survivors.guards(state).forEach(g => { if (U().chance(Math.min(0.6, 0.12 * comp.toxic) * (1 - (fx.toxicResist || 0)) * (1 - (DE.Gear ? DE.Gear.protection(state, g) : 0)))) { DE.Survivors.injure(g, 15); result.injured.push(g.name); if (DE.Infection && DE.Infection.expose(state, g, .3)) result.infected = (result.infected || 0) + 1; } });
     if (power.total >= hp) {
       result.outcome = 'victory';
       state.stats.wavesSurvived++;
@@ -152,7 +153,7 @@ DE.Defense = (function () {
       result.wallDamage = Math.min(state.defense.wall.hp, dmg);
       state.defense.wall.hp -= result.wallDamage;
       // guards get hurt when the horde reaches the wall
-      DE.Survivors.guards(state).forEach(g => { if (U().chance(0.5)) { DE.Survivors.injure(g, 25); if (!result.injured.includes(g.name)) result.injured.push(g.name); if (DE.Infection && DE.Infection.expose(state, g, .18)) result.infected = (result.infected || 0) + 1; } });
+      DE.Survivors.guards(state).forEach(g => { if (U().chance(0.5 * (1 - (DE.Gear ? DE.Gear.protection(state, g) : 0)))) { DE.Survivors.injure(g, 25); if (!result.injured.includes(g.name)) result.injured.push(g.name); if (DE.Infection && DE.Infection.expose(state, g, .18)) result.infected = (result.infected || 0) + 1; } });
       if (state.defense.wall.hp <= 0) {
         state.defense.wall.hp = 0;
         result.breach = true; result.outcome = 'breach';
@@ -187,6 +188,7 @@ DE.Defense = (function () {
     state.defense.nextWaveAt = now + waveInterval(state) * 1000;
     DE.Events.rollMutation(state);
     state._events = state._events || []; state._events.push({ type: 'wave', result });
+    if (DE.Gear) result.gear = DE.Gear.afterWave(state, result);   // wear, rounds spent
     return result;
   }
 

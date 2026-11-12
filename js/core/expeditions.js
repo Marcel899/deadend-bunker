@@ -25,6 +25,8 @@ DE.Expeditions = (function () {
     state.collection = state.collection || {}; state.blueprints = state.blueprints || {}; state.explore = state.explore || {};
   }
   function explore(state, id) { return Math.min(MAX_EXPLORE, (state.explore && state.explore[id]) || 0); }
+  /** Knowledge of a place from elsewhere (the radio): +n exploration, so teams find more there. */
+  function addExplore(state, id, n) { if (!DE.Data.LOCATIONS[id]) return 0; state.explore = state.explore || {}; state.explore[id] = Math.min(MAX_EXPLORE, (state.explore[id] || 0) + (n || 1)); return state.explore[id]; }
   function collectiblesAt(id) { return Object.values(DE.Data.COLLECTIBLES).filter(c => c.where === id).sort((a, b) => a.explore - b.explore); }
   function blueprintsAt(id) { return Object.values(DE.Data.ROOMS).filter(d => d.blueprint === id); }
   function setCount(state, setId) { return Object.values(DE.Data.COLLECTIBLES).filter(c => c.set === setId && state.collection && state.collection[c.id]).length; }
@@ -61,7 +63,7 @@ DE.Expeditions = (function () {
     const lucky = members.filter(s => (s.traits || []).includes('lucky')).length;
     const findChance = Math.min(0.95, 0.4 + 0.12 * scav + 0.1 * lucky + (fx.findBonus || 0));
     const mapGain = 1 + (scouts ? 1 : 0);
-    const danger = loc.danger * (1 - 0.15 * scav) * (1 - 0.2 * hunters) * (1 - 0.25 * Math.min(1, medics)) * (1 - Math.min(0.8, fx.expeditionSafety || 0)) * (1 - bus.safety);
+    const danger = loc.danger * (1 - 0.15 * scav) * (1 - 0.2 * hunters) * (1 - 0.25 * Math.min(1, medics)) * (1 - Math.min(0.8, fx.expeditionSafety || 0)) * (1 - bus.safety) * (DE.Gear ? DE.Gear.expeditionSafety(members) : 1);
     return { loc, members, duration, lootMult, danger: Math.max(0, Math.min(0.95, danger)), rescue: loc.rescue || 0, stops: duration >= 900 ? [0.35, 0.7] : [0.5], explore: known, findChance, mapGain, matMult: (1 + 0.15 * known) * bus.cargo };
   }
 
@@ -110,6 +112,8 @@ DE.Expeditions = (function () {
       result.loot[r] = Math.floor(U().rand(a, b) * lootMult);
     }
     for (const r in exp.bonus || {}) if (DE.Data.RESOURCES[r]) result.loot[r] = (result.loot[r] || 0) + Math.max(0, Math.floor(exp.bonus[r]));
+    // the haul waits in the storage room: sorting it properly there gets more out of it
+    if (state.flags) state.flags.haulBonus = Object.assign({}, result.loot);
     for (const r in result.loot) {
       const amt = result.loot[r];
       state.resources[r] = Math.min(DE.Economy.storageCap(state, r), state.resources[r] + amt);
@@ -158,6 +162,6 @@ DE.Expeditions = (function () {
     return done.map(e => resolve(state, e, now));
   }
 
-  return { location, slots, unlocked, isOpen, availableLocations, plan, canSend, send, progress, resolve, tick,
+  return { addExplore, location, slots, unlocked, isOpen, availableLocations, plan, canSend, send, progress, resolve, tick,
     MAX_EXPLORE, ensure, explore, collectiblesAt, blueprintsAt, setCount, setSize, setDone, owned, hasRare, payRare, addMat, grantCollectible };
 })();

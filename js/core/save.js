@@ -152,6 +152,8 @@ DE.Save = (function () {
             prev: p && (p.kind === 'guard' || p.kind === 'dig' || (p.kind === 'room' && typeof p.id === 'string')) ? (p.kind === 'room' ? { kind: 'room', id: p.id } : { kind: p.kind }) : null };
         }
         if (Number.isFinite(+v.immuneUntil) && +v.immuneUntil > 0) sv.immuneUntil = +v.immuneUntil;
+        if (Number.isFinite(+v.training) && +v.training > 0) sv.training = U().clamp(+v.training, 0, 10);
+        if (U().isObj(v.drill) && Number.isFinite(+v.drill.until)) sv.drill = { until: +v.drill.until, bonus: U().clamp(N(v.drill.bonus, 0), 0, .5) };
         if (U().isObj(v.assignment)) {
           const a = v.assignment;
           if (a.kind === 'room' && s.rooms[a.id]) sv.assignment = { kind: 'room', id: a.id };
@@ -235,6 +237,24 @@ DE.Save = (function () {
       if (Array.isArray(src.events)) s.events = src.events.filter(e => U().isObj(e) && typeof e.title === 'string' && Array.isArray(e.choices)).slice(0, 6).map(e => ({ id: typeof e.id === 'string' ? e.id : 'e' + (s.nextId++), kind: e.kind === 'expedition' ? 'expedition' : 'bunker', def: String(e.def || ''), title: String(e.title).slice(0, 120), text: String(e.text || '').slice(0, 600), ctx: U().isObj(e.ctx) ? e.ctx : {}, choices: e.choices.filter(U().isObj).slice(0, 4).map(c => ({ label: String(c.label || 'OK').slice(0, 60), desc: String(c.desc || '').slice(0, 200), effects: U().isObj(c.effects) ? c.effects : {}, trade: U().isObj(c.trade) ? c.trade : undefined })) }));
       if (U().isObj(src.artifacts)) for (const id in src.artifacts) if (DE.Data.ARTIFACTS[id]) s.artifacts[id] = true;
       if (U().isObj(src.materials)) for (const m of DE.Data.MATERIAL_ORDER) s.materials[m] = Math.floor(NN(src.materials[m], 0));
+      // gear from the forge (items checked against the recipes; owners must still be here)
+      if (U().isObj(src.gear)) {
+        const g = { items: [], ammo: Math.floor(NN(src.gear.ammo, 0)), nextId: Math.max(1, Math.floor(N(src.gear.nextId, 1))) };
+        if (Array.isArray(src.gear.items)) for (const it of src.gear.items.slice(0, 200)) {
+          if (!U().isObj(it) || (it.kind !== 'weapon' && it.kind !== 'armor')) continue;
+          const def = (it.kind === 'weapon' ? DE.Data.WEAPONS : DE.Data.ARMORS)[it.type]; if (!def) continue;
+          const q = DE.Data.QUALITY.find(x => x.id === it.q) ? it.q : 'standard', max = Math.max(1, Math.floor(N(it.max, def.dur)));
+          g.items.push({ id: typeof it.id === 'string' ? it.id.slice(0, 12) : 'g' + (g.nextId++), kind: it.kind, type: it.type, q, max, dur: U().clamp(Math.floor(N(it.dur, max)), 0, max), owner: typeof it.owner === 'string' && s.survivors[it.owner] ? it.owner : null });
+        }
+        s.gear = g;
+      }
+      // minigames: cooldowns, best scores, plays, mastery
+      if (U().isObj(src.mg)) {
+        const mg = { cd: {}, best: {}, plays: {}, xp: {} };
+        for (const g in DE.Minigames.GAMES) for (const k of ['cd', 'best', 'plays', 'xp']) if (U().isObj(src.mg[k]) && Number.isFinite(+src.mg[k][g])) mg[k][g] = Math.max(0, +src.mg[k][g]);
+        s.mg = mg;
+      }
+      if (U().isObj(src.flags) && U().isObj(src.flags.haulBonus)) { const h = {}; for (const r in src.flags.haulBonus) if (DE.Data.RESOURCES[r]) h[r] = Math.max(0, Math.floor(N(src.flags.haulBonus[r], 0))); s.flags.haulBonus = h; }
       if (U().isObj(src.collection)) for (const id in src.collection) if (DE.Data.COLLECTIBLES[id]) s.collection[id] = true;
       if (U().isObj(src.blueprints)) for (const id in src.blueprints) if (DE.Data.ROOMS[id] && DE.Data.ROOMS[id].blueprint) s.blueprints[id] = true;
       if (U().isObj(src.explore)) for (const id in src.explore) if (DE.Data.LOCATIONS.some(l => l.id === id)) s.explore[id] = U().clamp(Math.floor(N(src.explore[id], 0)), 0, 5);
