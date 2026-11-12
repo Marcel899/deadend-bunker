@@ -37,24 +37,26 @@ DE.UI.DigSite = (function () {
     return Math.round(110 + DE.Excavation.progress(s) * (W - 140));
   }
 
-  function machine(L, layer, fx) {
+  /* Machines are drawn relative to the face (x = 0) and travel with it. */
+  function machine(L, layer) {
     // machines stand back from the face so the crew works under the boom
-    const x = fx - (layer === 'topsoil' || layer === 'clay' ? 96 : 168), y = G;
+    const fx = 0, x = fx - (layer === 'topsoil' || layer === 'clay' ? 96 : 168), y = G;
     switch (layer) {
-      case 'limestone':   // compressor with a hose to the face
-        return img('gascylinders', x, y, 46) + `<path d="M${x + 12} ${y - 30} q40 30 ${fx - x - 46} 6" fill="none" stroke="${INK}" stroke-width="5"/><path d="M${x + 12} ${y - 30} q40 30 ${fx - x - 46} 6" fill="none" stroke="#c93a3a" stroke-width="2.5"/>`;
-      case 'granite': case 'basalt': {   // tracked drill rig, boom reaching the face
+      case 'limestone':   // compressor with a hose to the face, chugging
+        return `<g class="dig-shake">${img('gascylinders', x, y, 46)}</g><path d="M${x + 12} ${y - 30} q40 30 ${fx - x - 46} 6" fill="none" stroke="${INK}" stroke-width="5"/><path d="M${x + 12} ${y - 30} q40 30 ${fx - x - 46} 6" fill="none" stroke="#c93a3a" stroke-width="2.5"/>`;
+      case 'granite': case 'basalt': {   // tracked drill rig, boom reaching the face, the bit chattering
         const big = layer === 'basalt', c = big ? '#c9a24a' : '#f0a020', bx = fx - 30;
         return `<g class="dig-rig"><rect x="${x - 44}" y="${y - 22}" width="84" height="22" rx="11" fill="#3a3845" ${S3}/>${[0, 1, 2, 3].map(i => `<circle cx="${x - 32 + i * 20}" cy="${y - 11}" r="7" fill="#5a5866" ${S2}/>`).join('')}
-          <rect x="${x - 36}" y="${y - 58}" width="40" height="38" rx="5" fill="${c}" ${S3}/><rect x="${x - 30}" y="${y - 54}" width="18" height="16" rx="2" fill="#9fe3ff" ${S2}/><rect x="${x + 2}" y="${y - 48}" width="30" height="26" rx="3" fill="${c}" ${S3}/>
+          <g class="dig-shake"><rect x="${x - 36}" y="${y - 58}" width="40" height="38" rx="5" fill="${c}" ${S3}/><rect x="${x - 30}" y="${y - 54}" width="18" height="16" rx="2" fill="#9fe3ff" ${S2}/><rect x="${x + 2}" y="${y - 48}" width="30" height="26" rx="3" fill="${c}" ${S3}/>
+          <circle class="dig-beacon" cx="${x - 16}" cy="${y - 62}" r="4" fill="#ff7a2a" ${S2}/></g>
           <path d="M${x + 16} ${y - 44} L${bx - 26} ${y - (big ? 104 : 92)}" stroke="${INK}" stroke-width="${big ? 16 : 13}" stroke-linecap="round"/><path d="M${x + 16} ${y - 44} L${bx - 26} ${y - (big ? 104 : 92)}" stroke="${c}" stroke-width="${big ? 10 : 7}" stroke-linecap="round"/>
           <g class="dig-bit"><path d="M${bx - 30} ${y - (big ? 116 : 102)} h22 l${big ? 18 : 14} ${big ? 12 : 10} l${big ? -18 : -14} ${big ? 12 : 10} h-22 z" fill="#8a8e98" ${S3}/><path d="M${bx - 22} ${y - (big ? 112 : 99)} l6 16 M${bx - 14} ${y - (big ? 112 : 99)} l6 16" ${S2} fill="none"/></g>
-          ${big ? `<g class="dig-sparks"><circle cx="${bx - 4}" cy="${y - 98}" r="2.5" fill="#ffd34a"/><circle cx="${bx - 10}" cy="${y - 112}" r="2" fill="#fff4a8"/><circle cx="${bx - 6}" cy="${y - 88}" r="1.8" fill="#ffd34a"/></g>` : ''}</g>`;
+          <g class="dig-sparks"><circle cx="${bx - 4}" cy="${y - (big ? 98 : 88)}" r="2.5" fill="#ffd34a"/><circle cx="${bx - 10}" cy="${y - (big ? 112 : 100)}" r="2" fill="#fff4a8"/><circle cx="${bx - 6}" cy="${y - (big ? 88 : 80)}" r="1.8" fill="#ffd34a"/></g></g>`;
       }
       case 'magma': {     // thermal borer: a heavy cylinder whose cone glows white-hot
         const bx = fx - 6;
         return `<g class="dig-rig"><rect x="${x - 50}" y="${y - 24}" width="96" height="24" rx="12" fill="#3a3845" ${S3}/>${[0, 1, 2, 3, 4].map(i => `<circle cx="${x - 38 + i * 20}" cy="${y - 12}" r="7" fill="#5a5866" ${S2}/>`).join('')}
-          <rect x="${x - 40}" y="${y - 96}" width="${bx - x + 14}" height="66" rx="14" fill="#8a8e98" ${S3}/><path d="M${x - 30} ${y - 82} h${bx - x - 20} M${x - 30} ${y - 46} h${bx - x - 20}" ${S2}/>
+          <g class="dig-shake"><rect x="${x - 40}" y="${y - 96}" width="${bx - x + 14}" height="66" rx="14" fill="#8a8e98" ${S3}/><path d="M${x - 30} ${y - 82} h${bx - x - 20} M${x - 30} ${y - 46} h${bx - x - 20}" ${S2}/></g>
           <g class="dig-heat"><path d="M${bx - 26} ${y - 100} l30 37 l-30 37 z" fill="${L.glow}" ${S3}/><path d="M${bx - 22} ${y - 86} l16 23 l-16 23 z" fill="#fff1a8" stroke="none"/></g></g>`;
       }
       default:            // topsoil / clay: hand tools, a wheelbarrow and a bucket
@@ -62,51 +64,105 @@ DE.UI.DigSite = (function () {
     }
   }
 
-  function art(s, W) {
-    const d = DE.Excavation.nextDepth(s), Lr = DE.Excavation.layer(d), layer = Lr.id, L = LOOK[layer] || LOOK.topsoil;
-    const active = !!s.excavation, crew = DE.Excavation.miners(s).length, fx = faceAt(s, W), r = rng(d * 31 + 7);
-    lay = { faceX: fx, cartX: 112, depth: d, active, W };
-    // the carved tunnel: rough roof, jagged face, flat floor
-    let roof = `M0 ${ROOF}`; for (let x = 30; x < fx - 10; x += 30) roof += ` L${x} ${ROOF + 4 + r() * 10}`;
-    let face = ''; for (let y = ROOF + 6; y < G; y += 22) face += ` L${(fx + (r() * 14 - 7)).toFixed(0)} ${y}`;
-    const cave = `${roof} L${fx - 6} ${ROOF + 8}${face} L${fx} ${G} L0 ${G} Z`;
+  /** The whole tunnel as it will be when this floor is dug out. Only the part up to the face shows:
+   *  #dig-reveal widens smoothly as the dig progresses, so the frames, lamps and rails appear as the
+   *  crew advances and the untouched ground (the floor's own rock) stays beyond the face. */
+  function tunnel(L, d, W) {
+    const r = rng(d * 31 + 7), full = W - 30;
+    let roof = `M0 ${ROOF}`; for (let x = 30; x < full; x += 30) roof += ` L${x} ${ROOF + 4 + r() * 10}`;
+    const cave = `${roof} L${full} ${ROOF + 8} L${full} ${G} L0 ${G} Z`;
     let o = `<defs><linearGradient id="dg-cave" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${L.cave}"/><stop offset="1" stop-color="${L.wall}"/></linearGradient><clipPath id="dg-clip"><path d="${cave}"/></clipPath>
       <radialGradient id="dg-glow"><stop offset="0" stop-color="#ffd98a" stop-opacity=".55"/><stop offset="1" stop-color="#ffd98a" stop-opacity="0"/></radialGradient></defs>`;
     o += `<path d="${cave}" fill="url(#dg-cave)"/>`;
     // back-wall texture: rock seams inside the tunnel
-    let tex = ''; for (let i = 0; i < Math.max(3, fx / 60); i++) { const x = 20 + r() * (fx - 40), y = ROOF + 30 + r() * (G - ROOF - 70); tex += `<path d="M${x.toFixed(0)} ${y.toFixed(0)} l${(10 + r() * 20).toFixed(0)} ${(r() * 8 - 4).toFixed(0)} l${(8 + r() * 14).toFixed(0)} ${(6 + r() * 6).toFixed(0)}" fill="none" stroke="#000" stroke-width="2.5" opacity=".28"/>`; if (L.gem && r() < .5) tex += `<path d="M${x.toFixed(0)} ${(y + 18).toFixed(0)} l4 -10 l4 10 l-4 4 z" fill="${L.gem}" ${S2}/>`; if (L.glow && r() < .5) tex += `<path d="M${x.toFixed(0)} ${(y + 10).toFixed(0)} q12 -6 24 2 q10 6 22 -2" fill="none" stroke="${L.glow}" stroke-width="2.5" opacity=".8" class="dig-ember"/>`; }
-    o += `<g clip-path="url(#dg-clip)">${tex}<rect x="0" y="${G - 40}" width="${fx}" height="40" fill="#000" opacity=".22"/></g>`;
+    let tex = ''; for (let i = 0; i < Math.max(3, full / 60); i++) { const x = 20 + r() * (full - 40), y = ROOF + 30 + r() * (G - ROOF - 70); tex += `<path d="M${x.toFixed(0)} ${y.toFixed(0)} l${(10 + r() * 20).toFixed(0)} ${(r() * 8 - 4).toFixed(0)} l${(8 + r() * 14).toFixed(0)} ${(6 + r() * 6).toFixed(0)}" fill="none" stroke="#000" stroke-width="2.5" opacity=".28"/>`; if (L.gem && r() < .5) tex += `<path d="M${x.toFixed(0)} ${(y + 18).toFixed(0)} l4 -10 l4 10 l-4 4 z" fill="${L.gem}" ${S2}/>`; if (L.glow && r() < .5) tex += `<path d="M${x.toFixed(0)} ${(y + 10).toFixed(0)} q12 -6 24 2 q10 6 22 -2" fill="none" stroke="${L.glow}" stroke-width="2.5" opacity=".8" class="dig-ember"/>`; }
+    o += `<g clip-path="url(#dg-clip)">${tex}<rect x="0" y="${G - 40}" width="${full}" height="40" fill="#000" opacity=".22"/></g>`;
     // timber frames: posts, a header beam, braces
-    for (let x = 64; x < fx - 40; x += 112) o += `<rect x="${x}" y="${ROOF + 8}" width="11" height="${G - ROOF - 8}" fill="#8a5a32" ${S3}/><rect x="${x - 10}" y="${ROOF + 4}" width="${Math.min(112, fx - x - 20) + 20}" height="11" rx="2" fill="#a06a3a" ${S3}/><path d="M${x + 11} ${ROOF + 30} l18 -15" ${S3} stroke-width="5" fill="none"/><path d="M${x + 11} ${ROOF + 30} l18 -15" stroke="#8a5a32" stroke-width="2.5" fill="none"/>`;
+    for (let x = 64; x < full - 40; x += 112) o += `<rect x="${x}" y="${ROOF + 8}" width="11" height="${G - ROOF - 8}" fill="#8a5a32" ${S3}/><rect x="${x - 10}" y="${ROOF + 4}" width="${Math.min(112, full - x - 20) + 20}" height="11" rx="2" fill="#a06a3a" ${S3}/><path d="M${x + 11} ${ROOF + 30} l18 -15" ${S3} stroke-width="5" fill="none"/><path d="M${x + 11} ${ROOF + 30} l18 -15" stroke="#8a5a32" stroke-width="2.5" fill="none"/>`;
     // the lamp cable along the roof, a bulb every frame
-    if (fx > 90) { let cable = `M0 ${ROOF + 26}`; const bulbs = []; for (let x = 70; x < fx - 20; x += 112) { cable += ` Q${x - 50} ${ROOF + 40} ${x} ${ROOF + 26}`; bulbs.push(x + 28); } o += `<path d="${cable}" fill="none" stroke="${INK}" stroke-width="2"/>`; bulbs.forEach(x => { o += `<ellipse cx="${x}" cy="${ROOF + 60}" rx="46" ry="40" fill="url(#dg-glow)" class="dig-lamp"/><path d="M${x} ${ROOF + 30} v8" stroke="${INK}" stroke-width="2"/><circle cx="${x}" cy="${ROOF + 42}" r="5" fill="#ffd98a" ${S2}/>`; }); }
-    // rails with sleepers, the mine cart by the lift
-    o += `<g>${Array.from({ length: Math.max(0, Math.floor((fx - 30) / 16)) }, (_, i) => `<rect x="${8 + i * 16}" y="${G - 1}" width="9" height="5" rx="1" fill="#4a3a2a"/>`).join('')}<path d="M0 ${G - 2} H${Math.max(0, fx - 24)}" stroke="#8a8e98" stroke-width="3"/><path d="M0 ${G - 2} H${Math.max(0, fx - 24)}" stroke="${INK}" stroke-width="1" opacity=".5"/></g>`;
-    o += img('f3_minecart', lay.cartX, G + 1, 40) + (crew ? rock(lay.cartX - 8, G - 26, 8, L.rock, true) + rock(lay.cartX + 6, G - 27, 7, L.rock, true) : '');
+    let cable = `M0 ${ROOF + 26}`; const bulbs = []; for (let x = 70; x < full - 20; x += 112) { cable += ` Q${x - 50} ${ROOF + 40} ${x} ${ROOF + 26}`; bulbs.push(x + 28); }
+    o += `<path d="${cable}" fill="none" stroke="${INK}" stroke-width="2"/>`; bulbs.forEach(x => { o += `<ellipse cx="${x}" cy="${ROOF + 60}" rx="46" ry="40" fill="url(#dg-glow)" class="dig-lamp"/><path d="M${x} ${ROOF + 30} v8" stroke="${INK}" stroke-width="2"/><circle cx="${x}" cy="${ROOF + 42}" r="5" fill="#ffd98a" ${S2}/>`; });
+    // rails with sleepers
+    o += `<g>${Array.from({ length: Math.max(0, Math.floor((full - 30) / 16)) }, (_, i) => `<rect x="${8 + i * 16}" y="${G - 1}" width="9" height="5" rx="1" fill="#4a3a2a"/>`).join('')}<path d="M0 ${G - 2} H${full}" stroke="#8a8e98" stroke-width="3"/><path d="M0 ${G - 2} H${full}" stroke="${INK}" stroke-width="1" opacity=".5"/></g>`;
     // tools against the wall near the lift
-    if (fx > 300) o += img('pickaxe', 200, G - 2, 30) + img('lantern', 236, G - 2, 22);
-    // rubble at the face, a little more the further the crew has dug
-    for (let i = 0; i < 6; i++) o += rock(fx - 18 - i * 15 - r() * 8, G - (i % 2) * 2, 6 + r() * 6, i % 2 ? L.rock : L.face, true);
-    if (active && fx > 330) o += machine(L, layer, fx);
-    // the rock face itself: an outlined jagged edge with fresh chips
-    o += `<path d="M${fx - 6} ${ROOF + 8}${face} L${fx} ${G}" fill="none" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/><path d="M${fx - 8} ${ROOF + 10}${face.replace(/L(\d+) /g, (m, x) => 'L' + (+x - 4) + ' ')} L${fx - 4} ${G}" fill="none" stroke="${L.hi}" stroke-width="2" opacity=".7"/>`;
-    o += `<path d="${roof}" fill="none" stroke="${INK}" stroke-width="4"/><path d="M0 ${G} H${fx}" stroke="${INK}" stroke-width="3"/>`;
-    // dust and falling pebbles while the crew is working
-    if (crew) o += `<g class="dig-dust">${[0, 1, 2, 3].map(i => `<circle cx="${fx - 14 - i * 6}" cy="${G - 40 - i * 34}" r="${10 + i * 3}" fill="${L.hi}" style="animation-delay:${(i * .45).toFixed(2)}s"/>`).join('')}</g><g class="dig-pebbles">${[0, 1, 2].map(i => `<circle cx="${fx - 6 - i * 9}" cy="${ROOF + 30 + i * 30}" r="${2.5 - i * .4}" fill="${L.rock}" ${S2} style="animation-delay:${(i * .6).toFixed(2)}s"/>`).join('')}</g>`;
+    o += img('pickaxe', 200, G - 2, 30) + img('lantern', 236, G - 2, 22);
+    o += `<path d="${roof}" fill="none" stroke="${INK}" stroke-width="4"/><path d="M0 ${G} H${full}" stroke="${INK}" stroke-width="3"/>`;
     return `<svg class="dig-svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${o}</svg>`;
   }
 
-  /** Rebuild the art when something visible changed; refresh the info panel every call. */
+  /** Everything that travels with the face, drawn around x = 0: the fresh rock face (a band of the
+   *  layer's rock with a jagged edge), the rubble pile, the machine, and while the crew works: dust
+   *  billowing off the face, chips flying back, dirt trickling from the roof and pebbles bouncing. */
+  const FW = 470, FX = 420;            // front layer width, and where x = 0 sits inside it
+  function front(L, layer, d, digging, machineOn) {
+    const r = rng(d * 17 + 3);
+    let jag = ''; const pts = []; for (let y = ROOF + 6; y <= G; y += 22) pts.push([Math.round(r() * 14 - 8), Math.min(G, y)]);
+    jag = pts.map(([x, y], i) => (i ? 'L' : 'M') + x + ' ' + y).join(' ');
+    let o = '';
+    if (digging && machineOn) o += machine(L, layer);
+    // the rubble pile at the foot of the face (grows and is carted away: .dig-pile)
+    o += `<g class="dig-pile">`; for (let i = 0; i < 6; i++) o += rock(-18 - i * 15 - r() * 8, G - (i % 2) * 2, 6 + r() * 6, i % 2 ? L.rock : L.face, true); o += `</g>`;
+    // the face: a band of fresh rock, its jagged edge outlined, a highlight just inside
+    o += `<path d="${jag} L14 ${G} L14 ${ROOF + 6} Z" fill="${L.face}"/><path d="${jag}" fill="none" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>`
+      + `<path d="${pts.map(([x, y], i) => (i ? 'L' : 'M') + (x + 4) + ' ' + y).join(' ')}" fill="none" stroke="${L.hi}" stroke-width="2" opacity=".75"/>`;
+    for (let i = 0; i < 5; i++) { const y = ROOF + 26 + i * 40 + r() * 14; o += `<path d="M${(2 + r() * 6).toFixed(0)} ${y.toFixed(0)} l8 -3 l3 6 z" fill="${L.hi}" opacity=".7"/>`; }
+    // work effects
+    o += `<g class="dig-fx">`
+      + `<g class="dig-dust">${[0, 1, 2, 3, 4].map(i => `<circle cx="${-12 - i * 7}" cy="${G - 30 - i * 32}" r="${10 + i * 3}" fill="${L.hi}" style="animation-delay:${(i * .38).toFixed(2)}s"/>`).join('')}</g>`
+      + `<g class="dig-chips">${[0, 1, 2, 3, 4, 5].map(i => `<path d="M-6 ${G - 50 - i * 26} l5 -3 l3 5 l-6 2 z" fill="${i % 2 ? L.rock : L.hi}" ${S2} style="--cx:${-30 - (i % 3) * 22}px;--cy:${10 + (i % 2) * 12}px;animation-delay:${(i * .31).toFixed(2)}s"/>`).join('')}</g>`
+      + `<g class="dig-dirt">${[0, 1, 2, 3].map(i => `<rect x="${-26 - i * 14}" y="${ROOF + 12}" width="${2 + (i % 2)}" height="${6 + i * 2}" rx="1" fill="${L.face}" style="animation-delay:${(i * .7).toFixed(2)}s"/>`).join('')}</g>`
+      + `<g class="dig-pebbles">${[0, 1, 2].map(i => `<circle cx="${-6 - i * 9}" cy="${ROOF + 30 + i * 30}" r="${2.5 - i * .4}" fill="${L.rock}" ${S2} style="animation-delay:${(i * .6).toFixed(2)}s"/>`).join('')}</g></g>`;
+    return `<svg class="dig-front-svg" width="${FW}" height="${H}" viewBox="${-FX} 0 ${FW} ${H}" aria-hidden="true">${o}</svg>`;
+  }
+
+  /** The mine cart shuttles between the lift and the face: rolls up empty, is loaded (the rubble pile
+   *  shrinks), rolls back full and tips its load at the lift. Timed from the dig's pace. */
+  let cartAnim = null, cartKey = '';
+  function runCart(site, fx, pace, on) {
+    const cart = site.querySelector('.dig-cart'), load = site.querySelector('.dig-cart-load'), pile = site.querySelector('.dig-front .dig-pile');
+    if (!cart || !cart.animate) return;
+    const dist = Math.max(0, fx - 150 - lay.cartX), key = on ? Math.round(dist / 40) + ':' + pace.toFixed(1) : 'off';
+    if (key === cartKey && cartAnim && cartAnim.playState === 'running') return;
+    cartKey = key; if (cartAnim) cartAnim.cancel(); cartAnim = null;
+    if (!on || dist < 40 || document.body.classList.contains('no-anim')) { if (load) load.style.opacity = on ? '1' : '0'; return; }
+    const ms = Math.round(Math.max(6, Math.min(18, (8 + dist / 60) / pace)) * 1000);
+    cartAnim = cart.animate([{ transform: 'translateX(0)' }, { transform: `translateX(${dist}px)`, offset: .4 }, { transform: `translateX(${dist}px)`, offset: .55 }, { transform: 'translateX(0)', offset: .92 }, { transform: 'translateX(0)' }],
+      { duration: ms, easing: 'ease-in-out' });
+    if (load) load.animate([{ opacity: 0 }, { opacity: 0, offset: .47 }, { opacity: 1, offset: .53 }, { opacity: 1, offset: .93 }, { opacity: 0, offset: .97 }, { opacity: 0 }], { duration: ms });
+    if (pile) pile.animate([{ transform: 'scale(1, 1)' }, { transform: 'scale(1, 1.15)', offset: .45 }, { transform: 'scale(.95, .55)', offset: .55 }, { transform: 'scale(1, 1)' }], { duration: ms });
+    cartAnim.onfinish = () => { cartAnim = null; cartKey = ''; };
+  }
+
+  /** Rebuild the art when something visible changed; move the face every call; refresh the info panel. */
   function update(s, now) {
     const site = document.getElementById('dig-site'); if (!site) return;
     const W = site.clientWidth || 1200;
-    const d = DE.Excavation.nextDepth(s), crew = DE.Excavation.miners(s).length;
-    const sg = [d, s.excavation ? Math.floor(DE.Excavation.progress(s) * 100) : 'q', crew ? 1 : 0, W, DE.Excavation.layer(d).id].join(':');
+    const d = DE.Excavation.nextDepth(s), crew = DE.Excavation.miners(s).length, digging = !!s.excavation;
+    const Lr = DE.Excavation.layer(d), layer = Lr.id, L = LOOK[layer] || LOOK.topsoil;
+    const fx = faceAt(s, W), machineOn = fx > 330;
+    lay = { faceX: fx, cartX: 112, depth: d, active: digging, W };
+    const sg = [d, digging ? 1 : 0, crew ? 1 : 0, W, layer, machineOn ? 1 : 0].join(':');
     const artEl = document.getElementById('dig-art');
-    if (sg !== sig || (artEl && !artEl.firstChild)) { sig = sg; if (artEl) artEl.innerHTML = art(s, W); }
-    site.classList.toggle('active', !!s.excavation); site.classList.toggle('crewed', crew > 0);
+    if (artEl && (sg !== sig || !artEl.firstChild)) {
+      sig = sg; cartKey = ''; if (cartAnim) { cartAnim.cancel(); cartAnim = null; }
+      artEl.innerHTML = `<div class="dig-reveal" style="width:${fx}px">${tunnel(L, d, W)}</div>`
+        + `<div class="dig-cart" style="left:${lay.cartX - 22}px;top:${G - 40}px">${img2('f3_minecart', 44, 40)}<div class="dig-cart-load">${rockHtml(L)}</div></div>`
+        + `<div class="dig-front" style="left:${-FX}px;transform:translateX(${fx}px)">${front(L, layer, d, digging, machineOn)}</div>`;
+      void artEl.offsetWidth; artEl.classList.add('smooth');
+    } else if (artEl) {
+      const rv = artEl.querySelector('.dig-reveal'), fr = artEl.querySelector('.dig-front');
+      if (rv && rv.style.width !== fx + 'px') rv.style.width = fx + 'px';
+      const tf = `translateX(${fx}px)`; if (fr && fr.style.transform !== tf) fr.style.transform = tf;
+    }
+    const pace = Math.max(.3, DE.Excavation.speed(s));
+    if (artEl) artEl.style.setProperty('--pace', (1 / Math.min(2.5, Math.max(.6, pace))).toFixed(2));
+    site.classList.toggle('active', digging); site.classList.toggle('crewed', crew > 0);
+    runCart(site, fx, pace, digging || crew > 0);
     hud(s, now);
   }
+  /** A sprite as an <img> (the cart rides in HTML so it can be animated smoothly). */
+  function img2(sp, w, h) { return `<img src="assets/sprites/${sp}.png" alt="" draggable="false" style="width:${w}px;height:${h}px;object-fit:contain">`; }
+  function rockHtml(L) { return `<svg width="40" height="22" viewBox="-20 -22 40 22" aria-hidden="true">${rock(-6, 0, 8, L.rock, true)}${rock(7, 0, 7, L.face, true)}${rock(0, -6, 6, L.rock, true)}</svg>`; }
   function hud(s) {
     const el = document.getElementById('dig-zone'); if (!el) return;
     const U = DE.Util, d = DE.Excavation.nextDepth(s), L = DE.Excavation.layer(d), crew = DE.Excavation.miners(s), sp = DE.Excavation.speed(s);

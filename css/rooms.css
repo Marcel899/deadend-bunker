@@ -279,7 +279,26 @@ body.no-anim .sel-frame::before, body.no-anim .sel-frame i { animation: none; }
 @keyframes dig-heat { 50% { opacity: .6; } }
 .dig-sparks circle { animation: dig-spark .45s steps(2) infinite; } @keyframes dig-spark { 50% { opacity: 0; } }
 .dig-lamp { animation: dig-flicker 7s ease-in-out infinite; } @keyframes dig-flicker { 0%, 100% { opacity: 1; } 47% { opacity: 1; } 49% { opacity: .55; } 51% { opacity: 1; } }
-.dig-site:not(.crewed) .dig-dust, .dig-site:not(.crewed) .dig-pebbles { display: none; }
+.dig-site:not(.crewed) .dig-fx { display: none; }
+/* the tunnel is revealed up to the face; the face, machine and effects travel with it (js/ui/digsite.js) */
+.dig-art .dig-reveal { position: absolute; left: 0; top: 0; height: 266px; overflow: hidden; }
+.dig-art .dig-front { position: absolute; top: 0; width: 470px; height: 266px; pointer-events: none; will-change: transform; }
+.dig-art.smooth .dig-reveal { transition: width 1.2s linear; }
+.dig-art.smooth .dig-front { transition: transform 1.2s linear; }
+.dig-art .dig-cart { position: absolute; width: 44px; height: 40px; will-change: transform; }
+.dig-art .dig-cart img { display: block; }
+.dig-art .dig-cart-load { position: absolute; left: 2px; top: -9px; width: 40px; height: 22px; opacity: 0; }
+.dig-art .dig-cart-load svg { position: static; }
+.dig-pile { transform-box: fill-box; transform-origin: 50% 100%; }
+/* work effects, timed from the dig's pace (--pace: shorter when the crew digs faster) */
+.dig-dust circle { animation-duration: calc(1.8s * var(--pace, 1)); }
+.dig-chips path { opacity: 0; transform-box: fill-box; animation: dig-chip calc(1.1s * var(--pace, 1)) ease-out infinite; }
+@keyframes dig-chip { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 12% { opacity: 1; } 55% { transform: translate(calc(var(--cx) * .6), calc(var(--cy) * -1.4)) rotate(160deg); } 100% { opacity: 0; transform: translate(var(--cx), var(--cy)) rotate(320deg); } }
+.dig-dirt rect { opacity: 0; animation: dig-dirt calc(2.6s * var(--pace, 1)) ease-in infinite; }
+@keyframes dig-dirt { 0% { opacity: 0; transform: translateY(0) scaleY(.4); } 15% { opacity: .9; transform: translateY(8px) scaleY(1); } 100% { opacity: 0; transform: translateY(190px) scaleY(1.6); } }
+.dig-site.active .dig-shake { animation: dig-shake .18s linear infinite; }
+@keyframes dig-shake { 50% { transform: translate(.8px, -.6px); } }
+.dig-beacon { animation: dig-spark .9s steps(2) infinite; }
 body.no-anim .dig-site *, body.no-anim .wing-mine * { animation: none !important; }
 /* a wing being dug out sideways: a tunnel mouth, rubble and a miner at work */
 .wing.digging { position: relative; overflow: hidden; animation: none !important; border-style: solid; }
