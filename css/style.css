@@ -1261,3 +1261,12 @@ img.ico-face.ava { width: 40px; height: 40px; border-width: 2.5px; box-shadow: 0
   background: linear-gradient(180deg, #ffd25a, #f0a020); box-shadow: inset 0 1px 0 rgba(255, 255, 255, .5), 0 2px 0 rgba(0, 0, 0, .4); white-space: nowrap; }
 .ov-tips .tip-btn:hover { filter: brightness(1.08); } .ov-tips .tip-btn:active { transform: translateY(1px); box-shadow: none; }
 .sv-tabs .sv-putwork { margin-left: auto; }
+
+/* iPad portrait: all seven resource pills share the width instead of the last one being cut off */
+@media (max-width: 980px) and (min-width: 700px) {
+  #resbar { overflow-x: visible !important; gap: 6px 9px !important; padding-left: 20px !important; }
+  #resbar .res { flex: 1 1 0 !important; min-width: 0 !important; max-width: none; }
+}
+/* room status flag never runs past the room's edge */
+.room .room-foot { overflow: hidden; padding-right: 18px !important; }
+.room-flag { min-width: 0; max-width: 58%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
