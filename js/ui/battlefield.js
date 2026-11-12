@@ -253,6 +253,7 @@ DE.UI.Battlefield = (function () {
   }
   /* blood: droplets that arc out and a pool decal that fades — stylised, dark red (green for toxic) */
   function blood(x, y, n, toxic) {
+    n = Math.round(n * (DE.UI.Settings ? .3 + .7 * DE.UI.Settings.density() : 1));
     for (let i = 0; i < n; i++) {
       const c = document.createElementNS(NS, 'circle'); c.setAttribute('cx', x.toFixed(1)); c.setAttribute('cy', y.toFixed(1)); c.setAttribute('r', (1.6 + Math.random() * 2.2).toFixed(1));
       c.setAttribute('class', 'bf-drop' + (toxic ? ' tox' : ''));

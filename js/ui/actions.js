@@ -286,9 +286,14 @@ DE.Actions = (function () {
  UI().closeModal(); UI().closeDrawer();
  DE.Game.loadState(r.state); UI().toast('Save imported', 'ok');
  };
+ A.setTab = (p) => { UI().ui.settingsTab = p.tab; UI().renderDrawer(true); };
+ A.setPref = (p) => { DE.UI.Settings.set(p.key, p.val); DE.Audio.sfx('click'); UI().renderDrawer(true); };
+ A.togglePref = (p) => { DE.UI.Settings.set(p.key, !DE.UI.Settings.get(p.key)); DE.Audio.sfx('click'); UI().renderDrawer(true); };
+ A.setPrefNum = (p) => { DE.UI.Settings.set(p.key, Math.max(0, Math.min(1, +p.value || 0))); UI().renderDrawer(true); };
+ A.toggleMg = () => { DE.Audio.set('mgOn', !DE.Audio.prefs().mgOn); DE.Audio.mg('click'); UI().renderDrawer(true); };
  A.toggleMusic = () => { DE.Audio.set('musicOn', !DE.Audio.prefs().musicOn); UI().renderDrawer(true); };
  A.toggleSfx = () => { DE.Audio.set('sfxOn', !DE.Audio.prefs().sfxOn); DE.Audio.sfx('click'); UI().renderDrawer(true); };
- A.toggleAnimations = () => { S().settings.animations = !S().settings.animations; document.body.classList.toggle('no-anim', !S().settings.animations); UI().renderDrawer(true); };
+ A.toggleAnimations = () => { DE.UI.Settings.set('anim', DE.UI.Settings.get('anim') === 'off' ? 'full' : 'off'); UI().renderDrawer(true); };
  A.hardReset = () => UI().confirmModal('Delete everything?', '<p>This deletes your save, including Legacy Points. There is no undo.</p>', () => { DE.Save.clear(); DE.Game.newGame(); }, 'Delete save');
  A.toMenu = () => { DE.Game.save(); DE.Game.stop(); UI().closeDrawer(); UI().showScreen('menu'); };
 

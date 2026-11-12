@@ -149,15 +149,16 @@ DE.UI.DayCycle = (function () {
     scene.style.setProperty('--wx', wx.toFixed(2)); scene.style.setProperty('--snow', c.cover.snow.toFixed(2)); scene.style.setProperty('--leaves', c.cover.leaves.toFixed(2)); scene.style.setProperty('--flowers', c.cover.flowers.toFixed(2));
     // the layers: rain (with splashes on the grass), snow, and leaves — blown about on windy days,
     // drifting down lightly all autumn long (rain included)
-    const W2 = built.wx, rain = c.weather === 'rain' ? wx : 0;
+    const SET = DE.UI.Settings, wxOn = !SET || SET.get('weather'), rainOn = wxOn && (!SET || SET.on('rain')), seasOn = wxOn && (!SET || SET.on('seasonal'));
+    const W2 = built.wx, rain = c.weather === 'rain' && rainOn ? wx : 0;
     layer(W2.rain, rain, 1.25, c.heavy); layer(W2.splash, rain, 1.25, c.heavy);
-    layer(W2.snow, c.weather === 'snow' ? wx : 0, 1.4, c.heavy);
+    layer(W2.snow, c.weather === 'snow' && seasOn ? wx : 0, 1.4, c.heavy);
     const windy = c.weather === 'leaves';
-    layer(W2.leaves, windy ? wx : c.season === 'autumn' && c.weather !== 'snow' ? c.cover.leaves : 0, windy ? 1.6 : 1, windy ? c.heavy : true);
+    layer(W2.leaves, !seasOn ? 0 : windy ? wx : c.season === 'autumn' && c.weather !== 'snow' ? c.cover.leaves : 0, windy ? 1.6 : 1, windy ? c.heavy : true);
     W2.leaves.classList.toggle('drift', !windy);
     const fh = built.fx.clientHeight;
     if (fh && fh !== built.fh) { built.fh = fh; built.fx.style.setProperty('--fallH', fh + 'px'); built.fx.style.setProperty('--rx', (-fh * .2126).toFixed(0) + 'px'); }
-    if (DE.Audio && DE.Audio.ambience) DE.Audio.ambience(c.weather, wx);
+    if (DE.Audio && DE.Audio.ambience) DE.Audio.ambience(wxOn ? c.weather : 'clear', wx);
     scene.dataset.tod = c.night ? 'night' : (h < 8 || h > 17) ? 'twilight' : 'day';
     const hh = Math.floor(h), mm = Math.floor((h % 1) * 60 / 15) * 15;
     const wxTxt = c.weather === 'clear' ? '' : ` · ${c.weather === 'snow' ? '<img class="dc-snow" src="assets/icons/snow.png" alt="">' : ''}${c.heavy ? 'Heavy ' : ''}${c.weatherName.toLowerCase()}`;

@@ -273,6 +273,7 @@ DE.UI.Actors = (function () {
   }
   function talk(a, sv, s, now) {
     hush(a, now);
+    if (DE.UI.Settings && !DE.UI.Settings.get('speech')) { if (a.sayUntil) { a.sayUntil = now; hush(a, now); } return; }
     if (!TALK.ready || a.sayUntil > now || now < (a.nextSay || 0) || !a.placed || a.el.classList.contains('paused') || a.el.classList.contains('riding')) return;
     if (a.isNew) { a.isNew = false; if (canTalk(now) && say(a, 'newbie', 'good', now)) { a.nextSay = now + 60000; return; } }
     if (!canTalk(now)) return;
@@ -384,7 +385,7 @@ DE.UI.Actors = (function () {
       a.el.title = sv.name + ' · ' + DE.Needs.describe(sv) + (sv.act && sv.act.room && s.rooms[sv.act.room] ? ' in ' + DE.Data.ROOMS[s.rooms[sv.act.room].type].name : '');
     }
     for (const id in actors) if (!seen[id]) { actors[id].el.remove(); delete actors[id]; }
-    if (TALK.ready) moments(s, now); else { TALK.ready = true; TALK.weather = DE.Season ? DE.Season.clock(s).weather : ''; const sf = document.getElementById('surface'); TALK.wave = sf && sf.classList.contains('incoming') ? s.defense.wave : -1; TALK.fight = s.defense.wave; TALK.last = now; }
+    if (TALK.ready) { if (!DE.UI.Settings || DE.UI.Settings.get('speech')) moments(s, now); } else { TALK.ready = true; TALK.weather = DE.Season ? DE.Season.clock(s).weather : ''; const sf = document.getElementById('surface'); TALK.wave = sf && sf.classList.contains('incoming') ? s.defense.wave : -1; TALK.fight = s.defense.wave; TALK.last = now; }
   }
 
   /** Elevator ride, driven by the ticket the cabin updates: wait → walk in → ride → walk out. */

@@ -42,7 +42,7 @@ DE.Game = (function () {
  G.state = s;
  s._fx = DE.Effects.compute(s);
  s._rates = DE.Economy.computeRates(s, s._fx);
- document.body.classList.toggle('no-anim', !s.settings.animations);
+ if (DE.UI.Settings) DE.UI.Settings.adoptSave(s); else document.body.classList.toggle('no-anim', !s.settings.animations);
  DE.UI.showScreen('game');
  DE.UI.refresh(true);
  G.save();
@@ -81,7 +81,7 @@ DE.Game = (function () {
  }
  // decisions pop up only at a quiet moment (no drawer, no recent input, no fight, not too soon after
  // the last one, not while snoozed); until then they wait in the pill on the surface
- if (s.events && s.events.length && document.getElementById('modal-root').classList.contains('hidden') && now >= (G._evSnoozeUntil || 0) && DE.UI.eventQuiet(now)) { if (!G._evShownAt || now - G._evShownAt > 1500) { G._evShownAt = now; DE.UI.eventModal(s.events[0]); } }
+ if (s.events && s.events.length && document.getElementById('modal-root').classList.contains('hidden') && now >= (G._evSnoozeUntil || 0) && (!DE.UI.Settings || DE.UI.Settings.get('autoEvents')) && DE.UI.eventQuiet(now)) { if (!G._evShownAt || now - G._evShownAt > 1500) { G._evShownAt = now; DE.UI.eventModal(s.events[0]); } }
  if (s.settings.autosave && now - G._lastAutosave > C().AUTOSAVE_SEC * 1000) { G.save(); G._lastAutosave = now; }
  };
 

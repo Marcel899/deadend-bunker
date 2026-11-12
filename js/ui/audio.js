@@ -15,9 +15,9 @@ var DE = globalThis.DE = globalThis.DE || {};
 
 DE.Audio = (function () {
   const KEY = 'deadend_audio_v1';
-  let prefs = { music: 0.45, sfx: 0.7, musicOn: true, sfxOn: true };
+  let prefs = { music: 0.45, sfx: 0.7, mg: 0.8, musicOn: true, sfxOn: true, mgOn: true };
   try { Object.assign(prefs, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) { /* defaults */ }
-  let ctx = null, master = null, sfxBus = null, musicBus = null, noiseBuf = null, verb = null, out = null;
+  let ctx = null, master = null, sfxBus = null, musicBus = null, mgBus = null, noiseBuf = null, verb = null, out = null;
   let meter = null, musicTimer = 0, step = 0, night = false, last = {};
 
   function save() { try { localStorage.setItem(KEY, JSON.stringify(prefs)); } catch (e) { /* private mode */ } }
@@ -32,6 +32,7 @@ DE.Audio = (function () {
     master.connect(lim); lim.connect(ctx.destination);
     meter = ctx.createAnalyser(); meter.fftSize = 512; lim.connect(meter);
     sfxBus = ctx.createGain(); sfxBus.connect(master); out = sfxBus;
+    mgBus = ctx.createGain(); mgBus.connect(master);   // minigames have their own volume
     musicBus = ctx.createGain(); musicBus.connect(master);
     // a cheap reverb: a feedback delay network on the music bus
     verb = ctx.createDelay(1); verb.delayTime.value = 0.23; const fb = ctx.createGain(); fb.gain.value = 0.38; const lp = ctx.createBiquadFilter(); lp.frequency.value = 1800;
@@ -45,6 +46,7 @@ DE.Audio = (function () {
     if (!ctx) return;
     sfxBus.gain.setTargetAtTime(prefs.sfxOn ? prefs.sfx : 0, ctx.currentTime, .05);
     musicBus.gain.setTargetAtTime(prefs.musicOn ? prefs.music * 1.1 : 0, ctx.currentTime, .3);
+    mgBus.gain.setTargetAtTime(prefs.mgOn ? prefs.mg : 0, ctx.currentTime, .05);
   }
   // unlock on the first gesture (required by iOS / iPadOS Safari)
   ['pointerdown', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, () => ensure(), { passive: true }));
@@ -126,6 +128,17 @@ DE.Audio = (function () {
       out = p; try { FX[name](ctx.currentTime + .005); } finally { out = sfxBus; }
       setTimeout(() => { try { p.disconnect(); } catch (e) { /* gone */ } }, 3000);
     } else FX[name](ctx.currentTime + .005);
+  }
+  /** A minigame sound (its own volume in the settings). */
+  function mg(name, minGapMs) {
+    if (!prefs.mgOn || !FX[name] || !ensure()) return;
+    const now = performance.now(); if (now - (last['mg:' + name] || 0) < (minGapMs != null ? minGapMs : 30)) return; last['mg:' + name] = now;
+    out = mgBus; try { FX[name](ctx.currentTime + .005); } finally { out = sfxBus; }
+  }
+  /** A tone on the minigame bus (pitch and length chosen by the minigame: notes, beeps, sweeps). */
+  function mgTone(freq, dur, type, vol, glideTo) {
+    if (!prefs.mgOn || !ensure()) return;
+    out = mgBus; try { tone(freq, ctx.currentTime + .005, dur || .1, type || 'sine', vol || .06, null, glideTo); } finally { out = sfxBus; }
   }
   /** A sound coming from a point on screen (client x): panned left/right with where it happens. */
   function sfxAt(name, clientX, minGapMs) {
@@ -225,5 +238,5 @@ DE.Audio = (function () {
 
   /** Current output level 0..1 (peak of the last few ms) — for tests and a future VU meter. */
   function level() { if (!meter) return 0; const a = new Float32Array(meter.fftSize); meter.getFloatTimeDomainData(a); let m = 0; for (const v of a) m = Math.max(m, Math.abs(v)); return m; }
-  return { ambience, level, sfx, sfxAt, machine, blip, set, setNight, prefs: () => prefs, ensure, stopMusic };
+  return { ambience, level, sfx, sfxAt, mg, mgTone, machine, blip, set, setNight, prefs: () => prefs, ensure, stopMusic };
 })();

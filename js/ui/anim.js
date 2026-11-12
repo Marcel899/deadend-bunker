@@ -334,7 +334,8 @@ DE.UI.Anim = (function () {
     if (now - scanAt > 150) { scanAt = now; scan(); }
     // ~30 fps; a few frames a second while something is being scrolled (keeps scrolling smooth)
     const scrolling = Date.now() - scrolledAt < 260;
-    if (frameNo % (scrolling ? 8 : 2) !== 0) return;
+    const skip = DE.UI.Settings ? DE.UI.Settings.frameSkip() : 2;
+    if (frameNo % (scrolling ? 8 : skip) !== 0) return;
     const dt = lastT ? min(.12, (now - lastT) / 1000) : 0; lastT = now;
     const frozen = document.body && document.body.classList.contains('no-anim');
     rigs.forEach(st => update(st, frozen ? 0 : dt));
