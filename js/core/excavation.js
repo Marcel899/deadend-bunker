@@ -35,7 +35,7 @@ DE.Excavation = (function () {
   }
   /** Crew-seconds of digging a floor takes (seconds at speed 1). */
   function work(state, depth) {
-    return Math.max(10, 90 * Math.pow(1.45, depth - 2) * layer(depth).hardness * DE.Effects.get(state).excavationTimeMult);
+    return Math.max(10, 90 * Math.pow(1.6, depth - 2) * layer(depth).hardness * DE.Effects.get(state).excavationTimeMult);
   }
 
   /* ---------- the crew ---------- */
