@@ -17,6 +17,7 @@ DE.UI.Bunker = (function () {
     s.floors.forEach(f => html += renderFloor(s, f));
     html += renderDigZone(s);
     root.querySelector('#floors').innerHTML = html;
+    tagsDirty = true;
     DE.UI.Actors.relayout(); DE.UI.Elevator.relayout(); DE.UI.Geology.relayout();
     update();
   }
@@ -69,7 +70,7 @@ DE.UI.Bunker = (function () {
       <div class="room-scene"></div>
       <div class="builder">${DE.Chars.crew('engineer', { anim: 'repair', h: 48 })}</div>
       <div class="room-head"><span class="room-name">${esc(def.name)}</span><span class="room-lvl"></span><span class="room-flag"></span></div>
-      <div class="room-foot"><span class="room-rate"></span></div>
+      <div class="room-foot"></div>
       <div class="room-progress"><i></i><span></span></div>
     </div>`;
   }
@@ -78,6 +79,34 @@ DE.UI.Bunker = (function () {
     const d = DE.Excavation.nextDepth(s);
     if (d > DE.CONFIG.MAX_FLOORS) return `<div class="floor bedrock strata-bedrock"><div class="shaft-slot"></div><div class="bedrock-label">Bedrock. Nothing further down.</div></div>`;
     return `<div class="floor dig ${strata(d)}" data-action="openDrawer" data-drawer="excavate" id="dig-floor"><div class="shaft-slot"></div><div class="dig-zone" id="dig-zone"></div></div>`;
+  }
+
+  /* ---------- room output badges ----------
+     They live in their own layer above the walking survivors (#actors), so someone working at a
+     station never hides what the room makes. Positions are read from the rooms after a rebuild. */
+  let tagLayer = null, tagsDirty = true, tagTop = '';
+  const tags = {};
+  function tagFor(id) {
+    const bunker = document.getElementById('bunker'); if (!bunker) return null;
+    if (!tagLayer || tagLayer.parentElement !== bunker) {
+      tagLayer = document.getElementById('room-tags') || document.createElement('div'); tagLayer.id = 'room-tags'; bunker.appendChild(tagLayer);
+      tagLayer.innerHTML = ''; for (const k in tags) delete tags[k];
+    }
+    let t = tags[id];
+    if (!t) { t = tags[id] = document.createElement('div'); t.className = 'room-rate rtag'; tagLayer.appendChild(t); tagsDirty = true; }
+    return t;
+  }
+  function placeTags() {
+    const floors = document.getElementById('floors'); if (!tagLayer || !floors) return;
+    const top = floors.offsetTop + 'px'; if (top !== tagTop) { tagTop = top; tagLayer.style.top = top; }
+    if (!tagsDirty) return; tagsDirty = false;
+    const base = floors.getBoundingClientRect();
+    for (const id in tags) {
+      const el = document.getElementById('room-' + id), t = tags[id];
+      if (!el) { t.remove(); delete tags[id]; continue; }
+      const r = el.getBoundingClientRect();
+      t.style.left = Math.round(r.left - base.left + 14) + 'px'; t.style.top = Math.round(r.bottom - base.top - 5) + 'px';
+    }
   }
 
   /* ---------- per-tick ---------- */
@@ -114,7 +143,7 @@ DE.UI.Bunker = (function () {
       }
       // counter box: a label tab above a UI-sheet slot holding the value
       const label = room.level > 0 && info && Object.keys(info.produces || {}).length ? 'Makes /s' : def.effects && def.effects.housing ? 'Housing' : def.effects && def.effects.storage ? 'Storage' : 'Bonus';
-      setHtml(el.querySelector('.room-rate'), rate ? `<span class="rc-label">${label}</span><span class="rc-box">${rate}</span>` : '');
+      setHtml(tagFor(id), rate ? `<span class="rc-label">${label}</span><span class="rc-box">${rate}</span>` : '');
       setText(el.querySelector('.room-flag'), flag);
       const prog = el.querySelector('.room-progress');
       if (c) {
@@ -131,6 +160,7 @@ DE.UI.Bunker = (function () {
       const tier = room.level >= 50 ? 4 : room.level >= 25 ? 3 : room.level >= 10 ? 2 : 1;
       if (!el.classList.contains('tier-' + tier)) { el.classList.remove('tier-1', 'tier-2', 'tier-3', 'tier-4'); el.classList.add('tier-' + tier); }
     }
+    placeTags();
     document.querySelectorAll('.cell').forEach(el => el.classList.toggle('selected', !!(sel && sel.type === 'slot' && String(sel.depth) === el.dataset.depth && String(sel.slot) === el.dataset.slot)));
     updateSurface(s, now);
     updateDig(s, now);
