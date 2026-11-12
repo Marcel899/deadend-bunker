@@ -1131,5 +1131,5 @@ html, body { overscroll-behavior: none; touch-action: manipulation; -webkit-text
 .ex-rep .ex-chips { margin-top: 4px; }
 @media (max-width: 900px) { .ex-grid { grid-template-columns: 1fr; } .em-name { font-size: 17px; } }
 /* composed structure icons read better a little larger */
-.dk-line img.ico-struct.dk-mid { width: 46px !important; height: 46px !important; }
-.dk-sec-head img.ico-struct.dk-big, .dk-wallcard img.ico-struct.dk-big { width: 56px !important; height: 56px !important; }
+.dk-line img.ico-struct.dk-mid { width: 46px !important; height: 46px !important; flex: 0 0 46px; }
+.dk-sec-head img.ico-struct.dk-big, .dk-wallcard img.ico-struct.dk-big { width: 56px !important; height: 56px !important; flex: 0 0 56px; }
