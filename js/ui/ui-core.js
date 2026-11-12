@@ -36,6 +36,9 @@ DE.UI = (function () {
  function init() {
  watchScrolling();
  document.addEventListener('click', onClick);
+ // <select data-change="action"> and <input data-input="action">: the action gets the value
+ document.addEventListener('change', e => { const el = e.target.closest && e.target.closest('[data-change]'); if (!el) return; const fn = DE.Actions[el.dataset.change]; if (fn) fn(Object.assign({}, el.dataset, { value: el.value }), el, e); });
+ document.addEventListener('input', e => { const el = e.target.closest && e.target.closest('[data-input]'); if (!el) return; const fn = DE.Actions[el.dataset.input]; if (fn) fn(Object.assign({}, el.dataset, { value: el.value }), el, e); });
  // subtle hover tick on interactive elements (mouse only; touch has no hover)
  let hoverEl = null;
  document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest('.btn:not(:disabled), .nav-btn, .menu-btn, .res, .chip, .dk-sec-head, .rs-card.avail, .cell, .room, .ov-tile'); if (el && el !== hoverEl) { hoverEl = el; DE.Audio.sfx('hover'); } else if (!el) hoverEl = null; });
@@ -360,6 +363,9 @@ DE.UI = (function () {
  if (!force && def.live === false && ui.lastDrawerHtml) return; // drawers with text inputs only re-render on demand
  $('#drawer-title').innerHTML = DE.Icons.nav(ui.drawer, 'ico-title') + def.title(state());
  if (!force && scrollBusy($('#drawer-body'))) { if (def.tick) def.tick(state()); return; }
+ // someone is typing in a search box or has a picker open: rebuilding would steal it from them
+ const ae = document.activeElement;
+ if (!force && ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && $('#drawer-body').contains(ae)) { if (def.tick) def.tick(state()); return; }
  const html = def.render(state());
  if (force || html !== ui.lastDrawerHtml) {
  const body = $('#drawer-body'); const st = body.scrollTop;

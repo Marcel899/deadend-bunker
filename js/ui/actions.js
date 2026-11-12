@@ -150,7 +150,57 @@ DE.Actions = (function () {
  };
  A.revealAssign = (p) => { UI().closeModal(); A.openAssignSurvivor({ sid: p.sid }); };
  A.setRecruitProfession = () => {};   // recruiting is random now (kept for old bindings)
- A.setFilter = (p) => { UI().ui.survivorFilter = p.filter; UI().refresh(true); };
+ A.setFilter = (p) => { UI().ui.survivorFilter = UI().ui.survivorFilter === p.filter && p.filter !== 'all' ? 'all' : p.filter; UI().refresh(true); };
+ A.svProf = (p) => { UI().ui.svProf = p.prof || ''; UI().refresh(true); };
+ A.svSort = (p, el) => { UI().ui.svSort = p.value; if (el) el.blur(); UI().refresh(true); };
+ A.svGroup = (p, el) => { UI().ui.svGroup = p.value; if (el) el.blur(); UI().refresh(true); };
+ A.svView = (p) => { UI().ui.svView = p.view; UI().refresh(true); };
+ /** Search filters the rows in place (no rebuild, so the keyboard stays up). */
+ A.svSearch = (p) => {
+ const q = (UI().ui.svSearch = p.value || '').trim().toLowerCase();
+ document.querySelectorAll('#drawer-body [data-q]').forEach(el => el.classList.toggle('sv-hide', !!q && !el.dataset.q.includes(q)));
+ };
+ /** The one-tap job picker on a survivor row. */
+ A.assignSel = (p, el) => {
+ const v = p.value || '', target = !v ? null : v === 'guard' ? { kind: 'guard' } : v === 'dig' ? { kind: 'dig' } : v.startsWith('r:') ? { kind: 'room', id: v.slice(2) } : null;
+ const r = DE.Survivors.assign(S(), p.sid, target); if (el) el.blur();
+ if (!r.ok) { fail(r); UI().refresh(true); return; }
+ DE.Audio.sfx('click'); done();
+ };
+ A.svDetail = (p) => { const s = S(), sv = s.survivors[p.sid]; if (!sv) return; UI().modal({ title: esc(sv.name), cls: 'sv-detail', html: DE.UI.Drawers.survivorCard(s, sv), buttons: [{ label: 'Close', action: 'closeModal' }] }); };
+ /** Staff one room with the best idle survivors (matching profession first). */
+ A.fillRoom = (p) => {
+ const s = S(), room = s.rooms[p.room]; if (!room) return; const def = DE.Data.ROOMS[room.type], fx = s._fx || DE.Effects.get(s); let n = 0;
+ const cands = DE.Survivors.idle(s).filter(v => v.hp >= 25).sort((a, b) => DE.Survivors.efficiency(b, def, fx) - DE.Survivors.efficiency(a, def, fx));
+ for (const sv of cands) { if (room.workers.length >= def.workers) break; if (DE.Survivors.assign(s, sv.id, { kind: 'room', id: room.id }).ok) n++; }
+ if (!n) return fail({ reason: cands.length ? 'The room is full' : 'Nobody is idle — move someone with their job picker' });
+ UI().toast(n + ' to ' + def.name, 'ok', 2000, DE.Icons.room(def.id), { key: 'fillroom' }); DE.Audio.sfx('done'); done();
+ };
+ /** Re-deal room jobs (people working in rooms and the idle) so professions land in their rooms:
+  *  best matches first, production rooms before support, rooms that were staffed kept staffed.
+  *  Guards, miners and expedition teams are left alone. */
+ A.optimizeJobs = () => {
+ const s = S(), fx = s._fx || DE.Effects.get(s);
+ const pool = Object.values(s.survivors).filter(v => (!v.assignment || v.assignment.kind === 'room') && v.hp >= 25);
+ const rooms = Object.values(s.rooms).filter(r => r.level > 0 && !r.construction && DE.Data.ROOMS[r.type].workers > 0);
+ if (!pool.length || !rooms.length) return fail({ reason: 'Nobody to re-deal' });
+ const before = {}; pool.forEach(v => before[v.id] = v.assignment && v.assignment.id || ''); const had = {}; rooms.forEach(r => had[r.id] = r.workers.length);
+ const cap = {}; rooms.forEach(r => cap[r.id] = DE.Data.ROOMS[r.type].workers);
+ const left = new Set(pool.map(v => v.id)), plan = {};
+ const score = (v, r) => { const d = DE.Data.ROOMS[r.type]; return DE.Survivors.efficiency(v, d, fx) + (d.produces ? .3 : 0) + (had[r.id] ? .15 : 0) + (before[v.id] === r.id ? .05 : 0); };
+ for (let guard = 0; guard < 500 && left.size; guard++) {
+ let best = null, bs = -1;
+ left.forEach(id => { const v = s.survivors[id]; rooms.forEach(r => { if (cap[r.id] <= 0) return; const sc = score(v, r); if (sc > bs) { bs = sc; best = [id, r.id]; } }); });
+ if (!best) break; plan[best[0]] = best[1]; cap[best[1]]--; left.delete(best[0]);
+ }
+ let moves = 0; for (const id in before) if ((plan[id] || '') !== before[id]) moves++;
+ if (!moves) { UI().toast('Everyone already has their best job', 'ok', 2200, 'check', { key: 'optjobs' }); return; }
+ UI().confirmModal('Re-deal ' + moves + ' job' + (moves > 1 ? 's' : '') + '?', '<p>Professions go to the rooms they are trained for, production rooms first. Guards, miners and expedition teams stay where they are.</p>', () => {
+ pool.forEach(v => DE.Survivors.assign(s, v.id, null));
+ for (const id in plan) DE.Survivors.assign(s, id, { kind: 'room', id: plan[id] });
+ UI().closeModal(); UI().toast(moves + ' survivor' + (moves > 1 ? 's' : '') + ' changed jobs', 'ok', 2600, 'pop', { key: 'optjobs' }); DE.Audio.sfx('done'); done();
+ }, 'Re-deal');
+ };
 
  /* ---- research ---- */
  A.researchBranch = (p) => { UI().ui.researchBranch = p.branch; UI().refresh(true); };

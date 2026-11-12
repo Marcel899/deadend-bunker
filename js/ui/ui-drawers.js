@@ -48,18 +48,117 @@ DE.UI.Drawers = (function () {
  }
 
  /* ================= SURVIVORS ================= */
+ /* Built for big crews. Overview chips that double as filters; warnings with one-tap fixes (empty
+  * work stations, open guard and mining posts, the hurt and the exhausted); search, sort, a
+  * profession filter and grouping by profession or by job; a compact list (or the big cards) where
+  * every row shows what someone is doing, where, how they are and how good they are at it, and
+  * moves them to another job with one tap; and a staffing table of every work station. While the
+  * search box or a job picker has focus the panel is not rebuilt (see renderDrawer). */
+ const RAR_ORDER = { common: 0, uncommon: 1, rare: 2, legendary: 3 };
+ const SV_FILTERS = [['all', 'All'], ['idle', 'Idle'], ['working', 'Working'], ['guards', 'Guards'], ['miners', 'Mining'], ['away', 'Away'], ['hurt', 'Hurt'], ['tired', 'Tired'], ['hungry', 'Hungry']];
+ const SV_TEST = {
+   all: () => true, idle: (v) => !v.assignment, working: (v) => v.assignment && v.assignment.kind === 'room', guards: (v) => v.assignment && v.assignment.kind === 'guard',
+   miners: (v) => v.assignment && v.assignment.kind === 'dig', away: (v) => v.assignment && v.assignment.kind === 'expedition', hurt: (v) => v.hp < 100,
+   tired: (v) => (v.energy == null ? 100 : v.energy) < 30, hungry: (v) => (v.hunger || 0) > 80,
+ };
+ const SV_SORTS = [['level', 'Level'], ['eff', 'Skill at job'], ['name', 'Name'], ['prof', 'Profession'], ['health', 'Health'], ['energy', 'Energy'], ['mood', 'Mood'], ['rarity', 'Rarity']];
+ /** How good someone is at what they are doing now (or at their best job when idle). */
+ function svSkill(s, sv) {
+   const a = sv.assignment, fx = s._fx;
+   if (a && a.kind === 'guard') return { v: DE.Survivors.guardPower(sv, fx), t: U().fmt(DE.Survivors.guardPower(sv, fx), 1) + ' dmg/s' };
+   if (a && a.kind === 'dig') return { v: DE.Excavation.minerSkill(s, sv), t: Math.round(DE.Excavation.minerSkill(s, sv) * 100) + '% miner' };
+   const room = a && a.kind === 'room' ? s.rooms[a.id] : null, def = room ? DE.Data.ROOMS[room.type] : null;
+   const e = DE.Survivors.efficiency(sv, def, fx); return { v: e, t: Math.round(e * 100) + '%' + (def && def.profession === sv.profession ? ' ★' : '') };
+ }
+ /** The group a survivor falls in when grouping by job: one per room, then guards, miners, away, idle. */
+ function svJob(s, sv) {
+   const a = sv.assignment;
+   if (!a) return { key: 'z-idle', label: 'Idle', ic: DE.Icons.img('pop', 'ico-inline') };
+   if (a.kind === 'guard') return { key: 'g', label: 'Guard duty', ic: DE.Icons.img('guards', 'ico-inline') };
+   if (a.kind === 'dig') return { key: 'm', label: 'Mining crew', ic: DE.Icons.img('dig', 'ico-inline') };
+   if (a.kind === 'expedition') return { key: 'x', label: 'On expeditions', ic: DE.Icons.img('truck', 'ico-inline') };
+   const r = s.rooms[a.id]; if (!r) return { key: 'z-idle', label: 'Idle', ic: '' };
+   const def = DE.Data.ROOMS[r.type];
+   return { key: 'r' + String(r.floor).padStart(2, '0') + String(r.slot).padStart(2, '0'), label: def.name + ' · B' + r.floor + ' · ' + r.workers.length + '/' + def.workers, ic: DE.Icons.room(def.id, 'ico-inline') };
+ }
+ /** One-tap job picker: idle, guard duty, the mining crew, or any room with a free station. */
+ function jobSelect(s, sv) {
+   const a = sv.assignment, cur = !a ? '' : a.kind === 'room' ? 'r:' + a.id : a.kind;
+   if (a && a.kind === 'expedition') return '<span class="sv-away">On the road</span>';
+   const fx = s._fx, gFull = DE.Survivors.guards(s).length >= fx.guardCap, mFull = DE.Excavation.miners(s).length >= DE.Excavation.minerCap(s);
+   const opt = (v, label, dis) => `<option value="${v}"${v === cur ? ' selected' : ''}${dis && v !== cur ? ' disabled' : ''}>${esc(label)}</option>`;
+   const rooms = Object.values(s.rooms).filter(r => r.level > 0 && DE.Data.ROOMS[r.type].workers > 0).sort((x, y) => x.floor - y.floor || x.slot - y.slot);
+   return `<select class="sv-job" id="svj-${sv.id}" data-change="assignSel" data-sid="${sv.id}" aria-label="Job for ${esc(sv.name)}">${opt('', 'Idle')}${opt('guard', 'Guard duty' + (gFull ? ' (full)' : ''), gFull)}${opt('dig', 'Mining crew' + (mFull ? ' (full)' : ''), mFull)}<optgroup label="Rooms">${rooms.map(r => { const d = DE.Data.ROOMS[r.type], full = r.workers.length >= d.workers; return opt('r:' + r.id, (d.profession === sv.profession ? '★ ' : '') + d.name + ' B' + r.floor + ' (' + r.workers.length + '/' + d.workers + ')', full); }).join('')}</optgroup></select>`;
+ }
+ const tens = (v) => Math.round(Math.max(0, Math.min(100, v)) / 10) * 10;
+ function svRow(s, sv) {
+   const rar = DE.Data.RARITIES[sv.rarity] || DE.Data.RARITIES.common, mood = Math.round(DE.Survivors.mood(s, sv)), sk = svSkill(s, sv);
+   const en = sv.energy == null ? 100 : sv.energy, fed = 100 - (sv.hunger || 0);
+   const traits = (sv.traits || []).map(t => DE.Data.TRAITS[t]).filter(Boolean).map(d => `<i title="${esc(d.name + ': ' + d.desc)}">${esc(d.name)}</i>`).join('');
+   const bar = (cls, v, label) => `<span class="svb ${cls}" title="${label} ${Math.round(v)}%"><i style="width:${tens(v)}%"></i></span>`;
+   return `<div class="sv-row rar-${rar.id}${sv.hp < 50 ? ' hurt' : ''}${ui().focusSurvivor === sv.id ? ' focus' : ''}" style="--rc:${rar.color}" data-sv="${sv.id}">
+     <button class="sv-ava" data-action="svDetail" data-sid="${sv.id}" title="Details">${DE.Icons.prof(sv.profession, 'ava')}<b>${sv.level}</b></button>
+     <div class="sv-id"><b data-action="svDetail" data-sid="${sv.id}">${esc(sv.name)}</b><small>${esc(P()[sv.profession].name)} · <span style="color:${rar.color}">${esc(rar.name)}</span>${traits ? ' · ' : ''}<span class="sv-tr">${traits}</span></small></div>
+     <div class="sv-do"><span class="act-tag act-${sv.act ? sv.act.kind : 'idle'}">${DE.Needs.describe(sv)}</span><small>${assignmentText(s, sv)}</small></div>
+     <div class="sv-vit">${bar('hp', sv.hp, 'Health')}${bar('en', en, 'Energy')}${bar('fd', fed, 'Fed')}</div>
+     <div class="sv-num"><b class="${mood >= 50 ? 'pos' : mood >= 30 ? 'warn' : 'neg'}" title="Mood">${mood}</b><small title="Skill at the current job">${sk.t}</small></div>
+     <div class="sv-pick">${jobSelect(s, sv)}</div></div>`;
+ }
+ /** Problems with the crew, each with a fix. */
+ function svWarnings(s) {
+   const out = [], fx = s._fx, I = (k) => DE.Icons.img(k, 'pd-aico');
+   const idle = DE.Survivors.idle(s).filter(v => v.hp >= 25).length;
+   const rooms = Object.values(s.rooms).filter(r => r.level > 0 && !r.construction && DE.Data.ROOMS[r.type].workers > 0);
+   const empty = rooms.filter(r => !r.workers.length && DE.Data.ROOMS[r.type].produces), short = rooms.filter(r => r.workers.length && r.workers.length < DE.Data.ROOMS[r.type].workers);
+   empty.slice(0, 3).forEach(r => { const d = DE.Data.ROOMS[r.type]; out.push({ sev: 'crit', ic: DE.Icons.room(d.id, 'pd-aico'), t: `<b>${esc(d.name)} B${r.floor}</b> has nobody working — it runs at ${Math.round(fx.unmannedBase * 100)}%.`, btn: idle ? `<button class="btn tiny primary" data-action="fillRoom" data-room="${r.id}">Staff it</button>` : '' }); });
+   if (empty.length > 3) out.push({ sev: 'crit', ic: I('warning'), t: `<b>${empty.length - 3} more rooms</b> are unstaffed.` });
+   const free = short.reduce((n, r) => n + DE.Data.ROOMS[r.type].workers - r.workers.length, 0);
+   if (short.length) out.push({ sev: 'warn', ic: I('alert'), t: `<b>${short.length} room${short.length > 1 ? 's' : ''} understaffed</b> — ${free} free work station${free > 1 ? 's' : ''}.`, btn: idle ? `<button class="btn tiny primary" data-action="assignIdle">Fill with idle</button>` : '' });
+   if (idle && !empty.length && !short.length) out.push({ sev: 'info', ic: I('pop'), t: `<b>${idle} idle</b> and every station is full — build or upgrade rooms, post guards or miners.` });
+   const gOpen = fx.guardCap - DE.Survivors.guards(s).length; if (gOpen > 0 && s.defense.wave > 1) out.push({ sev: 'info', ic: I('guards'), t: `<b>${gOpen} guard post${gOpen > 1 ? 's' : ''}</b> empty.`, btn: idle ? `<button class="btn tiny" data-action="fillGuards">Post guards</button>` : '' });
+   const mOpen = DE.Excavation.minerCap(s) - DE.Excavation.miners(s).length; if (s.excavation && mOpen > 0) out.push({ sev: 'info', ic: I('dig'), t: `<b>${mOpen} mining post${mOpen > 1 ? 's' : ''}</b> open while B${s.excavation.depth} is being dug.`, btn: idle ? `<button class="btn tiny" data-action="fillMiners">Send miners</button>` : '' });
+   const hurt = Object.values(s.survivors).filter(v => v.hp < 50).length; const ward = DE.Needs.findRoom(s, DE.Needs.HEAL_ROOMS);
+   if (hurt) out.push({ sev: ward ? 'info' : 'warn', ic: I('medkit'), t: `<b>${hurt} badly hurt</b> — they work at half pace${ward ? ' and are being treated' : '. A Medical Bay would treat them'}.` });
+   const beds = DE.Needs.BED_ROOMS ? Object.values(s.rooms).filter(r => r.level > 0 && DE.Needs.BED_ROOMS.includes(r.type)).reduce((n, r) => n + DE.Data.bedsFor(r.type, r.level).length, 0) : 99;
+   const tired = Object.values(s.survivors).filter(v => (v.energy == null ? 100 : v.energy) < 12 && !(v.act && v.act.kind === 'sleep')).length;
+   if (tired) out.push({ sev: 'warn', ic: I('power'), t: `<b>${tired} exhausted</b> and waiting for a bed (${beds} berth${beds === 1 ? '' : 's'}) — upgrade the Sleeping Quarters.` });
+   return out;
+ }
+ /** Every room with work stations: who is there, how full, how well it runs. */
+ function staffing(s) {
+   const fx = s._fx, idle = DE.Survivors.idle(s).filter(v => v.hp >= 25).length;
+   const rooms = Object.values(s.rooms).filter(r => r.level > 0 && DE.Data.ROOMS[r.type].workers > 0).sort((a, b) => a.floor - b.floor || a.slot - b.slot);
+   if (!rooms.length) return '';
+   const rows = rooms.map(r => {
+     const d = DE.Data.ROOMS[r.type], n = r.workers.length, info = s._rates && s._rates.perRoom[r.id], wm = info ? info.workerMult : 0;
+     const faces = r.workers.map(id => s.survivors[id]).filter(Boolean).map(v => `<span title="${esc(v.name)}${d.profession === v.profession ? ' ★' : ''}" class="${d.profession === v.profession ? 'match' : ''}">${DE.Icons.prof(v.profession, 'ava')}</span>`).join('');
+     return `<div class="st-row ${!n ? 'none' : n < d.workers ? 'short' : 'full'}"><span class="st-room" data-action="selectRoom" data-id="${r.id}">${DE.Icons.room(d.id, 'ico-inline')}<b>${esc(d.name)}</b><small>B${r.floor} · Lv${r.level}${d.profession ? ' · ' + esc(P()[d.profession].name) + 's ★' : ''}</small></span>
+       <span class="st-faces">${faces}${'<i class="st-empty"></i>'.repeat(Math.max(0, d.workers - n))}</span><span class="st-n">${n}/${d.workers}<small>${Math.round(wm * 100)}% staffed</small></span>
+       <span class="st-act">${n < d.workers && idle ? `<button class="btn tiny primary" data-action="fillRoom" data-room="${r.id}">+ Fill</button>` : ''}</span></div>`;
+   }).join('');
+   const tot = rooms.reduce((a, r) => a + DE.Data.ROOMS[r.type].workers, 0), on = rooms.reduce((a, r) => a + r.workers.length, 0);
+   return `<div class="sv-sec"><h4>${DE.Icons.img('rooms', 'ico-h4')} Work stations <small>${on}/${tot} staffed</small></h4><div class="st-list">${rows}</div></div>`;
+ }
  const survivors = {
  title: (s) => `Survivors <small>${DE.Bunker.population(s)} / ${DE.Bunker.housingCapacity(s)} housing</small>`,
+ tick() {
+   // bring a survivor picked in the bunker into view, once
+   const f = ui().focusSurvivor; if (!f) return; const row = document.querySelector(`.sv-row[data-sv="${f}"]`);
+   if (row) { row.scrollIntoView({ block: 'center' }); ui().focusSurvivor = null; setTimeout(() => row.classList.remove('focus'), 2500); }
+ },
  render(s) {
- const cost = DE.Survivors.recruitCost(s); const can = DE.Survivors.canRecruit(s);
- const filter = ui().survivorFilter || 'all';
- const all = Object.values(s.survivors);
- const groups = { all: all, idle: all.filter(v => !v.assignment), working: all.filter(v => v.assignment && v.assignment.kind === 'room'), guards: all.filter(v => v.assignment && v.assignment.kind === 'guard'), away: all.filter(v => v.assignment && v.assignment.kind === 'expedition'), hurt: all.filter(v => v.hp < 100) };
- const list = (groups[filter] || all).slice().sort((a, b) => (b.level - a.level) || a.name.localeCompare(b.name));
- const filters = [['all', 'All'], ['idle', 'Idle'], ['working', 'Working'], ['guards', 'Guards'], ['away', 'Away'], ['hurt', 'Hurt']];
- const odds = Object.values(DE.Data.RARITIES); const tw = odds.reduce((a, r) => a + r.weight, 0);
- const pop = DE.Bunker.population(s), capH = DE.Bunker.housingCapacity(s);
- return `<div class="sv-top">
+ const u = ui(), cost = DE.Survivors.recruitCost(s), can = DE.Survivors.canRecruit(s);
+ const filter = SV_TEST[u.survivorFilter] ? u.survivorFilter : 'all', prof = u.svProf || '', sort = u.svSort || 'level', group = u.svGroup || 'none', q = (u.svSearch || '').trim().toLowerCase();
+ const all = Object.values(s.survivors), pop = all.length, capH = DE.Bunker.housingCapacity(s);
+ const view = u.svView || (pop > 6 ? 'list' : 'cards');
+ const odds = Object.values(DE.Data.RARITIES), tw = odds.reduce((a, r) => a + r.weight, 0);
+ // ---- the crew at a glance ----
+ const avg = (f) => all.length ? all.reduce((a, v) => a + f(v), 0) / all.length : 0;
+ const working = all.filter(SV_TEST.working).length + all.filter(SV_TEST.guards).length + all.filter(SV_TEST.miners).length;
+ const chips = SV_FILTERS.map(([k, l]) => { const n = all.filter(SV_TEST[k]).length; if (!n && k !== 'all' && k !== 'idle' && filter !== k) return ''; return `<button class="sv-chip ${filter === k ? 'active' : ''} f-${k}" data-action="setFilter" data-filter="${k}"><b>${n}</b><small>${l}</small></button>`; }).join('');
+ const profs = DE.Data.PROFESSION_ORDER.map(p => [p, all.filter(v => v.profession === p).length]).filter(x => x[1]);
+ const warn = svWarnings(s);
+ let html = `<div class="sv-top">
    <div class="rc-card"><div class="rc-radio"><span class="rv-signal"><i></i><i></i><i></i></span>${DE.Icons.img('signal', 'rc-ico')}</div>
      <div class="rc-text"><b>Recruit a survivor</b><small>Someone out there is always listening. Who answers is up to fate.</small>
        <div class="rc-odds">${odds.map(r => `<span style="--c:${r.color}"><i></i>${r.name} ${Math.round(100 * r.weight / tw)}%</span>`).join('')}</div></div>
@@ -67,11 +166,42 @@ DE.UI.Drawers = (function () {
    <div class="sv-sum">
      <div><small>Housing</small><b class="${pop >= capH ? 'warn' : ''}">${pop}/${capH}</b></div>
      <div><small>Morale</small><b class="${s.morale >= 50 ? 'pos' : s.morale >= 30 ? 'warn' : 'neg'}">${Math.round(s.morale)}</b></div>
-     <div><small>Output bonus</small><b>×${DE.Economy.moraleMult(s.morale).toFixed(2)}</b></div>
-     <div><small>Food & water</small><b>${(DE.CONFIG.SURVIVOR_FOOD * 60 * all.length).toFixed(1)}/min</b></div>
+     <div><small>On a job</small><b>${working}/${pop}</b></div>
+     <div><small>Avg level</small><b>${avg(v => v.level).toFixed(1)}</b></div>
+     <div><small>Avg health</small><b class="${avg(v => v.hp) >= 80 ? 'pos' : 'warn'}">${Math.round(avg(v => v.hp))}%</b></div>
+     <div><small>Food & water</small><b>${(DE.CONFIG.SURVIVOR_FOOD * 60 * pop).toFixed(1)}/min</b></div>
    </div></div>
- <div class="sv-tabs">${filters.map(([k, l]) => `<button class="btn small ${filter === k ? 'active' : ''}" data-action="setFilter" data-filter="${k}">${l} <span class="cost">${groups[k].length}</span></button>`).join('')}${groups.idle.length ? `<button class="btn small primary sv-putwork" data-action="assignIdle" title="Every idle survivor goes to the free work station they are best at">${DE.Icons.img('pop', 'ico-btn')} Put ${groups.idle.length} idle to work</button>` : ''}</div>
- <div class="sv-grid">${list.length ? list.map(v => survivorCard(s, v)).join('') : '<p class="muted">Nobody here.</p>'}</div>`;
+ ${warn.length ? `<div class="pd-alerts sv-warn">${warn.map(w => `<div class="pd-alert ${w.sev}">${w.ic}<span>${w.t}</span>${w.btn || ''}</div>`).join('')}</div>` : ''}
+ <div class="sv-chips">${chips}</div>
+ <div class="sv-tools">
+   <label class="sv-search">${DE.Icons.img('search', 'ico-inline')}<input type="search" id="sv-search" data-input="svSearch" placeholder="Search name, job, trait…" value="${esc(u.svSearch || '')}" autocomplete="off" spellcheck="false"></label>
+   <label class="sv-sel"><small>Sort</small><select id="sv-sort" data-change="svSort">${SV_SORTS.map(([k, l]) => `<option value="${k}"${sort === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+   <label class="sv-sel"><small>Group</small><select id="sv-group" data-change="svGroup">${[['none', 'None'], ['prof', 'Profession'], ['job', 'Job']].map(([k, l]) => `<option value="${k}"${group === k ? ' selected' : ''}>${l}</option>`).join('')}</select></label>
+   <span class="sv-views"><button class="btn tiny ${view === 'list' ? 'active' : ''}" data-action="svView" data-view="list">List</button><button class="btn tiny ${view === 'cards' ? 'active' : ''}" data-action="svView" data-view="cards">Cards</button></span>
+   ${DE.Survivors.idle(s).length ? `<button class="btn small primary sv-putwork" data-action="assignIdle" title="Every idle survivor goes to the free work station they are best at">${DE.Icons.img('pop', 'ico-btn')} Put ${DE.Survivors.idle(s).length} idle to work</button>` : ''}
+   <button class="btn small" data-action="optimizeJobs" title="Re-deal the room jobs so professions match their rooms (guards, miners and expeditions stay put)">${DE.Icons.img('recycle', 'ico-btn')} Best jobs</button>
+ </div>
+ <div class="sv-profs"><button class="sv-pf ${prof ? '' : 'active'}" data-action="svProf" data-prof="">All jobs</button>${profs.map(([p, n]) => `<button class="sv-pf ${prof === p ? 'active' : ''}" data-action="svProf" data-prof="${p}" title="${esc(P()[p].name)}: ${esc(P()[p].desc)}">${DE.Icons.prof(p, 'ico-inline')}<b>${n}</b></button>`).join('')}</div>`;
+ // ---- the list ----
+ const match = (v) => { if (!q) return true; const hay = (v.name + ' ' + P()[v.profession].name + ' ' + (v.traits || []).map(t => (DE.Data.TRAITS[t] || {}).name || '').join(' ') + ' ' + svJob(s, v).label + ' ' + DE.Needs.describe(v)).toLowerCase(); return hay.includes(q); };
+ const cmp = {
+   level: (a, b) => b.level - a.level || b.xp - a.xp, name: (a, b) => a.name.localeCompare(b.name), prof: (a, b) => a.profession.localeCompare(b.profession) || b.level - a.level,
+   eff: (a, b) => svSkill(s, b).v - svSkill(s, a).v, health: (a, b) => a.hp - b.hp, energy: (a, b) => (a.energy == null ? 100 : a.energy) - (b.energy == null ? 100 : b.energy),
+   mood: (a, b) => DE.Survivors.mood(s, a) - DE.Survivors.mood(s, b), rarity: (a, b) => (RAR_ORDER[b.rarity] || 0) - (RAR_ORDER[a.rarity] || 0) || b.level - a.level,
+ }[sort] || ((a, b) => b.level - a.level);
+ const list = all.filter(SV_TEST[filter]).filter(v => !prof || v.profession === prof).sort((a, b) => cmp(a, b) || a.name.localeCompare(b.name));
+ const hidden = all.length - list.length;
+ const rowsOf = (vs) => view === 'cards' ? `<div class="sv-grid">${vs.map(v => `<div class="sv-cardwrap${match(v) ? '' : ' sv-hide'}" data-q="${esc((v.name + ' ' + P()[v.profession].name + ' ' + svJob(s, v).label).toLowerCase())}">${survivorCard(s, v)}</div>`).join('')}</div>`
+   : `<div class="sv-list">${vs.map(v => svRow(s, v).replace('class="sv-row', `data-q="${esc((v.name + ' ' + P()[v.profession].name + ' ' + (v.traits || []).map(t => (DE.Data.TRAITS[t] || {}).name || '').join(' ') + ' ' + svJob(s, v).label + ' ' + DE.Needs.describe(v)).toLowerCase())}" class="sv-row${match(v) ? '' : ' sv-hide'}`)).join('')}</div>`;
+ if (!list.length) html += `<p class="muted sv-none">Nobody here${hidden ? ' — ' + hidden + ' hidden by the filters' : ''}.</p>`;
+ else if (group === 'none') html += rowsOf(list);
+ else {
+   const groups = {};
+   list.forEach(v => { const g = group === 'prof' ? { key: v.profession, label: P()[v.profession].name + 's', ic: DE.Icons.prof(v.profession, 'ico-inline') } : svJob(s, v); (groups[g.key] = groups[g.key] || { g, vs: [] }).vs.push(v); });
+   Object.keys(groups).sort().forEach(k => { const G = groups[k]; html += `<div class="sv-group"><h5>${G.g.ic}${esc(G.g.label)}<span class="cost">${G.vs.length}</span></h5>${rowsOf(G.vs)}</div>`; });
+ }
+ html += staffing(s);
+ return html;
  },
  };
 
