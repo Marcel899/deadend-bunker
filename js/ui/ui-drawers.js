@@ -224,77 +224,106 @@ DE.UI.Drawers = (function () {
  };
 
  /* ================= DEFENSE ================= */
+ /* A battle forecast up top (who is coming, the battle math, what to do about it), then the four
+  * levers — wall, guards, turrets, traps — as tiles with their main actions, then the roster,
+  * perimeter, bestiary and log. The countdown ticks in place, so the screen only rebuilds when
+  * something actually changes. */
  const defense = {
- title: (s) => `Defense <small>Manage the bunker's defenses · wave ${s.defense.wave} in ${U().fmtTime((s.defense.nextWaveAt - Date.now()) / 1000)}</small>`,
+ title: (s) => `Defense <small>Wave ${s.defense.wave} · ${DE.Defense.isBossWave(s.defense.wave) ? 'boss wave' : 'next attack'} in <span data-wave-clock>${U().fmtTime(Math.max(0, (s.defense.nextWaveAt - Date.now()) / 1000))}</span></small>`,
+ tick(s) {
+   const t = U().fmtTime(Math.max(0, (s.defense.nextWaveAt - Date.now()) / 1000));
+   document.querySelectorAll('[data-wave-clock]').forEach(el => { if (el.textContent !== t) el.textContent = t; });
+ },
  render(s) {
- const d = s.defense; const fx = s._fx; const now = Date.now(); const ui = DE.UI.ui; ui.defOpen = ui.defOpen || {};
- const hp = DE.Defense.waveHp(s); const pw = DE.Defense.defensePower(s); const maxHp = DE.Defense.wallMaxHp(s);
- const dmg = Math.max(0, Math.ceil((hp - pw.total) * 1.2));
- const verdict = pw.total >= hp ? ['pos', 'The horde will be wiped out before reaching the wall.', 'Your firepower outmatches this wave.']
-   : pw.total + d.wall.hp >= hp ? ['warn', `The wall will take about ${U().fmt(dmg)} damage.`, 'Watch out! Add guards, turrets or traps to stop them earlier.']
-   : ['neg', 'BREACH LIKELY', 'You will lose resources and survivors get hurt. Repair and reinforce now.'];
- const compList = DE.Defense.waveComposition(hp, d.wave); const comp = DE.Defense.compositionSummary(compList);
- const boss = DE.Defense.isBossWave(d.wave); const reward = DE.Defense.waveReward(d.wave, 'victory');
- const I = (k, c) => DE.Icons.img(k, c || 'dk-ico');
- const row = (icon, label, value) => `<div class="dk-row">${I(icon)}<span>${label}</span><b>${value}</b></div>`;
- const kinds = DE.Data.ZOMBIES.filter(z => comp.counts[z.id]);
- const skulls = Math.min(5, 1 + Math.floor(d.wave / 4));
- const m = DE.Events.mutation(s); const n = DE.Events.noise(s), lvl = DE.Events.noiseLevel(n);
- // ---- wave card ----
- let html = `<div class="dk-card wave ${boss ? 'boss' : ''}"><div class="dk-wave-main">
- <h4>${I('zombies', 'ico-h4')} ${boss ? 'BOSS wave' : 'Wave'} ${d.wave} <small>in ${U().fmtTime((d.nextWaveAt - now) / 1000)}</small><span class="dk-skulls">${Array.from({ length: 5 }, (_, i) => `<i class="${i < skulls ? 'on' : ''}">${I('skull2', '')}</i>`).join('')}</span></h4>
- ${row('wave', 'Horde strength', U().fmt(hp))}
- ${row('alert', 'Wall damage multiplier', comp.dmgMult.toFixed(2) + 'x' + (comp.toxic ? ` · ${comp.toxic} toxic` : ''))}
- ${row('trophy', 'Reward on victory', (U().costText(reward) || '—') + (d.winStreak ? ` <small class="pos">+${Math.min(50, 10 * d.winStreak)}% streak bonus</small>` : ''))}
- ${d.winStreak ? row('star', 'Victory streak', d.winStreak + ' in a row') : ''}
- ${d.breachStreak ? row('wave', 'Horde regrouping', `next wave −${Math.round((1 - Math.max(0.6, Math.pow(0.85, d.breachStreak))) * 100)}% after ${d.breachStreak} breach${d.breachStreak > 1 ? 'es' : ''}`) : ''}
- ${row('shield', 'Your firepower', `${U().fmt(pw.total)} <small>(guards ${U().fmt(pw.guardDps, 1)}/s · turrets ${U().fmt(pw.turretDps, 1)}/s${pw.missileDps ? ' · missiles ' + U().fmt(pw.missileDps, 1) + '/s' : ''} · traps ${pw.trapDmg})</small>`)}
- ${row('timer', 'Combat time', DE.CONFIG.WAVE_DURATION + 's')}
- ${row('noise', 'Bunker noise', `<span class="noise ${lvl}">${lvl}</span>`)}
- ${m ? row('biohazard', 'Mutation', esc(m.name) + ` <small>${esc(m.desc)}</small>`) : ''}
- <div class="dk-bar ${verdict[0]}"><i style="width:${Math.min(100, 100 * pw.total / hp)}%"></i></div>
- <div class="dk-verdict ${verdict[0]}">${I(verdict[0] === 'pos' ? 'check' : 'warning')}<div><b>${verdict[1]}</b><small>${verdict[2]}</small></div></div></div>
- <div class="dk-wave-art"><svg class="dk-field" viewBox="0 0 300 190" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-   <defs><linearGradient id="dkf-sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#3a2a5e"/><stop offset=".55" stop-color="#c8604a"/><stop offset="1" stop-color="#f0a050"/></linearGradient>
-   <linearGradient id="dkf-gr" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#6f8a2e"/><stop offset="1" stop-color="#4c6020"/></linearGradient></defs>
-   <rect width="300" height="190" fill="url(#dkf-sky)"/><circle cx="235" cy="112" r="20" fill="#ffd27a" opacity=".9"/>
-   <path d="M0 132 V102 H18 V84 H36 V102 H52 V92 H70 V132 Z M110 132 V96 H128 V78 H150 V100 H166 V132 Z M196 132 V104 H214 V88 H230 V132 Z M250 132 V96 H272 V108 H300 V132 Z" fill="#6a2f5f" opacity=".85"/>
-   <path d="M0 132 Q75 120 150 130 T300 126 V140 H0 Z" fill="#7a5a44"/>
-   <g stroke="#1c1020" stroke-width="2">${Array.from({ length: 8 }, (_, i) => `<rect x="${6 + i * 11}" y="${118 + (i % 2)}" width="8" height="${30 - (i % 3) * 3}" fill="#8d5b36"/>`).join('')}</g>
-   <rect x="0" y="146" width="300" height="44" fill="url(#dkf-gr)" stroke="#1c1020" stroke-width="2"/><rect x="0" y="160" width="300" height="30" fill="#5a3a26"/>
-   </svg><div class="dk-horde">${kinds.slice(0, 4).map((z, i) => `<span style="animation-delay:${-i * .9}s" title="${esc(z.name)} ×${comp.counts[z.id]}">${DE.Chars.portrait(z.id, { cls: 'flip' + (z.boss || z.id === 'brute' || z.id === 'mutant' ? ' big' : '') })}<em>×${comp.counts[z.id]}</em></span>`).join('')}</div><div class="dk-flag">${I('battle', '')}</div></div></div>`;
- // ---- wall ----
- const wc = DE.Defense.wallUpgradeCost(s); const rc = DE.Defense.repairCost(s); const wpct = 100 * d.wall.hp / maxHp;
- html += `<div class="dk-card dk-wallcard">${DE.Icons.structure('wall', 'dk-big')}<div class="dk-body"><div class="dk-titleline"><b>Wall · Level ${d.wall.level}</b><small>${d.wall.level < 3 ? 'cracked & patched' : d.wall.level < 6 ? 'steel-plated' : 'armoured'}</small><span class="dk-hp">${U().fmt(d.wall.hp)} / ${U().fmt(maxHp)}</span></div>
- <div class="dk-bar ${wpct < 30 ? 'neg' : 'pos'}"><i style="width:${wpct}%"></i></div>
- <div class="btn-row"><button class="btn primary ${U().canAfford(s.resources, wc) ? '' : 'cant'}" data-action="wallUpgrade" ${U().canAfford(s.resources, wc) ? '' : 'disabled'}>${I('star', 'ico-btn')} Upgrade <span class="cost">${U().costText(wc)}</span></button>
- <button class="btn ${rc.scrap > 0 ? '' : 'cant'}" data-action="wallRepair" ${rc.scrap > 0 ? '' : 'disabled'}>${I('repair2', 'ico-btn')} Repair <span class="cost">${U().costText(rc)}</span></button></div></div></div>`;
+ const d = s.defense, fx = s._fx, ui = DE.UI.ui; ui.defOpen = ui.defOpen || {};
+ const I = (k, c) => DE.Icons.img(k, c || 'dk-ico'), W = DE.CONFIG.WAVE_DURATION;
+ const hp = DE.Defense.waveHp(s), pw = DE.Defense.defensePower(s), maxHp = DE.Defense.wallMaxHp(s);
+ const boss = DE.Defense.isBossWave(d.wave);
+ const comp = DE.Defense.compositionSummary(DE.Defense.waveComposition(hp, d.wave));
+ // battle math: what the firepower shoots down, what the wall soaks up, what breaks through
+ const killed = Math.min(hp, pw.total), toWall = Math.min(d.wall.hp, hp - killed), through = Math.max(0, hp - killed - toWall);
+ const tone = through > 0 ? 'neg' : toWall > 0 ? 'warn' : 'pos';
+ const ratio = pw.total / Math.max(1, hp);
+ const threat = tone === 'neg' ? ['Deadly', 5] : tone === 'warn' ? ['High', 4] : ratio < 1.4 ? ['Moderate', 3] : ratio < 2.2 ? ['Low', 2] : ['Minimal', 1];
+ const pct = (v) => (100 * v / Math.max(1, hp)).toFixed(1) + '%';
+ const verdict = tone === 'pos' ? ['Wiped out before the wall', 'Your firepower outmatches this wave — the wall stays untouched.']
+   : tone === 'warn' ? [`The wall takes about ${U().fmt(Math.ceil(toWall * 1.2))} damage`, 'Post more guards, add turrets or stock traps to stop them sooner.']
+   : ['Breach likely', 'They will get inside: supplies are lost and survivors get hurt. Reinforce now.'];
+ const reward = DE.Defense.waveReward(d.wave, 'victory');
+ const m = DE.Events.mutation(s), lvl = DE.Events.noiseLevel(DE.Events.noise(s));
+ const chip = (icon, text, cls) => `<span class="d3-chip ${cls || ''}">${I(icon, 'ico-inline')}${text}</span>`;
+ const regroup = d.breachStreak ? Math.round((1 - Math.max(0.6, Math.pow(0.85, d.breachStreak))) * 100) : 0;
+ const chips = [
+   chip('trophy', 'Win: ' + (U().costText(reward) || '—'), 'gold'),
+   d.winStreak ? chip('star', `${d.winStreak} wins in a row · +${Math.min(50, 10 * d.winStreak)}% loot`, 'pos') : '',
+   regroup ? chip('wave', `Horde regrouping · −${regroup}%`, 'pos') : '',
+   comp.dmgMult > 1.05 ? chip('alert', `Wall damage ×${comp.dmgMult.toFixed(2)}`, 'warn') : '',
+   comp.toxic ? chip('biohazard', `${comp.toxic} toxic`, 'warn') : '',
+   m ? chip('biohazard', 'Mutation: ' + esc(m.name), 'neg') : '',
+   chip('noise', 'Noise: ' + lvl, 'noise ' + lvl),
+ ].join('');
+ const kinds = DE.Data.ZOMBIES.filter(z => comp.counts[z.id]).sort((a, b) => (b.boss ? 1e9 : 0) + b.hp * comp.counts[b.id] - ((a.boss ? 1e9 : 0) + a.hp * comp.counts[a.id]));
+ const horde = kinds.slice(0, 6).map((z, i) => `<figure class="d3-z${z.boss ? ' boss' : ''}${z.hp >= 60 ? ' big' : ''}" style="--i:${i}" title="${esc(z.name)} ×${comp.counts[z.id]} · ${z.hp} HP each">${DE.Chars.portrait(z.id, { cls: 'flip' })}<b>×${comp.counts[z.id]}</b><figcaption>${esc(z.name)}</figcaption></figure>`).join('')
+   + (kinds.length > 6 ? `<span class="d3-more">+${kinds.length - 6} more</span>` : '');
+ let html = `<div class="d3-hero ${tone}${boss ? ' boss' : ''}">
+ <div class="d3-top"><div class="d3-title">${I('zombies', 'd3-zico')}<div><small>${boss ? 'Boss wave' : 'Incoming'}</small><b>Wave ${d.wave}</b></div></div>
+   <div class="d3-clock"><small>arrives in</small><b data-wave-clock>${U().fmtTime(Math.max(0, (d.nextWaveAt - Date.now()) / 1000))}</b></div>
+   <div class="d3-threat t${threat[1]}"><small>Threat</small><b>${threat[0]}</b><span>${Array.from({ length: 5 }, (_, i) => `<i class="${i < threat[1] ? 'on' : ''}"></i>`).join('')}</span></div></div>
+ <div class="d3-field"><div class="d3-gate">${DE.Icons.structure('wall', 'd3-gateico')}<span class="d3-gatehp"><i style="width:${(100 * d.wall.hp / maxHp).toFixed(1)}%"></i></span></div><div class="d3-horde">${horde}</div>${boss ? `<div class="d3-bossflag">${I('skull2', '')} BOSS</div>` : ''}</div>
+ <div class="d3-math"><div class="d3-vs"><span>${I('shield', 'ico-inline')} Your firepower <b>${U().fmt(pw.total)}</b></span><span>Horde strength <b>${U().fmt(hp)}</b> ${I('zombies', 'ico-inline')}</span></div>
+   <div class="d3-bar" title="Of the horde's ${U().fmt(hp)} strength: ${U().fmt(killed)} shot down, ${U().fmt(toWall)} against the wall, ${U().fmt(through)} breaking in"><i class="k" style="width:${pct(killed)}"></i><i class="w" style="width:${pct(toWall)}"></i><i class="b" style="width:${pct(through)}"></i></div>
+   <div class="d3-legend"><span class="k"><i></i>Shot down <b>${U().fmt(killed)}</b></span>${toWall > 0 ? `<span class="w"><i></i>Hits the wall <b>${U().fmt(toWall)}</b></span>` : ''}${through > 0 ? `<span class="b"><i></i>Breaks in <b>${U().fmt(through)}</b></span>` : ''}<span class="t">${W}s of combat</span></div></div>
+ <div class="d3-verdict">${I(tone === 'pos' ? 'check' : 'warning', 'd3-vico')}<div><b>${verdict[0]}</b><small>${verdict[1]}</small></div></div>
+ <div class="d3-chips">${chips}</div></div>`;
+ // ---- the four levers ----
+ const wc = DE.Defense.wallUpgradeCost(s), rc = DE.Defense.repairCost(s), wpct = 100 * d.wall.hp / maxHp, canW = U().canAfford(s.resources, wc);
+ const gs = DE.Survivors.guards(s), free = Math.max(0, fx.guardCap - gs.length);
+ const idleOk = DE.Survivors.idle(s).filter(sv => sv.hp >= 50).length;
+ const tc = DE.Defense.turretCost(s), maxT = DE.Defense.maxTurrets(s), canT = fx.turretsUnlocked && U().canAfford(s.resources, tc) && d.turrets < maxT;
+ const cc = DE.Defense.calibreCost(s), canC = fx.turretsUnlocked && d.turrets > 0 && U().canAfford(s.resources, cc), tdmg = DE.Defense.turretDmg(s);
+ const trc = DE.Defense.trapCost(s), stock = Math.max(1, DE.CONFIG.TRAPS_PER_WAVE - d.traps), stockCost = U().scaleCost(trc, stock);
+ const btn = (cls, ok, attrs, body, tip) => `<button class="btn small ${cls} ${ok ? '' : 'cant'}" ${attrs} ${ok ? '' : 'disabled'}${tip ? ` title="${tip}"` : ''}>${body}</button>`;
+ const tile = (cls, icon, title, big, sub, meter, actions, locked) => `<div class="d3-tile ${cls}${locked ? ' locked' : ''}"><div class="d3-th">${icon}<div class="d3-tt"><b>${title}</b><small>${sub}</small></div><em>${big}</em></div>${meter}<div class="d3-act">${actions}</div></div>`;
+ const toResearch = `<button class="btn small" data-action="openDrawer" data-drawer="research">${I('flask', 'ico-btn')} Research</button>`;
+ html += '<div class="d3-tiles">';
+ html += tile('d3-t-wall', DE.Icons.structure('wall', 'd3-tico'), `Wall · Lv ${d.wall.level}`, `${U().fmt(d.wall.hp)}<small>/${U().fmt(maxHp)}</small>`, d.wall.level < 3 ? 'cracked & patched' : d.wall.level < 6 ? 'steel-plated' : 'armoured',
+   `<div class="d3-meter ${wpct < 30 ? 'neg' : wpct < 70 ? 'warn' : 'pos'}"><i style="width:${wpct.toFixed(1)}%"></i></div>`,
+   btn('primary', canW, 'data-action="wallUpgrade"', `${I('up', 'ico-btn')} Reinforce <span class="cost">${U().costText(wc)}</span>`, `More wall HP (max ${U().fmt(maxHp)} now)`)
+   + btn('', rc.scrap > 0, 'data-action="wallRepair"', `${I('repair2', 'ico-btn')} ${rc.scrap > 0 ? 'Repair <span class="cost">' + U().costText(rc) + '</span>' : 'Intact'}`));
+ html += tile('d3-t-guards', I('guards', 'd3-tico'), 'Guards', `${gs.length}<small>/${fx.guardCap}</small>`, gs.length ? `${U().fmt(pw.guardDps, 1)} dmg/s on duty` : 'nobody on duty',
+   `<div class="d3-faces">${gs.map(g => DE.Icons.prof(g.profession, 'ava', esc(g.name))).join('')}${'<i class="d3-post"></i>'.repeat(free)}</div>`,
+   btn('primary', free > 0 && idleOk > 0, 'data-action="fillGuards"', `${I('plus', 'ico-btn')} Fill posts`, free <= 0 ? 'Every guard post is taken' : idleOk ? 'Posts idle, healthy survivors — strongest first' : 'Nobody idle and healthy to post')
+   + `<button class="btn small" data-action="defToggle" data-key="guards">${ui.defOpen.guards ? 'Hide roster' : 'Roster'}</button>`);
+ html += tile('d3-t-turrets', DE.Icons.structure('turret', 'd3-tico'), 'Auto-turrets', fx.turretsUnlocked ? `${d.turrets}<small>/${maxT}</small>` : I('lock', 'd3-lock'), fx.turretsUnlocked ? `${U().fmt(tdmg, 1)} dmg/s each · calibre ${d.turretLevel || 0}` : 'needs Heavy Machinery',
+   fx.turretsUnlocked ? `<div class="d3-pips">${Array.from({ length: Math.max(maxT, 1) }, (_, i) => `<i class="${i < d.turrets ? 'on' : ''}"></i>`).join('')}</div>` : '<div class="d3-pips"></div>',
+   fx.turretsUnlocked ? btn('primary', canT, 'data-action="buyTurret"', `${I('plus', 'ico-btn')} Install <span class="cost">${U().costText(tc)}</span>`, d.turrets >= maxT ? 'All mounts used — Armory levels and floodlight masts add more' : '')
+     + btn('', canC, 'data-action="upgradeCalibre"', `${I('up', 'ico-btn')} Calibre ${(d.turretLevel || 0) + 1} <span class="cost">${U().costText(cc)}</span>`, '+25% damage for every turret') : toResearch, !fx.turretsUnlocked);
+ html += tile('d3-t-traps', DE.Icons.structure('trap', 'd3-tico'), 'Traps', fx.trapsUnlocked ? `${d.traps}` : I('lock', 'd3-lock'), fx.trapsUnlocked ? `${DE.CONFIG.TRAP_DMG} dmg each · ${DE.CONFIG.TRAPS_PER_WAVE} per wave` : 'needs Fortification',
+   fx.trapsUnlocked ? `<div class="d3-pips">${Array.from({ length: DE.CONFIG.TRAPS_PER_WAVE }, (_, i) => `<i class="${i < d.traps ? 'on' : ''}"></i>`).join('')}</div>` : '<div class="d3-pips"></div>',
+   fx.trapsUnlocked ? btn('', U().canAfford(s.resources, trc), 'data-action="buyTraps" data-n="1"', `+1 <span class="cost">${U().costText(trc)}</span>`)
+     + btn('primary', d.traps < DE.CONFIG.TRAPS_PER_WAVE && U().canAfford(s.resources, stockCost), `data-action="buyTraps" data-n="${stock}"`, `Stock up <span class="cost">${U().costText(stockCost)}</span>`, d.traps >= DE.CONFIG.TRAPS_PER_WAVE ? 'Fully stocked for the next wave' : 'Enough traps for a whole wave') : toResearch, !fx.trapsUnlocked);
+ html += '</div>';
+ // ---- where the firepower comes from ----
+ const src = [['s-guards', 'Guards', pw.guardDps * W], ['s-turrets', 'Turrets', pw.turretDps * W], ['s-missiles', 'Missiles', pw.missileDps * W], ['s-traps', 'Traps', pw.trapDmg], ['s-flat', 'Fortifications', pw.flat || 0]].filter(x => x[2] > 0);
+ const tot = src.reduce((a, x) => a + x[2], 0);
+ if (tot > 0) html += `<div class="d3-src"><small>Firepower per wave</small><div class="d3-srcbar">${src.map(x => `<i class="${x[0]}" style="width:${(100 * x[2] / tot).toFixed(1)}%"></i>`).join('')}</div><div class="d3-srclg">${src.map(x => `<span class="${x[0]}"><i></i>${x[1]} <b>${U().fmt(x[2])}</b></span>`).join('')}</div></div>`;
  // ---- expandable sections ----
- const section = (key, icon, title, desc, status, statusCls, art, body) => { const open = !!ui.defOpen[key];
-   return `<div class="dk-sec ${open ? 'open' : ''}"><div class="dk-sec-head" data-action="defToggle" data-key="${key}">${icon}<div class="dk-sec-text"><b>${title}</b><small>${desc}</small>${status ? `<small class="dk-status ${statusCls || ''}">${status}</small>` : ''}</div><div class="dk-sec-art">${art || ''}</div><img class="dk-chev" src="assets/ui/chevron.png" alt=""></div>${open ? `<div class="dk-sec-body">${body}</div>` : ''}</div>`; };
- const tc = DE.Defense.turretCost(s); const maxT = DE.Defense.maxTurrets(s); const canT = fx.turretsUnlocked && U().canAfford(s.resources, tc) && d.turrets < maxT;
- const cc = DE.Defense.calibreCost(s); const canC = fx.turretsUnlocked && d.turrets > 0 && U().canAfford(s.resources, cc); const tdmg = DE.Defense.turretDmg(s);
- html += section('turrets', DE.Icons.structure('turret', 'dk-big'), `Auto-turrets · ${d.turrets}/${maxT}`, 'Automatic defense units. Aim at incoming threats.',
-   fx.turretsUnlocked ? `${U().fmt(tdmg, 1)} dmg/s each · calibre ${d.turretLevel || 0} · ${U().fmt(pw.turretDps, 1)} dmg/s total` : 'Requires research: Heavy Machinery', fx.turretsUnlocked ? '' : 'neg', I('turret', 'dk-art'),
-   fx.turretsUnlocked ? `<div class="dk-stats"><span><small>Per turret</small><b>${U().fmt(tdmg, 1)}/s</b></span><span><small>All turrets</small><b>${U().fmt(pw.turretDps, 1)}/s</b></span><span><small>Per wave</small><b>${U().fmt(pw.turretDps * DE.CONFIG.WAVE_DURATION)}</b></span><span><small>Power draw</small><b>${(DE.CONFIG.TURRET_POWER * d.turrets).toFixed(1)}/s</b></span></div>
-   <div class="btn-row"><button class="btn primary ${canT ? '' : 'cant'}" data-action="buyTurret" ${canT ? '' : 'disabled'}>${I('plus', 'ico-btn')} Install turret <span class="cost">${U().costText(tc)}</span></button>
-   <button class="btn ${canC ? '' : 'cant'}" data-action="upgradeCalibre" ${canC ? '' : 'disabled'} title="+25% damage for every turret">${I('up', 'ico-btn')} Calibre ${(d.turretLevel || 0) + 1} <span class="cost">${U().costText(cc)}</span></button></div>
-   <p class="muted">${d.turrets >= maxT ? 'All mounts used — Armory levels and floodlight masts add more.' : 'More mounts come from Armory levels and floodlight masts.'} Calibre adds +25% damage to every turret.</p>` : '<p>Research Heavy Machinery to unlock turrets.</p>');
- html += section('traps', DE.Icons.structure('trap', 'dk-big'), `Traps · ${d.traps} stocked`, 'Set up traps to slow down the enemy.',
-   fx.trapsUnlocked ? `${DE.CONFIG.TRAP_DMG} dmg each · up to ${DE.CONFIG.TRAPS_PER_WAVE} used per wave` : 'Requires research: Fortification', fx.trapsUnlocked ? '' : 'neg', I('traps', 'dk-art'),
-   fx.trapsUnlocked ? `<div class="btn-row"><button class="btn" data-action="buyTraps" data-n="1">+1 <span class="cost">${U().costText(DE.Defense.trapCost(s))}</span></button><button class="btn" data-action="buyTraps" data-n="5">+5 <span class="cost">${U().costText(U().scaleCost(DE.Defense.trapCost(s), 5))}</span></button></div>` : '<p>Research Fortification to unlock traps.</p>');
- const pool = DE.Survivors.available(s); const gs = DE.Survivors.guards(s);
- html += section('guards', I('guards', 'dk-big'), `Guards · ${gs.length}/${fx.guardCap}`, 'A trained squad to defend the bunker. Soldiers +50%.',
-   gs.length ? `${U().fmt(pw.guardDps, 1)} dmg/s on duty` : 'Nobody on guard duty', gs.length ? 'pos' : 'warn', DE.Chars.portrait('soldier', { cls: 'dk-port' }),
-   pool.map(sv => { const g = sv.assignment && sv.assignment.kind === 'guard'; return `<div class="dk-line">${DE.Icons.prof(sv.profession, 'ava')}<span><b>${esc(sv.name)}</b><small>Lv${sv.level} · ${U().fmt(DE.Survivors.guardPower(sv, fx), 1)} dmg/s${sv.hp < 50 ? ' · hurt' : ''}</small></span><button class="btn small ${g ? 'active' : ''}" data-action="toggleGuard" data-sid="${sv.id}">${g ? I('check', 'ico-btn') + ' On duty' : 'Post as guard'}</button></div>`; }).join('') || '<p>No survivors available.</p>');
+ const section = (key, icon, title, desc, status, statusCls, body) => { const open = !!ui.defOpen[key];
+   return `<div class="dk-sec ${open ? 'open' : ''}"><div class="dk-sec-head" data-action="defToggle" data-key="${key}">${icon}<div class="dk-sec-text"><b>${title}</b><small>${desc}</small>${status ? `<small class="dk-status ${statusCls || ''}">${status}</small>` : ''}</div><img class="dk-chev" src="assets/ui/chevron.png" alt=""></div>${open ? `<div class="dk-sec-body">${body}</div>` : ''}</div>`; };
+ const pool = DE.Survivors.available(s).sort((a, b) => DE.Survivors.guardPower(b, fx) - DE.Survivors.guardPower(a, fx));
+ html += section('guards', I('guards', 'dk-big'), `Guard roster · ${gs.length}/${fx.guardCap}`, 'Soldiers +50%, guards +35%, hunters +25%. Strongest first.',
+   gs.length ? `${U().fmt(pw.guardDps, 1)} dmg/s on duty` : 'Nobody on guard duty', gs.length ? 'pos' : 'warn',
+   pool.map(sv => { const g = sv.assignment && sv.assignment.kind === 'guard'; return `<div class="dk-line${g ? ' on' : ''}">${DE.Icons.prof(sv.profession, 'ava')}<span><b>${esc(sv.name)}</b><small>${esc(P()[sv.profession].name)} · Lv${sv.level} · ${U().fmt(DE.Survivors.guardPower(sv, fx), 1)} dmg/s${sv.hp < 50 ? ' · <i class="neg">hurt</i>' : ''}${!g && sv.assignment ? ' · leaves ' + esc(assignmentText(s, sv)) : ''}</small></span><button class="btn small ${g ? 'active' : ''}" data-action="toggleGuard" data-sid="${sv.id}">${g ? I('check', 'ico-btn') + ' On duty' : 'Post'}</button></div>`; }).join('') || '<p>No survivors available.</p>');
  const owDone = DE.Data.OVERWORLD_ORDER.filter(k => !DE.Defense.structureNext(s, k)).length;
- html += section('perimeter', I('perimeter', 'dk-big'), 'Perimeter', 'Fence, barricades, towers, lights, road and the missile battery.', `${owDone}/${DE.Data.OVERWORLD_ORDER.length} fully upgraded`, '', DE.Icons.structure('fence', 'dk-art'),
+ html += section('perimeter', I('perimeter', 'dk-big'), 'Perimeter', 'Fence, barricades, towers, lights, road and the missile battery.', `${owDone}/${DE.Data.OVERWORLD_ORDER.length} fully upgraded`, '',
    DE.Data.OVERWORLD_ORDER.map(k => { const def = DE.Data.OVERWORLD[k]; const lv = (s.overworld && s.overworld[k]) || 0; const cur = def.levels[lv]; const next = DE.Defense.structureNext(s, k); const blocked = next && DE.Defense.structureBlocked(s, k); const ok = next && !blocked && U().canAfford(s.resources, next.cost);
    return `<div class="dk-line">${DE.Icons.structure(k, 'dk-mid')}<span><b>${esc(def.name)} <em class="tag">${esc(cur.name)}</em></b><small>${next ? esc(next.name) + ' — ' + esc(next.desc) : esc(cur.desc) + ' · fully upgraded'}</small>${blocked ? `<small class="neg">${esc(blocked)}</small>` : ''}</span>${next ? `<button class="btn primary small ${ok ? '' : 'cant'}" data-action="owUpgrade" data-key="${k}" ${ok ? '' : 'disabled'}>Upgrade <span class="cost">${U().costText(next.cost)}</span></button>` : '<b class="gold">MAX</b>'}</div>`; }).join(''));
- html += section('bestiary', I('zombies', 'dk-big'), 'Bestiary', 'Know what is coming.', `${DE.Data.ZOMBIES.filter(z => z.minWave <= d.wave).length}/${DE.Data.ZOMBIES.length} sighted`, '', '',
-   DE.Data.ZOMBIES.map(z => `<div class="dk-line ${z.minWave > d.wave ? 'locked-row' : ''}">${DE.Icons.zombie(z.id, 'ava')}<span><b>${esc(z.name)}</b><small>${z.boss ? 'every ' + DE.Data.BOSS_EVERY + 'th wave' : 'from wave ' + z.minWave + ' · ' + z.hp + ' HP'} · wall dmg ×${z.dmg} · ${esc(z.desc)}</small></span></div>`).join(''));
- if (d.log.length) html += section('log', I('battle', 'dk-big'), 'Battle log', 'The last waves at the gate.', (() => { const r = d.log[d.log.length - 1]; return 'Last: wave ' + r.wave + ' · ' + (r.outcome === 'victory' ? 'repelled' : r.outcome === 'held' ? 'wall held' : 'BREACH'); })(), d.log[d.log.length - 1].outcome === 'breach' ? 'neg' : 'pos', '',
-   d.log.slice().reverse().slice(0, 8).map(r => `<div class="dk-line log ${r.outcome}">${I(r.outcome === 'breach' ? 'warning' : 'check', 'dk-ico')}<span><b>Wave ${r.wave} · ${r.outcome === 'victory' ? 'Repelled' : r.outcome === 'held' ? 'Wall held (−' + r.wallDamage + ' HP)' : 'BREACH'}</b><small>${r.killed} killed${r.reward && Object.keys(r.reward).length ? ' · loot ' + U().costText(r.reward) : ''}${(r.injured || []).length ? ' · injured: ' + r.injured.map(esc).join(', ') : ''}</small></span></div>`).join(''));
+ const seen = DE.Data.ZOMBIES.filter(z => z.minWave <= d.wave || (z.boss && d.wave >= DE.Data.BOSS_EVERY));
+ html += section('bestiary', I('zombies', 'dk-big'), 'Bestiary', 'Know what is coming.', `${seen.length}/${DE.Data.ZOMBIES.length} sighted`, '',
+   `<div class="d3-best">${DE.Data.ZOMBIES.map(z => { const known = seen.includes(z); return `<div class="d3-bz${known ? '' : ' unknown'}">${DE.Icons.zombie(z.id, 'ava')}<span><b>${known ? esc(z.name) : '???'}</b><small>${known ? `${z.hp} HP · wall dmg ×${z.dmg}${z.toxic ? ' · toxic' : ''}` : z.boss ? 'every ' + DE.Data.BOSS_EVERY + 'th wave' : 'appears from wave ' + z.minWave}</small>${known ? `<small class="d3-bzd">${esc(z.desc)}</small>` : ''}</span></div>`; }).join('')}</div>`);
+ if (d.log.length) { const last = d.log[d.log.length - 1];
+   html += section('log', I('battle', 'dk-big'), 'Battle log', 'The last waves at the gate.', 'Last: wave ' + last.wave + ' · ' + (last.outcome === 'victory' ? 'repelled' : last.outcome === 'held' ? 'wall held' : 'BREACH'), last.outcome === 'breach' ? 'neg' : 'pos',
+   d.log.slice().reverse().slice(0, 8).map(r => `<div class="dk-line log ${r.outcome}">${I(r.outcome === 'breach' ? 'warning' : 'check', 'dk-ico')}<span><b>Wave ${r.wave} · ${r.outcome === 'victory' ? 'Repelled' : r.outcome === 'held' ? 'Wall held (−' + r.wallDamage + ' HP)' : 'BREACH'}</b><small>${r.killed} killed${r.reward && Object.keys(r.reward).length ? ' · loot ' + U().costText(r.reward) : ''}${(r.injured || []).length ? ' · injured: ' + r.injured.map(esc).join(', ') : ''}</small></span></div>`).join('')); }
  return html;
  },
  };

@@ -83,13 +83,18 @@ DE.Defense = (function () {
   }
   function isBossWave(n) { return n % DE.Data.BOSS_EVERY === 0; }
 
-  /** Deterministic-ish horde for wave n: counts per type, average damage multiplier, toxic count. */
+  /** The horde for wave n with total strength hp. Seeded by the wave and its strength, so the
+   *  Defense forecast, the fight on the surface and the resolution all see the same horde. */
   function waveComposition(hp, n) {
     n = n || 1;
+    let seed = ((n * 2654435761) ^ Math.floor(hp)) >>> 0;
+    const rnd = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
     const pool = DE.Data.ZOMBIES.filter(z => !z.boss && z.minWave <= n);
+    const total = pool.reduce((a, z) => a + (z.weight || 1), 0);
+    const pickZ = () => { let r = rnd() * total; for (const z of pool) { r -= (z.weight || 1); if (r <= 0) return z; } return pool[pool.length - 1]; };
     const list = []; let left = hp; let guard = 0;
     if (isBossWave(n)) { const b = DE.Data.ZOMBIES.find(z => z.boss); const bhp = Math.floor(hp * b.hp); list.push(Object.assign({}, b, { hp: bhp })); left -= bhp; }
-    while (left > 0 && guard++ < 400) { const z = U().weightedPick(pool); list.push(z); left -= z.hp; }
+    while (left > 0 && guard++ < 400) { const z = pickZ(); list.push(z); left -= z.hp; }
     return list;
   }
   function compositionSummary(list) {

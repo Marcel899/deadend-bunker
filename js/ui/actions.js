@@ -105,6 +105,14 @@ DE.Actions = (function () {
  A.assignTo2 = (p) => { const r = DE.Survivors.assign(S(), p.sid, { kind: 'room', id: p.room }); if (!r.ok) return fail(r); UI().closeModal(); done(); };
  A.assignGuard = (p) => { const r = DE.Survivors.assign(S(), p.sid, { kind: 'guard' }); if (!r.ok) return fail(r); UI().closeModal(); done(); };
  A.unassign = (p) => { const r = DE.Survivors.assign(S(), p.sid, null); if (!r.ok) return fail(r); done(); };
+ /** Fill the empty guard posts with idle, healthy survivors — the strongest shots first. */
+ A.fillGuards = () => {
+ const s = S(), fx = DE.Effects.get(s); let free = fx.guardCap - DE.Survivors.guards(s).length; let n = 0;
+ const cands = DE.Survivors.idle(s).filter(sv => sv.hp >= 50).sort((a, b) => DE.Survivors.guardPower(b, fx) - DE.Survivors.guardPower(a, fx));
+ for (const sv of cands) { if (free <= 0) break; if (DE.Survivors.assign(s, sv.id, { kind: 'guard' }).ok) { free--; n++; } }
+ if (!n) return fail({ reason: free <= 0 ? 'Every guard post is taken' : 'Nobody idle and healthy to post' });
+ UI().toast(n + (n > 1 ? ' guards' : ' guard') + ' posted', 'ok', 2400, 'guards', { key: 'fillguards' }); DE.Audio.sfx('done'); done();
+ };
  A.toggleGuard = (p) => {
  const sv = S().survivors[p.sid]; if (!sv) return;
  const isGuard = sv.assignment && sv.assignment.kind === 'guard';
