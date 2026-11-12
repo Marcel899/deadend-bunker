@@ -171,6 +171,18 @@ DE.Actions = (function () {
  const cap = DE.Events.bus(S()).capacity; if (i >= 0) ex.members.splice(i, 1); else if (ex.members.length < cap) ex.members.push(p.sid); else return UI().toast('The vehicle seats ' + cap, 'err');
  UI().refresh(true);
  };
+ /** Fill the free seats: healthy idle survivors first (guards last), trip specialists first, one medic. */
+ A.expAuto = () => {
+ const s = S(), ex = UI().ui.expedition, cap = DE.Events.bus(s).capacity;
+ const busy = (sv) => !sv.assignment ? 0 : sv.assignment.kind === 'room' ? 1 : 2;
+ const rank = { scavenger: 4, scout: 3, hunter: 3, medic: 2 };
+ const pool = DE.Survivors.available(s).filter(sv => sv.hp >= 50 && !ex.members.includes(sv.id))
+   .sort((a, b) => busy(a) - busy(b) || (rank[b.profession] || 0) - (rank[a.profession] || 0) || b.level - a.level);
+ let n = 0, medic = ex.members.some(id => s.survivors[id] && s.survivors[id].profession === 'medic');
+ for (const sv of pool) { if (ex.members.length >= cap) break; if (sv.profession === 'medic') { if (medic) continue; medic = true; } ex.members.push(sv.id); n++; }
+ if (!n) return fail({ reason: ex.members.length >= cap ? 'Every seat is taken' : 'Nobody healthy is free' });
+ DE.Audio.sfx('click'); UI().refresh(true);
+ };
  A.expSend = () => {
  const ex = UI().ui.expedition; const r = DE.Expeditions.send(S(), ex.location, ex.members); if (!r.ok) return fail(r);
  UI().toast('Team sent to ' + DE.Expeditions.location(ex.location).name, 'ok'); ex.members = []; done();

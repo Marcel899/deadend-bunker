@@ -1276,3 +1276,5 @@ img.ico-face.ava { width: 40px; height: 40px; border-width: 2.5px; box-shadow: 0
 .room-head .room-flag { margin: 0 0 0 auto; align-self: center; flex: 0 1 auto; min-width: 0; max-width: 45%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
   font-family: var(--display); font-size: 9px; letter-spacing: .5px; line-height: 1.5; color: #2b1600; text-shadow: none; background: linear-gradient(180deg, #ffd25a, #f0a020); border: 2px solid #0d0b12; border-radius: 7px; padding: 0 6px; }
 .room-head .room-flag:empty { display: none; }
+
+.ex-team h4 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .ex-team h4 .ex-auto { margin-left: auto; }
