@@ -69,7 +69,7 @@ DE.UI.Drawers = (function () {
      <div><small>Output bonus</small><b>×${DE.Economy.moraleMult(s.morale).toFixed(2)}</b></div>
      <div><small>Food & water</small><b>${(DE.CONFIG.SURVIVOR_FOOD * 60 * all.length).toFixed(1)}/min</b></div>
    </div></div>
- <div class="sv-tabs">${filters.map(([k, l]) => `<button class="btn small ${filter === k ? 'active' : ''}" data-action="setFilter" data-filter="${k}">${l} <span class="cost">${groups[k].length}</span></button>`).join('')}</div>
+ <div class="sv-tabs">${filters.map(([k, l]) => `<button class="btn small ${filter === k ? 'active' : ''}" data-action="setFilter" data-filter="${k}">${l} <span class="cost">${groups[k].length}</span></button>`).join('')}${groups.idle.length ? `<button class="btn small primary sv-putwork" data-action="assignIdle" title="Every idle survivor goes to the free work station they are best at">${DE.Icons.img('pop', 'ico-btn')} Put ${groups.idle.length} idle to work</button>` : ''}</div>
  <div class="sv-grid">${list.length ? list.map(v => survivorCard(s, v)).join('') : '<p class="muted">Nobody here.</p>'}</div>`;
  },
  };

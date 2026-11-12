@@ -39,10 +39,15 @@ DE.UI.Actors = (function () {
       let list = DE.Scenes.stations(def, stationKind);
       if (kind === 'heal' && (!list || !list.length)) list = DE.Scenes.stations(def, 'sleep');
       if (!list || !list.length) list = DE.Scenes.stations(def, 'rest') || DE.Scenes.stations(def, 'work');
-      let idx;
+      let idx, spread = 0;
       if (kind === 'work' || kind === 'build') idx = Math.max(0, room.workers.indexOf(sv.id));
-      else idx = hash(sv.id) % list.length;
-      const sx = list[idx % list.length] + (idx >= list.length ? 12 * Math.floor(idx / list.length) : 0);
+      else {
+        // people taking a break or eating gather around a station, not on the same spot
+        const mates = Object.values(state.survivors).filter(o => o.act && o.act.kind === kind && o.act.room === roomId).map(o => o.id).sort();
+        const k = Math.max(0, mates.indexOf(sv.id)); idx = (hash(sv.id) + Math.floor(k / 3)) % list.length;
+        spread = [0, -16, 16][k % 3] + (k >= 3 ? 6 : 0);
+      }
+      const sx = list[idx % list.length] + spread + (idx >= list.length ? 12 * Math.floor(idx / list.length) : 0);
       return { room: roomId, kind, anim: kind === 'work' ? roomAnim(def, room) : anim, sx, size: def.size };
     }
     // nowhere to go: hang around the elevator landing on the top floor (never sleeping on the floor)
@@ -100,7 +105,7 @@ DE.UI.Actors = (function () {
     a.x = x; a.y = y;
     if (flip != null) a.rig.classList.toggle('flip', flip);
   }
-  function bubble(a, text, cls) { a.bubble.textContent = text; a.bubble.className = 'bubble ' + (cls || '') + (text ? ' show' : ''); }
+  function bubble(a, text, cls) { a.bubble.textContent = text; a.bubble.className = 'bubble ' + (cls || '') + (text && !/\bquiet\b/.test(cls || '') ? ' show' : ''); }
 
   /** Plan a path from the actor's position to a point (same floor: walk; other floor: walk→ride→walk). */
   function plan(a, dest) {
@@ -180,7 +185,8 @@ DE.UI.Actors = (function () {
       } else if (!a.queue.length && a.segEnd && now >= a.segEnd) {
         a.segEnd = 0;
         setAnim(a, a.pendingAnim || 'idle');
-        if (t.kind === 'sleep') bubble(a, 'z z z', 'zz'); else if (t.kind === 'eat') bubble(a, 'nom', 'eat'); else if (t.kind === 'heal') bubble(a, '+ resting', 'hurt'); else if (t.kind === 'rest') bubble(a, 'break', ''); else bubble(a, '', '');
+        // sleeping and recovering show a bubble; eating and breaks only on hover (no pile of labels)
+        if (t.kind === 'sleep') bubble(a, 'z z z', 'zz'); else if (t.kind === 'eat') bubble(a, 'nom', 'eat quiet'); else if (t.kind === 'heal') bubble(a, '+ resting', 'hurt'); else if (t.kind === 'rest') bubble(a, 'break', 'quiet'); else bubble(a, '', '');
         if (a.pendingAnim === 'sleep' || a.pendingAnim === 'heal') a.rig.classList.remove('flip');
       }
       a.el.classList.toggle('hurt', sv.hp < 50);

@@ -105,6 +105,20 @@ DE.Actions = (function () {
  A.assignTo2 = (p) => { const r = DE.Survivors.assign(S(), p.sid, { kind: 'room', id: p.room }); if (!r.ok) return fail(r); UI().closeModal(); done(); };
  A.assignGuard = (p) => { const r = DE.Survivors.assign(S(), p.sid, { kind: 'guard' }); if (!r.ok) return fail(r); UI().closeModal(); done(); };
  A.unassign = (p) => { const r = DE.Survivors.assign(S(), p.sid, null); if (!r.ok) return fail(r); done(); };
+ /** Put every idle survivor to work where they do best: matching profession first, then efficiency. */
+ A.assignIdle = () => {
+ const s = S(), fx = s._fx || DE.Effects.get(s); let n = 0;
+ const idle = DE.Survivors.idle(s).filter(sv => sv.hp >= 25).sort((a, b) => b.level - a.level);
+ for (const sv of idle) {
+   const open = Object.values(s.rooms).filter(r => r.level > 0 && !r.construction && DE.Data.ROOMS[r.type].workers > r.workers.length);
+   if (!open.length) break;
+   let best = null, score = -1;
+   open.forEach(r => { const def = DE.Data.ROOMS[r.type]; const e = DE.Survivors.efficiency(sv, def, fx) + (def.profession === sv.profession ? .5 : 0); if (e > score) { score = e; best = r; } });
+   if (best && DE.Survivors.assign(s, sv.id, { kind: 'room', id: best.id }).ok) n++;
+ }
+ if (!n) return fail({ reason: idle.length ? 'No free work stations — build or upgrade a room' : 'Nobody is idle' });
+ UI().toast(n + (n > 1 ? ' survivors' : ' survivor') + ' put to work', 'ok', 2600, 'pop', { key: 'assignidle' }); DE.Audio.sfx('done'); done();
+ };
  /** Fill the empty guard posts with idle, healthy survivors — the strongest shots first. */
  A.fillGuards = () => {
  const s = S(), fx = DE.Effects.get(s); let free = fx.guardCap - DE.Survivors.guards(s).length; let n = 0;

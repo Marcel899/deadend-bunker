@@ -65,6 +65,14 @@ DE.Game = (function () {
  G.handleEvents(DE.Sim.takeEvents(s));
  }
  DE.UI.refresh();
+ // heads-up once per wave when the horde shows up on the surface; an alarm when the forecast is bad
+ const lead = (s.defense.nextWaveAt - now) / 1000;
+ if (lead > 0 && lead <= DE.Defense.warningSec(s) && G._warnedWave !== s.defense.wave) {
+ G._warnedWave = s.defense.wave;
+ const hp = DE.Defense.waveHp(s), pw = DE.Defense.defensePower(s).total, risk = pw + s.defense.wall.hp < hp ? 2 : pw < hp ? 1 : 0;
+ DE.UI.toast('<b>Wave ' + s.defense.wave + '</b> is on its way — ' + ['your defense should hold', 'the wall will take hits', 'they will break in, reinforce now!'][risk], ['info', 'warn', 'err'][risk], 5200, 'wave', { key: 'wavewarn' });
+ if (risk) DE.Audio.sfx('alarm');
+ }
  if (s.events && s.events.length && document.getElementById('modal-root').classList.contains('hidden') && !(DE.UI.Placement && DE.UI.Placement.active())) { if (!G._evShownAt || now - G._evShownAt > 1500) { G._evShownAt = now; DE.UI.eventModal(s.events[0]); } }
  if (s.settings.autosave && now - G._lastAutosave > C().AUTOSAVE_SEC * 1000) { G.save(); G._lastAutosave = now; }
  };

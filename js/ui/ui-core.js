@@ -27,6 +27,12 @@ DE.UI = (function () {
  document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest('.btn:not(:disabled), .nav-btn, .menu-btn, .res, .chip, .dk-sec-head, .rs-card.avail, .cell, .room, .ov-tile'); if (el && el !== hoverEl) { hoverEl = el; DE.Audio.sfx('hover'); } else if (!el) hoverEl = null; });
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-place]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ type: el.dataset.place }, e); });
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-move]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ roomId: el.dataset.move }, e); });
+ const KEYS = { b: 'bunker', s: 'survivors', r: 'research', x: 'excavate', d: 'defense', e: 'expeditions', t: 'economy', l: 'legacy', o: 'settings' };
+ document.addEventListener('keydown', e => {
+ if (e.ctrlKey || e.metaKey || e.altKey || /^(INPUT|TEXTAREA|SELECT)$/.test((e.target && e.target.tagName) || '') || !$('#modal-root').classList.contains('hidden') || !state()) return;
+ const k = KEYS[(e.key || '').toLowerCase()]; if (!k || $('#game-screen').classList.contains('hidden')) return;
+ if (k === 'bunker') closeDrawer(); else if (ui.drawer === k) closeDrawer(); else openDrawer(k);
+ });
  document.addEventListener('keydown', e => { if (/^[1-4]$/.test(e.key)) { const b = document.querySelectorAll('#modal-root .choice')[+e.key - 1]; if (b && !b.disabled) { b.click(); return; } } if (e.key === 'Escape') { if (!$('#modal-root').classList.contains('hidden')) closeModal(); else closeDrawer(); } });
  renderResbar();
  }
@@ -200,8 +206,12 @@ DE.UI = (function () {
  function placeToasts() {
  const root = $('#toasts'), top = $('#topbar'), wrap = $('#bunker-wrap'), game = $('#game-screen'); if (!root || !top || !wrap || !game) return;
  const g = game.getBoundingClientRect(), r = wrap.getBoundingClientRect(), dr = $('#drawer');
- const head = dr && !dr.classList.contains('hidden') ? (dr.querySelector('.drawer-head') || {}).offsetHeight || 0 : 0;
- root.style.top = Math.round(r.top - g.top + head + 10) + 'px';
+ const open = !!dr && !dr.classList.contains('hidden');
+ // over an open panel, notifications stack up from the bottom edge (the panel's header and first
+ // buttons stay visible); over the bunker they hang from the top of the view
+ root.classList.toggle('at-bottom', open);
+ if (open) root.style.setProperty('--tb', Math.round(g.bottom - r.bottom + 14) + 'px');
+ else root.style.top = Math.round(r.top - g.top + 10) + 'px';
  root.style.left = Math.round(r.left - g.left + r.width / 2) + 'px';
  root.style.maxWidth = Math.max(260, Math.min(520, r.width - 24)) + 'px';
  }
