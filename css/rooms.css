@@ -401,3 +401,6 @@ body.hq .actor::before { content: ''; position: absolute; left: -15px; bottom: -
   background: radial-gradient(closest-side, rgba(0, 0, 0, .45), transparent); }
 /* the dig site gets the same soft depth */
 body.hq .dig-site::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(0, 0, 0, .25), transparent 18%, transparent 82%, rgba(0, 0, 0, .3)); }
+/* performance: anything scrolled out of view holds still (no repaints of off-screen art) */
+.surface.offscreen *, .dig-site.offscreen *, .room.offscreen .room-scene *, .room.offscreen .sel-frame * { animation-play-state: paused !important; }
+.room.offscreen .room-scene::before { animation-play-state: paused; }

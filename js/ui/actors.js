@@ -12,14 +12,14 @@ DE.UI.Actors = (function () {
   const WALK = 34, RIDE = 110;       // px per second (walking pace matches the stride of a 54px survivor)
   const SHAFT_X = 40;                // elevator column centre within a floor
   const WORK_LIFT = 9;               // workers stand this much higher at their station than on the floor
-  let last = 0, layer = null;
+  let last = 0, layer = null, snapCheck = false, layerAt = 0;
 
   function ensureLayer() {
     const floors = document.getElementById('floors'), bunker = document.getElementById('bunker'); if (!floors || !bunker) return null;
     if (!layer || layer.parentElement !== bunker) { layer = document.getElementById('actors'); if (!layer) { layer = document.createElement('div'); layer.id = 'actors'; } bunker.appendChild(layer); }
     // the layer is a sibling of #floors (so room re-renders never destroy actors) laid exactly over it
-    const t = floors.offsetTop + 'px', h = floors.offsetHeight + 'px';
-    if (layer.style.top !== t) layer.style.top = t; if (layer.style.height !== h) layer.style.height = h;
+    const now = Date.now();
+    if (now - layerAt > 1000 || snapCheck) { layerAt = now; const t = floors.offsetTop + 'px', h = floors.offsetHeight + 'px'; if (layer.style.top !== t) layer.style.top = t; if (layer.style.height !== h) layer.style.height = h; }
     return layer;
   }
 
@@ -304,7 +304,8 @@ DE.UI.Actors = (function () {
 
   function update(now) {
     const s = DE.UI.state(); if (!s || !ensureLayer()) return;
-    if (now - last < 350) return; last = now;
+    const every = DE.UI.Settings && DE.UI.Settings.get('perf') ? 600 : 350;
+    if (now - last < every) return; last = now;
     const wrap = document.getElementById('bunker-wrap'); const viewTop = wrap ? wrap.scrollTop - 150 : -1e9, viewBot = wrap ? wrap.scrollTop + wrap.clientHeight + 150 : 1e9;
     const seen = {};
     for (const id in s.survivors) {
@@ -342,8 +343,9 @@ DE.UI.Actors = (function () {
           } else plan(a, dest);
           a.pendingAnim = t.anim; a.segEnd = 0; bubble(a, '', '');
         }
-      } else if (!a.queue.length && a.segEnd === 0 && a.placed) {
-        // standing at a station whose room may have moved (re-render): snap if far off
+      } else if (snapCheck && !a.queue.length && a.segEnd === 0 && a.placed) {
+        // standing at a station whose room may have moved (re-render): snap if far off (checked once
+        // after a re-layout, not every tick: it reads the room's geometry)
         const dest = t.room || t.site ? pointFor() : null;
         if (dest && (Math.abs(dest.x - a.x) > 3 || Math.abs(dest.y - a.y) > 3)) moveTo(a, dest.x, dest.y, 0);
       }
@@ -382,9 +384,11 @@ DE.UI.Actors = (function () {
       const ist = sv.infection && sv.infection.known ? DE.Infection.stage(sv).id : '';
       if ((a.el.dataset.inf || '') !== ist) { a.el.dataset.inf = ist; a.el.classList.toggle('infected', !!ist); }
       a.el.classList.toggle('paused', a.y < viewTop || a.y > viewBot);
-      a.el.title = sv.name + ' · ' + DE.Needs.describe(sv) + (sv.act && sv.act.room && s.rooms[sv.act.room] ? ' in ' + DE.Data.ROOMS[s.rooms[sv.act.room].type].name : '');
+      const tip = sv.name + ' · ' + DE.Needs.describe(sv) + (sv.act && sv.act.room && s.rooms[sv.act.room] ? ' in ' + DE.Data.ROOMS[s.rooms[sv.act.room].type].name : '');
+      if (a.tip !== tip) { a.tip = tip; a.el.title = tip; }
     }
     for (const id in actors) if (!seen[id]) { actors[id].el.remove(); delete actors[id]; }
+    snapCheck = false;
     if (TALK.ready) { if (!DE.UI.Settings || DE.UI.Settings.get('speech')) moments(s, now); } else { TALK.ready = true; TALK.weather = DE.Season ? DE.Season.clock(s).weather : ''; const sf = document.getElementById('surface'); TALK.wave = sf && sf.classList.contains('incoming') ? s.defense.wave : -1; TALK.fight = s.defense.wave; TALK.last = now; }
   }
 
@@ -414,6 +418,7 @@ DE.UI.Actors = (function () {
       const a = actors[id]; a.key = ''; a.bedFloorY = null;
       // riders already in (or stepping into) the cabin finish the ride; then they re-plan from the landing
       if (a.lift && a.lift.ticket.state !== 'wait') { a.queue = []; a.lift.resync = true; continue; }
+      snapCheck = true;
       // everyone else stays on the floor they are on (no teleporting between floors): drop them onto
       // its corridor at the new layout and let them walk or ride from there
       if (a.placed) a.snap = true;

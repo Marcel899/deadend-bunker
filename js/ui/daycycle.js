@@ -83,10 +83,18 @@ DE.UI.DayCycle = (function () {
     // own layer (and particles), so a shower in autumn never stops the leaves, and switching weather
     // never makes a falling particle jump. Everything falls to the bottom of the layer = the grass line.
     const parts = (n, f) => { let p = ''; for (let i = 0; i < n; i++) p += f(i); return p; };
-    const rain = parts(72, i => `<i style="left:${((i * 37.3) % 126).toFixed(1)}%;--d:${(.5 + (i * 7 % 10) / 45).toFixed(2)}s;animation-delay:-${((i * .173) % 1).toFixed(2)}s;--l:${14 + (i % 4) * 4}px"></i>`);
+    // rain and snow fall as a few seamlessly looping sheets of particles (one layer each instead of a
+    // hundred animated elements): tiles whose streaks are slanted exactly one tile-width per tile-height
+    // fully escaped (quotes and brackets too) so it can sit unquoted inside a style="" attribute
+    const dataUrl = (svg) => 'url(data:image/svg+xml,' + encodeURIComponent(svg).replace(/['()]/g, ch => '%' + ch.charCodeAt(0).toString(16).toUpperCase()) + ')';
+    const rainTile = (w, h, n, sw, op) => { let l = ''; for (let k = 0; k < n; k++) { const x = (w * (k * .37 + .2)) % (w - 8) + 6, y = (h * (k * .61 + .1)) % (h - 40) + 10, L = 16 + (k % 3) * 6; l += `<path d='M${x.toFixed(0)} ${y.toFixed(0)} l${(-L * w / h).toFixed(1)} ${L}' stroke='rgba(210,230,255,${op})' stroke-width='${sw}' stroke-linecap='round'/>`; }
+      return dataUrl(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${l}</svg>`); };
+    const snowTile = (w, h, n, r) => { let l = ''; for (let k = 0; k < n; k++) { const x = (w * (k * .41 + .13)) % (w - 10) + 5, y = (h * (k * .67 + .07)) % (h - 10) + 5; l += `<circle cx='${x.toFixed(0)}' cy='${y.toFixed(0)}' r='${(r * (.6 + (k % 3) * .25)).toFixed(1)}' fill='rgba(255,255,255,.9)'/>`; }
+      return dataUrl(`<svg xmlns='http://www.w3.org/2000/svg' width='${w}' height='${h}'>${l}</svg>`); };
+    const rain = [['rs-far', 43, 200, 5, 1.1, .45], ['rs-mid', 54, 252, 5, 1.5, .65], ['rs-near', 64, 300, 4, 2, .85]].map(([c, w, h, n, sw, op]) => `<u class="rs ${c}" style="background-image:${rainTile(w, h, n, sw, op)};background-size:${w}px ${h}px;--tw:${w}px;--th:${h}px"></u>`).join('');
     const splash = parts(22, i => `<b style="left:${((i * 53.9) % 100).toFixed(1)}%;--d:${(.8 + (i % 4) * .17).toFixed(2)}s;animation-delay:-${((i * .37) % 1.2).toFixed(2)}s"></b>`);
     const leaves = parts(24, i => `<i style="left:${((i * 29.1) % 100).toFixed(1)}%;--d:${(6 + (i * 11 % 40) / 10).toFixed(1)}s;animation-delay:-${((i * .83) % 9).toFixed(1)}s;--s:${3 + (i % 3)}px;--dx:${(i % 5) * 16 - 40}px"></i>`);
-    const snow = parts(60, i => `<i style="left:${((i * 41.7) % 104).toFixed(1)}%;--d:${(5 + (i * 13 % 50) / 10).toFixed(1)}s;animation-delay:-${((i * .61) % 9).toFixed(1)}s;--s:${2 + (i % 4)}px;--dx:${(i % 7) * 6 - 22}px"></i>`);
+    const snow = [['ss-far', 150, 180, 9, 1.6], ['ss-near', 210, 240, 7, 2.8]].map(([c, w, h, n, r]) => `<u class="ss ${c}" style="background-image:${snowTile(w, h, n, r)};background-size:${w}px ${h}px;--tw:${w}px;--th:${h}px"></u>`).join('');
     fx.innerHTML = `<div class="wx wx-rain">${rain}</div><div class="wx wx-splash">${splash}</div><div class="wx wx-leaves">${leaves}</div><div class="wx wx-snow">${snow}</div>`;
     const chip = document.createElement('div'); chip.className = 'dc-chip';
     // order: art SVG, battlefield, then ambient darkness, then lights, then weather, then UI overlay
@@ -159,7 +167,11 @@ DE.UI.DayCycle = (function () {
     let amb = keyed(AMB, h); if (c.cover.snow > 0) amb = mix(amb, '#dfe8ff', .25 * c.cover.snow * (1 - dark));
     if (overcast) amb = mix(amb, c.weather === 'snow' ? '#c8cede' : '#9aa2b6', .38 * overcast * (1 - dark * .5));
     built.amb.style.backgroundColor = amb;
+    // a white multiply changes nothing but still costs a full-scene blend every frame: skip it then
+    const m = /^#?([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})/i.exec(amb), white = m && [m[1], m[2], m[3]].every(h => parseInt(h, 16) >= 250);
+    const ad = white ? 'none' : ''; if (built.amb.style.display !== ad) built.amb.style.display = ad;
     built.lights.style.opacity = Math.min(1, dark * 1.15).toFixed(2);
+    const lit = dark > .02 ? '' : 'none'; if (built.lights.style.display !== lit) built.lights.style.display = lit;   // invisible by day: skip its repaints
     // units are above the light layers: dim them to match (a little cooler at night, warmer at golden hour)
     scene.style.setProperty('--unit-light', (1 - .42 * dark).toFixed(3)); scene.style.setProperty('--unit-sat', (1 - .3 * dark).toFixed(3));
     // season + weather

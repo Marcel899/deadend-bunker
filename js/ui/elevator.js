@@ -16,7 +16,7 @@ DE.UI = DE.UI || {};
 DE.UI.Elevator = (function () {
   const SPEED = 170;          // px per second
   const DOOR_MS = 500, DWELL_MS = 1200, CAB_H = 84;
-  let el = null, cabin = null, floorsSig = '', stops = {}, depths = [];
+  let el = null, cabin = null, floorsSig = '', stops = {}, depths = [], measuredAt = 0;
   let cur = 1, dir = 0, state = 'open', until = 0, target = null, cabY = null, clock = 0;
   const tickets = [];
   /** Floors the cabin still has to visit, derived from the live tickets (so a cancelled ride never
@@ -35,6 +35,9 @@ DE.UI.Elevator = (function () {
       el.innerHTML = `<div class="ev-rails"></div><div class="ev-winch"><i class="ev-wheel"></i><i class="ev-wheel"></i></div><div class="ev-cable"></div><div class="ev-stops"></div><div class="ev-cabin" id="ev-cabin"><div class="ev-cab-light"></div><div class="ev-cab-doors"><i></i><i></i></div><div class="ev-cab-panel"><b>B1</b></div></div>`;
       cabin = el.querySelector('#ev-cabin'); floorsSig = ''; cabY = null;
     }
+    const now = Date.now();
+    if (floorsSig && now - measuredAt < 1000) return true;   // geometry is re-read once a second (it forces a layout)
+    measuredAt = now;
     const fls = Array.from(floors.querySelectorAll('.floor[data-depth]'));
     if (!fls.length) return false;
     const base = floors.getBoundingClientRect();

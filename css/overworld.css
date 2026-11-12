@@ -308,3 +308,21 @@ body.fx-soft .dc-hq .hq-lightning.flash { animation-name: hqBoltSoft; } @keyfram
 body.no-ambient .dc-hq :is(.hq-beam, .hq-mist) { animation: none; }
 /* low quality / performance: the expensive sky dressing goes */
 body:is(.q-low, .perf) :is(.ow-godrays, .ow-mote, .ow-sunrays, .ow-shadows) { display: none !important; }
+/* rain and snow sheets (js/ui/daycycle.js): each sheet is one layer, oversized by one tile and moved
+   by exactly one tile per loop, so the pattern repeats seamlessly; the bottom edge of the weather layer
+   is the grass, where the streaks end */
+.dc-weather .wx-rain .rs, .dc-weather .wx-snow .ss { position: absolute; left: 0; top: calc(var(--th) * -1); right: calc(var(--tw) * -1); bottom: 0; background-repeat: repeat; will-change: transform; display: block; }
+.dc-weather .wx-rain .rs-near { animation: rsNear .62s linear infinite; } @keyframes rsNear { from { transform: translate(0, 0); } to { transform: translate(-64px, 300px); } }
+.dc-weather .wx-rain .rs-mid { animation: rsMid .66s linear infinite; } @keyframes rsMid { from { transform: translate(0, 0); } to { transform: translate(-54px, 252px); } }
+.dc-weather .wx-rain .rs-far { animation: rsFar .7s linear infinite; } @keyframes rsFar { from { transform: translate(0, 0); } to { transform: translate(-43px, 200px); } }
+.wx-heavy .dc-weather .wx-rain .rs { animation-duration: .5s; }
+.dc-weather .wx-snow .ss-near { animation: ssNear 7s linear infinite; } @keyframes ssNear { 0% { transform: translate(0, 0); } 25% { transform: translate(9px, 60px); } 50% { transform: translate(0, 120px); } 75% { transform: translate(-9px, 180px); } 100% { transform: translate(0, 240px); } }
+.dc-weather .wx-snow .ss-far { animation: ssFar 9s linear infinite; } @keyframes ssFar { 0% { transform: translate(0, 0); } 25% { transform: translate(-6px, 45px); } 50% { transform: translate(0, 90px); } 75% { transform: translate(6px, 135px); } 100% { transform: translate(0, 180px); } }
+/* sheets by density and strength (these override the per-particle nth-child rules) */
+.dc-weather .wx-rain > .rs, .dc-weather .wx-snow > .ss { display: block !important; }
+.dc-weather .wx-rain.light > .rs-far, body.pd-low .dc-weather .wx-rain > :is(.rs-far, .rs-mid), body.pd-med .dc-weather .wx-rain > .rs-far { display: none !important; }
+body.pd-low .dc-weather .wx-snow > .ss-far { display: none !important; }
+/* medium quality: the big sky layers hold still (High keeps them moving; they repaint the whole sky) */
+body.q-medium :is(.ow-sunrays, .ow-godrays, .ow-shadows, .ow-horizonhaze) { animation: none !important; }
+/* the blurred HQ beams and mist stay still between day-cycle updates (re-blurring every frame is costly) */
+.dc-hq .hq-beam, .dc-hq .hq-mist { animation: none !important; }

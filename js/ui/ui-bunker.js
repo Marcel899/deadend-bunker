@@ -12,11 +12,12 @@ DE.UI.Bunker = (function () {
   function render() {
     const s = DE.UI.state(); const root = document.getElementById('bunker');
     // the surface scene persists across re-renders so its animations (horde, party) keep running
-    if (!root.querySelector('#surface')) { root.innerHTML = renderSurface(s) + '<div id="floors"></div>';  }
+    if (!root.querySelector('#surface')) { root.innerHTML = renderSurface(s) + '<div id="floors"></div>'; observe(root.querySelector('#surface')); }
     let html = '';
     s.floors.forEach(f => html += renderFloor(s, f));
     html += renderDigZone(s);
     root.querySelector('#floors').innerHTML = html;
+    const dig = root.querySelector('#dig-site'); if (dig) observe(dig);   // its animations pause when scrolled away
     tagsDirty = true; DE.UI.DigSite.relayout();
     DE.UI.Actors.relayout(); DE.UI.Elevator.relayout(); DE.UI.Geology.relayout();
     update();
@@ -262,7 +263,7 @@ DE.UI.Bunker = (function () {
         pill.classList.remove('fresh'); void pill.offsetWidth; pill.classList.add('fresh');
       }
     }
-    DE.UI.DayCycle.update(s);
+    if (!surface.classList.contains('offscreen')) DE.UI.DayCycle.update(s);
   }
 
   /** Called when a wave resolves: the battlefield plays out the result (see battlefield.js). */
