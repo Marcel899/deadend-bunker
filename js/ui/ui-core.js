@@ -20,7 +20,21 @@ DE.UI = (function () {
 
  function state() { return DE.Game.state; }
 
+ /* While a finger is on a scrolling panel, or its momentum is still running, its HTML is not swapped:
+  * replacing the content mid-scroll stops iOS momentum scrolling and makes the panel jump. */
+ const scrollAt = new WeakMap(); let touching = null;
+ const SCROLLERS = '#drawer-body, #sidepanel, #bunker-wrap, .modal-body';
+ function scrollBusy(el) { if (!el) return false; if (touching && (touching === el || el.contains(touching) || touching.contains(el))) return true; const t = scrollAt.get(el); return !!t && Date.now() - t < 700; }
+ function watchScrolling() {
+   const mark = (el) => { if (el) scrollAt.set(el, Date.now()); };
+   document.addEventListener('touchstart', e => { touching = e.target.closest ? e.target.closest(SCROLLERS) : null; mark(touching); }, { passive: true, capture: true });
+   const up = () => { mark(touching); touching = null; };
+   document.addEventListener('touchend', up, { passive: true, capture: true }); document.addEventListener('touchcancel', up, { passive: true, capture: true });
+   document.addEventListener('scroll', e => { if (e.target && e.target.nodeType === 1) mark(e.target); }, { passive: true, capture: true });
+   document.addEventListener('wheel', e => { mark(e.target.closest ? e.target.closest(SCROLLERS) : null); }, { passive: true, capture: true });
+ }
  function init() {
+ watchScrolling();
  document.addEventListener('click', onClick);
  // subtle hover tick on interactive elements (mouse only; touch has no hover)
  let hoverEl = null;
@@ -339,6 +353,7 @@ DE.UI = (function () {
  const def = DE.UI.Drawers[ui.drawer]; if (!def) return;
  if (!force && def.live === false && ui.lastDrawerHtml) return; // drawers with text inputs only re-render on demand
  $('#drawer-title').innerHTML = DE.Icons.nav(ui.drawer, 'ico-title') + def.title(state());
+ if (!force && scrollBusy($('#drawer-body'))) { if (def.tick) def.tick(state()); return; }
  const html = def.render(state());
  if (force || html !== ui.lastDrawerHtml) {
  const body = $('#drawer-body'); const st = body.scrollTop;
@@ -358,5 +373,5 @@ DE.UI = (function () {
  }
 
  return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, floatText, floatAt, modal, eventModal, closeModal, confirmModal,
- openDrawer, closeDrawer, renderDrawer, refresh, state };
+ openDrawer, closeDrawer, renderDrawer, refresh, state, scrollBusy  };
 })();

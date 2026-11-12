@@ -13,7 +13,8 @@ DE.UI.Side = (function () {
  else if (sel && sel.type === 'slot' && DE.Bunker.getFloor(s, sel.depth)) html = renderBuild(s, sel.depth, sel.slot);
  else { ui.selection = null; html = renderOverview(s); }
  if (force || html !== ui.lastSideHtml) {
- const el = document.getElementById('sidepanel'); const st = el.scrollTop;
+ const el = document.getElementById('sidepanel'); if (!force && DE.UI.scrollBusy && DE.UI.scrollBusy(el)) return;
+ const st = el.scrollTop;
  el.innerHTML = html; el.scrollTop = st; ui.lastSideHtml = html;
  }
  }

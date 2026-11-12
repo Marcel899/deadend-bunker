@@ -133,7 +133,7 @@ body.no-anim .ow-svg * { animation: none !important; }
 .bf-world .wall-label { font-size: 17px; } .bf-world .entrance-sign { font-size: 17px; z-index: 35; } .bf-world .wall-hp { height: 12px; }
 .bf-fx { position: absolute; left: 0; top: 0; overflow: visible; z-index: 40; pointer-events: none; }
 .bf-unit { position: absolute; left: 0; top: 0; will-change: transform; pointer-events: none; }
-.bf-unit .rig { display: block; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }
+.bf-unit .rig { display: block; }
 .bf-turret { z-index: 12; } .bf-turret.ground { z-index: 31; } .bf-launcher { z-index: 11; }
 .bf-turret svg, .bf-launcher svg { display: block; overflow: visible; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }
 .bf-guard { z-index: 30; } .bf-party { z-index: 14; }
@@ -196,7 +196,7 @@ body.no-anim .dc-weather { display: none !important; }
 @keyframes bf-casing { 0% { transform: translate(0, 0) rotate(0); } 35% { transform: translate(-10px, -14px) rotate(200deg); } 100% { transform: translate(-18px, 30px) rotate(560deg); opacity: 0; } }
 .bf-casing { transform-box: fill-box; transform-origin: center; }
 /* hit reaction: a white flash on the sprite (the knock-back is real movement in battlefield.js) */
-.bf-z.pinged .rig .sp-fig, .bf-guard.pinged .rig .sp-fig { animation: bf-flash .16s steps(2) 1; }
+.bf-z.pinged .rig, .bf-guard.pinged .rig { animation: bf-flash .16s steps(2) 1; }
 @keyframes bf-flash { 0% { filter: brightness(3) saturate(0); } 100% { filter: none; } }
 .bf-z.pinged .rig, .bf-guard.pinged .rig { filter: drop-shadow(0 0 3px rgba(255, 60, 40, .7)) drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }
 /* bunker shudders when clawed */

@@ -279,7 +279,7 @@ DE.UI.Battlefield = (function () {
         let spd = z.speed;
         if (st.barricades >= 2 && z.id !== 'leaper' && z.x > 960 && z.x < 1190) spd *= .45;   // steel hedgehogs
         if (z.x > stop + .5) {
-          z.x = Math.max(stop, z.x - spd * dt);
+          z.x = Math.max(stop, z.x - spd * dt); if (z._v !== spd) { z._v = spd; DE.UI.Anim.speed(z.rig, spd); }
           if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, z.id === 'runner' ? 'run' : 'walk'); }
         } else {
           // at the front of the lane: attack the defence; queued behind: press on (attacks the air when close)
@@ -341,7 +341,7 @@ DE.UI.Battlefield = (function () {
       if (st.barricades < 1 && nearest && nearest.x - u.x < 34) u.hold = Math.max(OW().LAYOUT.wallR + 34, (u.hold || u.x) - 30 * dt);
       else if (st.barricades >= 1) u.hold = null;
       if (u.hold) post = Math.min(post, u.hold);
-      if (Math.abs(u.x - post) > 2) { const d = Math.sign(post - u.x); u.x += d * (u.hold ? 30 : 70) * dt; if (Math.sign(post - u.x) !== d) u.x = post; face(u.rig, d < 0 && !u.hold); anim(u.rig, u.hold ? 'shoot' : 'run'); }
+      if (Math.abs(u.x - post) > 2) { const d = Math.sign(post - u.x); DE.UI.Anim.speed(u.rig, u.hold ? 30 : 70); u.x += d * (u.hold ? 30 : 70) * dt; if (Math.sign(post - u.x) !== d) u.x = post; face(u.rig, d < 0 && !u.hold); anim(u.rig, u.hold ? 'shoot' : 'run'); }
       else {
         face(u.rig, false); u.cd -= dt;
         const z = live.filter(q => q.x - u.x < RANGE && q.x > u.x).reduce((b, q) => (!b || q.x < b.x ? q : b), null);
@@ -359,7 +359,7 @@ DE.UI.Battlefield = (function () {
       const span = (PATROL[1] - PATROL[0]) / u.n, a = PATROL[0] + u.i * span, b = a + span;
       if (u.pause > 0) { u.pause -= dt; anim(u.rig, 'guard'); }
       else {
-        u.x += u.dir * 24 * dt; anim(u.rig, 'walk'); face(u.rig, u.dir < 0);
+        u.x += u.dir * 24 * dt; DE.UI.Anim.speed(u.rig, 24); anim(u.rig, 'walk'); face(u.rig, u.dir < 0);
         if (u.x < a) { u.x = a; u.dir = 1; u.pause = 1.2 + Math.random() * 2; } else if (u.x > b) { u.x = b; u.dir = -1; u.pause = 1.2 + Math.random() * 2; }
       }
     }
@@ -381,7 +381,7 @@ DE.UI.Battlefield = (function () {
     });
     for (const id in st.party) if (!seen[id]) { st.party[id].el.remove(); delete st.party[id]; }
   }
-  function stepParty(p, dt) { p.x += 34 * dt; if (p.x > OW().W + 40) p.x = OW().LAYOUT.doorX; put(p.el, p.x - 56 * 70 / 225, p.y - 56 * 215 / 225);  }
+  function stepParty(p, dt) { if (!p.v) { p.v = 34; DE.UI.Anim.speed(p.el.querySelector('.rig'), 34); } p.x += 34 * dt; if (p.x > OW().W + 40) p.x = OW().LAYOUT.doorX; put(p.el, p.x - 56 * 70 / 225, p.y - 56 * 215 / 225);  }
 
   /* ---------- loop ---------- */
   function frame(t) {

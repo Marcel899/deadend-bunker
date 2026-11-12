@@ -295,7 +295,7 @@ DE.Chars = (function () {
     if (h.hang) return `<g transform="translate(${(-w / 2).toFixed(1)} ${(len + 4).toFixed(1)})">${img}</g>`;
     const gx = h.grip[0] * w, gy = h.grip[1] * ht, ang = Math.atan2(h.tip[1] * ht - gy, h.tip[0] * w - gx) * 180 / Math.PI;
     const dist = Math.hypot(h.tip[0] * w - gx, h.tip[1] * ht - gy);
-    const flash = GUNS[t] ? `<g class="muzzle" transform="translate(0 ${(len + dist + 3).toFixed(1)}) rotate(90)"><path d="M0 0 L16 -7 L11 0 L16 7 Z M0 0 L9 -11 L7 0 L9 11 Z" fill="#ffe27a" stroke="#ff9a2a" stroke-width="1.5"/><circle r="4.5" fill="#fff6c8"/></g>` : '';
+    const flash = GUNS[t] ? `<g class="muzzle" opacity="0" transform="translate(0 ${(len + dist + 3).toFixed(1)}) rotate(90)"><path d="M0 0 L16 -7 L11 0 L16 7 Z M0 0 L9 -11 L7 0 L9 11 Z" fill="#ffe27a" stroke="#ff9a2a" stroke-width="1.5"/><circle r="4.5" fill="#fff6c8"/></g>` : '';
     return `<g transform="translate(0 ${len}) rotate(${(90 - ang).toFixed(1)}) translate(${(-gx).toFixed(1)} ${(-gy).toFixed(1)})">${img}</g>${flash}`;
   }
   function item(t, len) {
@@ -312,8 +312,18 @@ DE.Chars = (function () {
       default: return '';
     }
   }
-  // what the hands hold decides the rest pose of the arms (css/rigs.css: .hold-*)
+  // what the hands hold decides the rest pose of the arms
   const HOLD = { rifle: 'gun', ak: 'gun', shotgun: 'gun', sniper: 'gun', pistol: 'pistol', wrench: 'tool', pipewrench: 'tool', crowbar: 'tool', cleaver: 'tool', pan: 'tool', shovel: 'tool', medkit: 'hang', toolbox: 'hang', flashlight: 'torch', clipboard: 'board' };
+  /* Rest angles in degrees (negative = forward / up): upper arm and forearm, near (F) and far (B),
+   * aiming angles (au*, af*), arm-swing factor k and a forward lean. Read by js/ui/anim.js. */
+  const POSE_BASE = { uaF: 3, faF: -10, uaB: -3, faB: -10, auF: -58, afF: -32, auB: -72, afB: -22, k: 1, lean: 0 };
+  const POSES = {
+    none: {}, gun: { uaF: -12, faF: -58, uaB: -32, faB: -50, k: .25 }, pistol: { uaF: 4, faF: -18, auF: -84, afF: -6, auB: 8, afB: -16 },
+    tool: { uaF: 3, faF: -26 }, hang: { uaF: 2, faF: -4 }, torch: { uaF: -14, faF: -56, k: .35 }, board: { uaF: -6, faF: -100, k: .3 },
+    reach: { uaF: -60, faF: -26, uaB: -96, faB: -8, k: .6 }, heavy: { uaF: -12, faF: -28, uaB: -44, faB: -30 }, hunch: { uaF: -22, faF: -12, uaB: -28, faB: -10, lean: 12 },
+    cast: { uaF: -98, faF: -36, uaB: -112, faB: -30, k: .4 }, pounce: { uaF: -78, faF: -52, uaB: -88, faB: -46 }, flail: { uaF: -42, faF: -32, uaB: -52, faB: -22 }, crawl: {},
+  };
+  const pose = (hold) => Object.assign({}, POSE_BASE, POSES[hold] || {});
   // a crate carried in both arms (shown by .a-carry), in the torso's frame
   const CRATE = `<g class="crate"><rect x="8" y="-46" width="42" height="34" rx="3" fill="#b0824e" ${sw}/><path d="M10 -29 h38 M29 -45 v32" stroke="#7a5230" stroke-width="3"/><path d="M12 -43 l34 28" stroke="#7a5230" stroke-width="2.5" opacity=".6"/><path d="M11 -43 h36" ${thin('#dcb27c', 2)} opacity=".8"/><rect x="22" y="-38" width="14" height="6" rx="1" fill="#e9dcc0" opacity=".85"/></g>`;
 
@@ -325,17 +335,20 @@ DE.Chars = (function () {
     const it = o.item !== undefined ? o.item : (c.item || null);
     const hold = c.kind === 'crew' ? (HOLD[it] || 'none') : (c.hold || 'reach');
     ensureDefs(id, c);
+    const P = pose(hold);
     const leg = (side, x) => `<g transform="translate(${x} ${B.hip})"><g class="j j-leg${side}">${thigh(c, B.thigh, id)}<g transform="translate(0 ${B.thigh})"><g class="j j-shin${side}">${shin(c, B.shin, id)}</g></g></g></g>`;
-    const arm = (side, x, held) => `<g transform="translate(${x} ${-L + B.shY})"><g class="j j-arm${side}">${upperArm(c, B.upper, id)}<g transform="translate(0 ${B.upper})"><g class="j j-fore${side}">${foreArm(c, B.fore, held, id, side)}</g></g></g></g>`;
+    const arm = (side, x, held) => `<g transform="translate(${x} ${-L + B.shY})"><g class="j j-arm${side}" transform="rotate(${P['ua' + side]})">${upperArm(c, B.upper, id)}<g transform="translate(0 ${B.upper})"><g class="j j-fore${side}" transform="rotate(${P['fa' + side]})">${foreArm(c, B.fore, held, id, side)}</g></g></g></g>`;
     const parts = leg('L', -B.hipOff) + leg('R', B.hipOff)
-      + `<g transform="translate(0 ${B.hip})"><g class="j j-torso">${arm('B', B.shB != null ? B.shB : -B.sh, null)}${torso(c, L, id)}${c.kind === 'crew' ? CRATE : ''}<g transform="translate(0 ${-L})"><g class="j j-head">${head(c, id)}</g></g>${arm('F', B.sh, it)}</g></g>`;
+      + `<g transform="translate(0 ${B.hip})"><g class="j j-torso" transform="rotate(${P.lean})">${arm('B', B.shB != null ? B.shB : -B.sh, null)}${torso(c, L, id)}${c.kind === 'crew' ? CRATE : ''}<g transform="translate(0 ${-L})"><g class="j j-head">${head(c, id)}</g></g>${arm('F', B.sh, it)}</g></g>`;
     const h = o.h || 48, w = Math.round(h * 140 / 225);
-    const vars = Object.assign({}, c.vars || {});
-    if (o.phase != null) vars['--ph'] = (-Math.abs(+o.phase || 0)).toFixed(2) + 's';
+    const v = c.vars || {}, num = (k, d) => (v[k] != null ? parseFloat(v[k]) : d);
+    const phase = o.phase != null ? Math.abs(+o.phase || 0) : 0;
     const filter = [c.filter, o.tint].filter(Boolean).join(' ');
-    const style = `height:${h}px;width:${w}px;` + Object.entries(vars).map(([k, v]) => `${k}:${v}`).join(';') + (filter ? `;filter:${filter}` : '');
+    const style = `height:${h}px;width:${w}px;--ph:-${phase.toFixed(2)}s` + (filter ? `;filter:${filter}` : '');
     const cls = `rig rig-${id} kind-${c.kind} hold-${hold} a-${o.anim || 'idle'}${GUNS[it] ? ' armed' : ''}${o.flip ? ' flip' : ''}${c.big ? ' big' : ''}${o.cls ? ' ' + o.cls : ''}`;
-    return `<svg class="${cls}" viewBox="-70 -215 140 225" style="${style}"${o.title ? ` data-title="${esc(o.title)}"` : ''} aria-hidden="true"><title>${esc(o.title || c.name || id)}</title><ellipse class="shadow" cx="0" cy="1" rx="${c.big ? 44 : 30}" ry="6" fill="#000" opacity=".3"/><g class="j j-body"><g class="j j-body2">${parts}</g></g></svg>`;
+    // the animator (js/ui/anim.js) reads the character's build and gait from these
+    const data = `data-c="${id}" data-k="${c.kind}" data-hold="${hold}" data-t="${num('--t', 1)}" data-la="${num('--la', 20)}" data-aa="${num('--aa', 14)}" data-bob="${num('--bob', 5)}" data-ph="${phase.toFixed(2)}" data-leg="${B.thigh + B.shin}" data-h="${h}" data-big="${c.big ? 1 : 0}"`;
+    return `<svg class="${cls}" viewBox="-70 -215 140 225" style="${style}" ${data}${o.title ? ` data-title="${esc(o.title)}"` : ''} aria-hidden="true"><title>${esc(o.title || c.name || id)}</title><ellipse class="shadow" cx="0" cy="1" rx="${c.big ? 44 : 30}" ry="6" fill="#000" opacity=".3"/><g class="j j-body"><g class="j j-body2">${parts}</g></g></svg>`;
   }
 
   /* ---------- portraits: the illustrated cut-outs, used as icons around the UI ---------- */
@@ -384,5 +397,5 @@ DE.Chars = (function () {
   function crew(prof, o) { return rig(CREW[prof] ? prof : 'scavenger', o); }
   /** Weapon a survivor carries on guard duty: their own firearm, else a rifle. */
   function dutyWeapon(prof) { const c = CREW[prof]; return c && GUNS[c.item] ? c.item : 'rifle'; }
-  return { rig, zombie, crew, portrait, dutyWeapon, ZOMBIES, CREW, ALL };
+  return { rig, zombie, crew, portrait, dutyWeapon, pose, ZOMBIES, CREW, ALL };
 })();

@@ -109,7 +109,7 @@ body.no-anim .scene * { animation: none !important; }
 #bunker { position: relative; }
 #actors { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; z-index: 4; overflow: visible; }
 .actor { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
-.actor .rig { position: absolute; left: -17px; bottom: 0; height: 54px; width: 34px; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .5)); pointer-events: auto; cursor: pointer; }
+.actor .rig { position: absolute; left: -17px; bottom: 0; height: 54px; width: 34px; pointer-events: auto; cursor: pointer; }
 .actor .bubble { position: absolute; left: 10px; bottom: 56px; font-family: var(--display); font-size: 10px; color: #fff; background: rgba(28, 16, 32, .8); border: 2px solid var(--ink); border-radius: 8px; padding: 1px 6px; white-space: nowrap; opacity: 0; transform: translateY(4px); transition: opacity .3s, transform .3s; pointer-events: none; }
 .actor .bubble.show { opacity: 1; transform: none; }
 .actor .bubble.zz { color: #9fe3ff; } .actor .bubble.eat { color: #ffd34a; } .actor .bubble.hurt { color: #ff8a7a; }

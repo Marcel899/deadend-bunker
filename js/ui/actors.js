@@ -9,7 +9,7 @@ DE.UI = DE.UI || {};
 DE.UI.Actors = (function () {
   const esc = (s) => DE.Util.escapeHtml(s);
   const actors = {};                 // survivorId → actor
-  const WALK = 60, RIDE = 110;       // px per second
+  const WALK = 34, RIDE = 110;       // px per second (walking pace matches the stride of a 54px survivor)
   const SHAFT_X = 40;                // elevator column centre within a floor
   let last = 0, layer = null;
 
@@ -96,6 +96,7 @@ DE.UI.Actors = (function () {
     actors[sv.id] = a; return a;
   }
   function setAnim(a, anim) {
+    DE.UI.Anim.speed(a.rig, anim === 'walk' ? WALK : 0);
     if (a.anim === anim) return; a.anim = anim;
     Array.from(a.rig.classList).forEach(c => { if (c.startsWith('a-')) a.rig.classList.remove(c); }); a.rig.classList.add('a-' + anim);
   }

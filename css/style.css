@@ -353,7 +353,7 @@ img.ico-room, img.ico-struct { image-rendering: auto; border-radius: 22%; }
 .menu-scene .ow-svg .eq-fence-0, .menu-scene .ow-svg .eq-walltier-0 { display: inline; }
 .menu-world { position: absolute; left: 0; top: 0; width: 1664px; height: 600px; transform-origin: 0 0; pointer-events: none; }
 .menu-unit { position: absolute; left: 0; top: 0; will-change: transform; }
-.menu-unit .rig { display: block; filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .5)); }
+.menu-unit .rig { display: block; }
 .menu-light { position: absolute; inset: 0; pointer-events: none; mix-blend-mode: multiply; background: linear-gradient(180deg, #8a7ab8 0%, #f0c8b0 55%, #e0a890 100%); opacity: .55; }
 .menu-vignette { position: absolute; inset: 0; pointer-events: none; background: radial-gradient(ellipse at 65% 60%, transparent 40%, rgba(12, 6, 18, .5) 100%), linear-gradient(90deg, rgba(14, 8, 22, .9) 0%, rgba(14, 8, 22, .55) calc(6vw + 300px), transparent calc(6vw + 520px)); }
 .menu-card { position: absolute; left: clamp(16px, 6vw, 96px); top: 50%; transform: translateY(-50%); width: min(460px, calc(100vw - 32px)); padding: 26px 26px 18px; text-align: left;
@@ -1278,3 +1278,7 @@ img.ico-face.ava { width: 40px; height: 40px; border-width: 2.5px; box-shadow: 0
 .room-head .room-flag:empty { display: none; }
 
 .ex-team h4 { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; } .ex-team h4 .ex-auto { margin-left: auto; }
+
+/* scrolling lists stay cheap: portraits carry their own dark outline, no per-image shadow filter */
+.cport img { filter: none; }
+.rv-fig .cport img, .ev-stage .cport img, .d3-z .cport img { filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, .5)); }

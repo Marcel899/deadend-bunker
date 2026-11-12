@@ -75,7 +75,7 @@ DE.UI.Menu = (function () {
     units.forEach(u => {
       if (u.guard) { u.cd = (u.cd || Math.random() * 2) - dt; if (u.cd <= 0) { u.cd = 1.6 + Math.random() * 2.4; setAnim(u, 'shoot'); setTimeout(() => setAnim(u, 'guard'), 400); } return; }
       if (u.wait > 0) { u.wait -= dt; if (u.wait <= 0) { u.x = W + 40 + Math.random() * 240; setAnim(u, 'walk'); u.el.classList.remove('gone'); } else return; }
-      u.x -= u.v * dt;
+      u.x -= u.v * dt; if (!u.sp) { u.sp = 1; DE.UI.Anim.speed(u.el.querySelector('.rig'), u.v); }
       // reach the sandbags: claw at them, then fall and a fresh one shambles in from the right
       if (u.x < u.stop) { u.x = u.stop; u.wait = 4 + Math.random() * 5; setAnim(u, 'attack'); setTimeout(() => { setAnim(u, 'die'); setTimeout(() => u.el.classList.add('gone'), 900); }, (u.wait - 1.2) * 1000); }
       place(u);
