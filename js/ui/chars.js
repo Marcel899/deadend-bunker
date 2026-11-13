@@ -143,6 +143,13 @@ DE.Chars = (function () {
     else if (m === 'fangs') s += `<path d="M-15 ${my - 7} q15 -6 30 0 q-2 19 -15 19 q-13 0 -15 -19 z" fill="#3a1424" ${sw3}/><path d="M-11 ${my - 5} l3 10 l3 -10 M5 ${my - 5} l3 10 l3 -10" fill="#efe6d0" stroke="none"/><path d="M-8 ${my + 10} q8 5 16 0" fill="#8f1e2e"/>`;
     if (c.beard) s += beard(c, my);
     if (c.cheeks) s += `<ellipse cx="-21" cy="${cy + 13}" rx="5" ry="3" fill="#ff8a7a" opacity=".32"/><ellipse cx="21" cy="${cy + 13}" rx="5" ry="3" fill="#ff8a7a" opacity=".32"/>`;
+    // raiders: war paint, a bandana over the face or a gas mask
+    if (c.paint === 'war') s += `<path d="M-25 ${ey + 9} l14 4 M-24 ${ey + 15} l12 3 M11 ${ey + 13} l14 -4 M12 ${ey + 18} l12 -3" ${thin(INK, 3.6)}/>`;
+    if (c.paint === 'skull') s += `<path d="M-13 ${my - 3} h26 v9 q-13 5 -26 0 z" fill="#efe6d0" ${sw3}/><path d="M-6 ${my - 3} v10 M0 ${my - 3} v11 M6 ${my - 3} v10" ${thin(INK, 1.8)}/><path d="M-27 ${ey - 9} q-4 12 5 17 M27 ${ey - 9} q4 12 -5 17" ${thin('#efe6d0', 4)}/>`;
+    if (c.mask === 'bandana') { const mc = c.maskColor || '#a3202a';
+      s += `<path d="M-31 ${cy + 9} q31 7 62 0 l-3 19 q-28 22 -56 0 z" fill="${mc}" ${sw}/><g fill="#fff" opacity=".55"><circle cx="-14" cy="${cy + 18}" r="2"/><circle cx="2" cy="${cy + 22}" r="2"/><circle cx="16" cy="${cy + 17}" r="2"/><circle cx="-4" cy="${cy + 31}" r="1.6"/></g><path d="M29 ${cy + 11} l12 6 l-9 7 z" fill="${mc}" ${sw3}/><path d="M-26 ${cy + 13} q26 7 52 0" ${thin(light(mc, .3), 2)} opacity=".7"/>`; }
+    if (c.mask === 'gas') s += `<path d="M-33 ${ey - 2} h66" ${thin('#2a2a30', 6)}/><circle cx="-12" cy="${ey}" r="10" fill="#2a3038" ${sw3}/><circle cx="12" cy="${ey}" r="10" fill="#2a3038" ${sw3}/><circle cx="-14" cy="${ey - 3}" r="3" fill="#9fd0e8" opacity=".8"/><circle cx="10" cy="${ey - 3}" r="3" fill="#9fd0e8" opacity=".8"/>`
+      + `<path d="M-14 ${cy + 13} q14 -6 28 0 l-3 17 q-11 7 -22 0 z" fill="#4a4e58" ${sw}/><circle cx="-16" cy="${cy + 28}" r="8" fill="#5a6248" ${sw3}/><circle cx="16" cy="${cy + 28}" r="8" fill="#5a6248" ${sw3}/><path d="M-6 ${cy + 20} h12 M-6 ${cy + 25} h12" ${thin(INK, 2)}/>`;
     return s;
   }
   function beard(c, my) {
@@ -247,6 +254,7 @@ DE.Chars = (function () {
     if (!bare) s += `<path d="M-6.5 ${len - 8} h13" ${thin(dark(base, .4), 3)} opacity=".55"/>`;
     if (c.boneArm) s += `<path d="M-7 ${len * .25} h14 v${len * .3} h-14 z" fill="#efe6d0" ${sw2}/><path d="M-3 ${len * .3} v${len * .2} M3 ${len * .3} v${len * .2}" ${thin(INK, 1.2)} opacity=".6"/>`;
     if (c.wristband) s += `<path d="M-7 ${len - 7} h14" ${thin(c.wristband, 5)}/>`;
+    if (c.armband) s += `<path d="M-7.5 ${len * .3} h15 v7 h-15 z" fill="${c.armband}" ${sw3}/>`;
     const hc = c.gloves || c.skin[0], hcd = c.gloves ? dark(c.gloves, .35) : c.skin[1];
     // a mitten hand: palm, thumb on the +x side, two finger creases
     s += `<ellipse cx="7" cy="${len - 2}" rx="4.6" ry="5.2" fill="${hc}" ${sw3}/><ellipse cx="0" cy="${len + 1}" rx="9" ry="9.8" fill="${hc}" ${sw}/><path d="M-6 ${len - 2} q-1 6 3 9" ${thin(hcd, 2.2)} opacity=".5"/><path d="M-5.5 ${len + 1} q2.5 3 6 3 M-4.5 ${len + 5} q2.5 2.5 5.5 2.5" ${thin(hcd, 1.7)} opacity=".8"/><path d="M-3 ${len - 5} q3 -2 6 0" ${thin(light(hc, .4), 2)} opacity=".7"/>`;
@@ -403,6 +411,14 @@ DE.Chars = (function () {
     guard:     C({ name: 'Guard', eyes: 'sunglasses', mouth: 'grim', hat: { type: 'police', color: '#2b3350' }, dirt: false, shirt: '#2b3350', sleeve: '#2b3350', gloves: '#1a1a22', pants: '#222a44', boots: '#1a1a22', badge: true, item: 'rifle', vars: { '--t': '1.02s', '--la': '20deg', '--aa': '14deg', '--bob': '5.5px' } }),
     scout:     C({ name: 'Scout', hair: { style: 'messy', color: '#5a3a22' }, cheeks: true, hat: { type: 'cap', color: '#d8303a', color2: '#f6f4ee' }, shirt: '#f6f4ee', jacket: { color: '#d8303a', lapel: '#a02028', len: 46, pocket: true }, sleeve: '#d8303a', pants: '#3a5a9a', boots: '#6b4a2e', sneakers: true, backpack: '#4f7a3a', item: 'flashlight', vars: { '--t': '.84s', '--la': '25deg', '--aa': '18deg', '--bob': '7px' } }),
   };
+  /* raiders: the crews that come in trucks (js/ui/battlefield.js). Red armbands mark the gang. */
+  Object.assign(CREW, {
+    b_raider: C({ name: 'Raider', skin: SKIN.tan, hair: { style: 'mohawk', color: '#d8402a' }, mask: 'bandana', maskColor: '#a3202a', angry: true, scar: true, shirt: '#8a8070', jacket: { color: '#3a2a2a', lapel: '#1e1418', len: 60 }, sleeve: '#3a2a2a', armband: '#c8302a', pants: '#3a3640', boots: '#2a2020', item: 'pistol', vars: { '--t': '.95s', '--la': '22deg', '--aa': '16deg', '--bob': '6px' } }),
+    b_gunner: C({ name: 'Gunner', hair: { style: 'spikes', color: '#2a2a2a' }, hat: { type: 'goggles' }, mask: 'bandana', maskColor: '#26232c', brows: 'stern', shirt: '#5a5a4a', vest: '#3a3a30', bandolier: true, sleeve: '#4a4a3a', armband: '#c8302a', gloves: '#1a1a1a', pants: '#4a4434', boots: '#2a2a2a', item: 'ak', vars: { '--t': '1s', '--la': '21deg', '--aa': '15deg', '--bob': '6px' } }),
+    b_shotgunner: C({ name: 'Shotgunner', skin: SKIN.light, hair: { style: 'wild', color: '#e8d8a0' }, paint: 'war', angry: true, mouth: 'grim', shirt: '#2a2a30', jacket: { color: '#6a2a1a', lapel: '#3a140c', len: 54 }, sleeve: '#6a2a1a', armband: '#c8302a', pants: '#2f3550', boots: '#3a2416', item: 'shotgun', vars: { '--t': '.9s', '--la': '24deg', '--aa': '18deg', '--bob': '7px' } }),
+    b_marksman: C({ name: 'Marksman', hat: { type: 'hood', color: '#2a2a30' }, mask: 'gas', shirt: '#3a3a40', jacket: { color: '#2e3a2e', lapel: '#1a241a', len: 66 }, sleeve: '#2e3a2e', armband: '#c8302a', gloves: '#1a1a1a', pants: '#2a2e2a', boots: '#1a1a1a', item: 'sniper', vars: { '--t': '1.1s', '--la': '18deg', '--aa': '12deg', '--bob': '4px' } }),
+    b_warlord: C({ name: 'Warlord', skin: SKIN.tan, hair: { style: 'mohawk', color: '#ffd34a' }, paint: 'skull', beard: { style: 'full', color: '#2a1a14' }, angry: true, scar: true, shirt: '#2a2228', jacket: { color: '#4a3020', lapel: '#d8c8a0', len: 72, pocket: true }, sleeve: '#4a3020', bandolier: true, armband: '#c8302a', gloves: '#2a1a14', pants: '#2a2228', boots: '#1a1210', item: 'lmg', vars: { '--t': '1.15s', '--la': '19deg', '--aa': '13deg', '--bob': '5px' } }),
+  });
   CREW.scientist = Object.assign({}, CREW.medic, { name: 'Scientist', cross: false, stethoscope: false, item: 'clipboard', shirt: '#8fe3d8', hair: { style: 'bun', color: '#2a1a14' } });
   const ALL = Object.assign({}, ZOMBIES, CREW);
 

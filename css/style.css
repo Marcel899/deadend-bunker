@@ -1294,7 +1294,7 @@ img.ico-face.ava { width: 40px; height: 40px; border-width: 2.5px; box-shadow: 0
 .d3-z { position: absolute; bottom: calc(36% - var(--row) * 8px); margin: 0; display: flex; align-items: flex-end; animation: d3-shamble 3.4s ease-in-out infinite; animation-delay: calc(var(--i) * -.7s); z-index: calc(2 + var(--row)); }
 .d3-zc { display: block; margin-left: calc(-22px + var(--k) * 0px); } .d3-zc:first-child { margin-left: 0; }
 .d3-zc:nth-child(n+2) { filter: brightness(.82); }
-.d3-z .cport { height: 62px; display: block; } .d3-z.big .cport { height: 78px; } .d3-z.boss .cport { height: 104px; }
+.d3-z .cport { height: 62px; display: block; } .d3-zc > .rig { display: block; filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, .5)); } .d3-z.big .cport { height: 78px; } .d3-z.boss .cport { height: 104px; }
 .d3-z .cport img { height: 100%; width: auto; filter: drop-shadow(0 2px 1.5px rgba(0, 0, 0, .5)); }
 .d3-z.boss .cport img { filter: drop-shadow(0 0 8px rgba(255, 70, 60, .7)) drop-shadow(0 2px 1.5px rgba(0, 0, 0, .5)); }
 .d3-z b { position: absolute; top: -6px; right: -8px; font-family: var(--display); font-weight: 400; font-size: 15px; color: #fff; background: #c8302a; border: 2px solid #0d0b12; border-radius: 9px; padding: 0 5px; line-height: 1.25; }

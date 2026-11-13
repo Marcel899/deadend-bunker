@@ -113,3 +113,16 @@ DE.Data.SPEECH = {
     'What\'s a zombie\'s favourite music?|Anything with a lot of soul.', 'What do zombies order at a bar?|A Bloody Mary, hold the Mary.', 'Why are zombies so good at chess?|They always go for the head.'],
   newbie: ['Hello, everyone!', 'Thanks for taking me in.', 'Nice place you\'ve got.', 'Where do I sleep?', 'Hi! I\'m new here.', 'Finally, people!', 'I can pull my weight.', 'Is it always this loud?'],
 };
+
+/* Raiders on the surface (js/ui/battlefield.js): the leader shouts a demand when the trucks stop,
+ * the crew yells during the fight, and a guard sometimes answers back. */
+DE.Data.BANDIT_LINES = {
+  arrive: ['Open the gate and nobody gets hurt!', 'We hear you have food down there.', 'Knock knock, bunker rats!', 'Hand over the fuel and we leave. Maybe.', 'Nice hole. We will take it.',
+    'You should have paid the tribute!', 'Last chance: open up!', 'Smells like canned beans and fear.', 'Toll time. Everything you have.', 'Come out with your hands full!'],
+  boss: ['Everything you own is mine now.', 'I want that bunker by sundown!', 'Nobody walks away from me.', 'Burn the gate. Bring me the generator.'],
+  fight: ['Keep their heads down!', 'Flank the wall!', 'Reloading!', 'Push! Push!', 'Covering fire!', 'Aim for the guards!', 'They are dug in like ticks!', 'Somebody shoot that turret!'],
+  hurt: ['Argh!', 'I am hit!', 'Medic! ...we do not have a medic.', 'Not like this...', 'Ow ow ow!'],
+  lose: ['Fall back! Fall back!', 'This is not over!', 'Get to the truck!', 'Forget it, they are crazy!'],
+  win: ['Load the trucks!', 'Grab what you can carry!', 'Thanks for the supplies!', 'Pleasure doing business!'],
+};
+DE.Data.GUARD_REPLIES = ['Not today!', 'Come and take it!', 'Hold the line!', 'Turn that truck around!', 'We bite back.', 'Wrong bunker, pal.', 'Try the next town!', 'Bullets are all we are serving.'];

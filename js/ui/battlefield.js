@@ -257,7 +257,7 @@ DE.UI.Battlefield = (function () {
   function spawnRaid(s, all) {
     const comp = all.slice(0, 16), n = comp.length, W = OW().W;
     const pw = DE.Defense.defensePower(s), hp = DE.Defense.waveHp(s);
-    st.ratio = hp > 0 ? pw.total / hp : 1; st.kills = 0; st.resolved = false; st.result = null; st.raid = true;
+    st.ratio = hp > 0 ? pw.total / hp : 1; st.kills = 0; st.resolved = false; st.result = null; st.raid = true; st.demanded = false; st.retreatCalled = false;
     const used = [...new Set(comp.map(b => b.car))], secs = Math.max(20, (s.defense.nextWaveAt - Date.now()) / 1000);
     st.cars = used.map((ci, k) => {
       const v = all.cars[ci], C0 = CAR[v.id] || CAR.buggy;
@@ -268,7 +268,7 @@ DE.UI.Battlefield = (function () {
     });
     comp.forEach((b, i) => {
       const car = st.cars[used.indexOf(b.car)], big = !!b.boss, h = big ? 78 : 62;
-      const el = unit(DE.Chars.crew(b.prof, { anim: 'idle', h, flip: true, item: b.weapon, phase: Math.random() * 4, tint: 'saturate(.75) brightness(.92)', title: b.name }), 'bf-z bf-bandit');
+      const el = unit(DE.Chars.crew(b.prof, { anim: 'idle', h, flip: true, item: b.weapon, phase: Math.random() * 4, title: b.name }), 'bf-z bf-bandit');
       el.style.width = (h * 140 / 225) + 'px'; el.style.height = h + 'px'; el.style.visibility = 'hidden';
       const k = car.crew.length, cover = b.id === 'marksman' || k % 3 === 2;
       const z = { el, rig: el.querySelector('.rig'), id: b.id, bandit: true, big, boss: big, h, speed: b.id === 'shotgunner' ? 90 : 70, lane: i % LANES, x: car.x, y: OW().GROUND + 2 + (i % LANES) * 3,
@@ -280,6 +280,33 @@ DE.UI.Battlefield = (function () {
     });
     st.spawned = n; st.killBudget = Math.round(n * Math.min(1, st.ratio) * .9);
     DE.UI.toast('<b>Bandits on the road!</b> ' + st.cars.length + ' vehicle' + (st.cars.length > 1 ? 's' : '') + ' coming for the bunker', 'err', 5000, 'truck', { key: 'raid' });
+  }
+  /* ---------- the raiders talk ---------- */
+  const lineBag = {};
+  function line(topic) { const L = (topic === 'reply' ? DE.Data.GUARD_REPLIES : (DE.Data.BANDIT_LINES || {})[topic]) || []; let bag = lineBag[topic]; if (!bag || !bag.length) bag = lineBag[topic] = L.slice().sort(() => Math.random() - .5); return bag.pop() || ''; }
+  /** A speech bubble over a unit on the field, typed out with a talk blip; one per unit. */
+  function shout(u, text, cls, pitch) {
+    if (!u || !u.el || !text || (DE.UI.Settings && DE.UI.Settings.get('speech') === false)) return;
+    let e = u.el.querySelector(':scope > .bf-say'); if (!e) { e = document.createElement('span'); e.className = 'bf-say'; u.el.appendChild(e); }
+    clearTimeout(e._t); clearTimeout(e._hide);
+    e.className = 'bf-say ' + (cls || ''); e.innerHTML = '<span class="st"></span>'; const tx = e.firstChild; void e.offsetWidth; e.classList.add('on');
+    let i = 0; const audible = () => !DE.UI.ui.drawer && document.getElementById('modal-root').classList.contains('hidden') && !document.hidden;
+    const step = () => { if (!e.isConnected) return; i++; tx.textContent = text.slice(0, i); const ch = text[i - 1];
+      if (i % 2 && /[a-z]/i.test(ch) && audible() && DE.Audio.blip) DE.Audio.blip((pitch || 180) * (.92 + Math.random() * .16));
+      if (i < text.length) e._t = setTimeout(step, /[.,!?]/.test(ch) ? 100 : 30); };
+    if (document.body.classList.contains('no-anim')) tx.textContent = text; else e._t = setTimeout(step, 120);
+    e._hide = setTimeout(() => e.classList.remove('on'), 1600 + text.length * 55);
+    st.lastShout = performance.now();
+  }
+  function banter(dt) {
+    if (!st.raid && !(st.fighting && (st.cars || []).length)) return;
+    const now = performance.now(), live = st.zombies.filter(z => z.bandit && !z.dead && !z.through && z.delay <= 0 && z.mode !== 'ride');
+    if (!live.length || now - (st.lastShout || 0) < 5200) return;
+    // the leader's demand when the first truck has stopped, and a guard's answer
+    if (!st.demanded && live.length >= 2) { st.demanded = true; const boss = live.find(z => z.boss) || live[0]; shout(boss, line(boss.boss ? 'boss' : 'arrive'), 'bandit', boss.boss ? 120 : 170);
+      const gs = Object.values(st.guards); if (gs.length && Math.random() < .8) setTimeout(() => { if (root) shout(gs[(Math.random() * gs.length) | 0], line('reply'), 'guard', 320); }, 2600 + Math.random() * 800); return; }
+    if (!st.retreatCalled && st.fighting && live.length <= 2 && st.spawned > 3) { st.retreatCalled = true; shout(live[0], line('lose'), 'bandit', 170); return; }
+    if (Math.random() < dt * .35) { const z = live[(Math.random() * live.length) | 0]; shout(z, line('fight'), 'bandit', z.boss ? 120 : 160 + Math.random() * 40); }
   }
   function placeCar(c) { put(c.el, c.x - 10, OW().GROUND + 14 - c.h - 30 + 2); }
   function stepCars(dt) {
@@ -323,7 +350,7 @@ DE.UI.Battlefield = (function () {
     st.zombies.forEach(z => {
       if (!z.bandit || z.dead || z.delay > 0 || z.through || z.mode === 'ride') return;
       // after a breach the survivors rush the gate
-      if (st.resolved && st.result && st.result.breach && z.survivor && age > 5) { z.through = true; anim(z.rig, 'run'); face(z.rig, true); DE.UI.Anim.speed(z.rig, z.speed * 1.6); return; }
+      if (st.resolved && st.result && st.result.breach && z.survivor && age > 5) { if (!st.lootCalled) { st.lootCalled = true; shout(z, line('win'), 'bandit', 170); } z.through = true; anim(z.rig, 'run'); face(z.rig, true); DE.UI.Anim.speed(z.rig, z.speed * 1.6); return; }
       if (Math.abs(z.x - z.post) > 2) { const d = Math.sign(z.post - z.x); z.x += d * z.speed * dt; if (Math.sign(z.post - z.x) !== d) z.x = z.post; if (z._v !== z.speed) { z._v = z.speed; DE.UI.Anim.speed(z.rig, z.speed); } face(z.rig, d < 0); if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, 'run'); } place(z); return; }
       face(z.rig, true);
       if (!(st.incoming || st.fighting)) { if (z.mode !== 'idle') { z.mode = 'idle'; anim(z.rig, 'guard'); } return; }
@@ -356,6 +383,7 @@ DE.UI.Battlefield = (function () {
   function kill(z) {
     if (z.dead) return;
     z.dead = true; st.kills++; anim(z.rig, 'die'); z.el.classList.add('dead');
+    if (z.bandit && Math.random() < .3 && performance.now() - (st.lastShout || 0) > 1500) shout(z, line('hurt'), 'bandit hurt', 200);
     pool(z.x - 10, z.y, z.big ? 34 : 22, z.toxic);
     blood(z.x, z.y - z.h * .5, z.big ? 12 : 8, z.toxic);
     DE.Audio.sfxAt(z.bandit ? 'thud' : z.big ? 'bigdie' : 'zdie', sx(z.x), 90);
@@ -506,7 +534,7 @@ DE.UI.Battlefield = (function () {
     const dt = Math.min(.05, Math.max(0, (t - (lastT || t)) / 1000)); lastT = t;
     if (!document.hidden) {
       const live = st.zombies.filter(z => !z.dead && !z.through && !z.retreat && z.delay <= 0 && z.x < OW().W - 10);
-      stepZombies(dt); stepCars(dt); stepBandits(dt);
+      stepZombies(dt); stepCars(dt); stepBandits(dt); banter(dt);
       st.turrets.forEach(tu => stepTurret(tu, dt, live));
       if (st.launcher) stepLauncher(st.launcher, dt, live);
       st.missiles = st.missiles.filter(m => stepMissile(m, dt));
@@ -581,7 +609,7 @@ DE.UI.Battlefield = (function () {
     st.fighting = false; st.resolved = false; st.wallShotAt = 0;
     // raid over: the wrecks burn for a while; after a breach the trucks drive off with the loot
     (st.cars || []).forEach(c => { if (breach && !c.wreck) { c.mode = 'leave'; c.v = 0; c.el.classList.add('moving'); face(c.el, false); c.el.classList.add('leaving'); DE.Audio.sfxAt('engine', sx(c.x), 300); } else if (!c.wreck) { c.wreck = true; c.el.classList.add('wreck'); } });
-    st.carsClearAt = Date.now() + 14000; st.raid = false;
+    st.carsClearAt = Date.now() + 14000; st.raid = false; st.lootCalled = false;
     // anything still out there (stragglers that never reached the wall) falls where it stands
     st.zombies.forEach(z => { if (!z.dead && !z.through && !z.retreat) kill(z); });
     st.wave = -1;

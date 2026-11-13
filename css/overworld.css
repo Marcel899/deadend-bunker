@@ -339,3 +339,12 @@ body.q-medium :is(.ow-sunrays, .ow-godrays, .ow-shadows, .ow-horizonhaze) { anim
 .d3-hero.raid { box-shadow: inset 0 2px 0 rgba(255, 255, 255, .07), inset 0 0 0 2px #8a5a1a, 0 0 18px rgba(255, 150, 40, .25), 0 3px 0 rgba(0, 0, 0, .4); }
 .d3-hero.raid .d3-title b { color: #ffb86a; }
 body.no-anim .bf-car .bf-wheel, body.no-anim .bf-car svg { animation: none !important; }
+
+/* raiders' and guards' shouts (in world units: the battlefield layer is scaled down to the screen) */
+.bf-say { position: absolute; left: 50%; bottom: 100%; margin-bottom: 6px; z-index: 50; width: max-content; max-width: 260px; padding: 6px 14px 8px; border-radius: 16px; border: 3px solid #1c1020;
+  background: #fffaf0; color: #1c1020; font: 800 22px/1.25 var(--body); box-shadow: 0 4px 0 rgba(0, 0, 0, .3); opacity: 0; transform: translate(-50%, 8px) scale(.7); transform-origin: 50% 100%;
+  transition: opacity .18s, transform .22s cubic-bezier(.3, 1.6, .5, 1); pointer-events: none; }
+.bf-say::after { content: ''; position: absolute; left: 50%; bottom: -9px; width: 14px; height: 14px; margin-left: -7px; background: inherit; border-right: 3px solid #1c1020; border-bottom: 3px solid #1c1020; transform: rotate(45deg); }
+.bf-say.on { opacity: 1; transform: translate(-50%, 0) scale(1); }
+.bf-say.bandit { background: #ffe0d6; } .bf-say.bandit.hurt { background: #fff; font-size: 17px; } .bf-say.guard { background: #e8f8d8; }
+body.no-speech .bf-say { display: none; }

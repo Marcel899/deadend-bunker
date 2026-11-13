@@ -401,7 +401,7 @@ DE.UI.Drawers = (function () {
  const nKinds = Math.min(6, kinds.length);
  const horde = kinds.slice(0, 6).map((z, i) => {
    const n = comp.counts[z.id], copies = Math.min(3, n), pos = Math.max(4, Math.min(80, 100 - (SPEED[z.id] != null ? SPEED[z.id] : .5) * 70 - i * 6 - (nKinds > 3 ? 0 : 10)));
-   const fig = (k) => `<span class="d3-zc" style="--k:${k}">${DE.Chars.portrait(z.prof || z.id, { cls: 'flip' + (z.prof ? ' bandit' : '') })}</span>`;
+   const fig = (k) => `<span class="d3-zc" style="--k:${k}">${z.prof ? DE.Chars.crew(z.prof, { anim: 'idle', h: z.boss ? 92 : 70, item: z.weapon, flip: true, phase: k + i }) : DE.Chars.portrait(z.id, { cls: 'flip' })}</span>`;
    return `<figure class="d3-z${z.boss ? ' boss' : ''}${z.hp >= 60 ? ' big' : ''}" style="--i:${i};left:${pos}%;--row:${i % 2}" title="${esc(z.name)} ×${n}${z.boss ? '' : ' · ' + z.hp + ' HP each'}">${Array.from({ length: copies }, (_, k) => fig(copies - 1 - k)).join('')}<b>×${n}</b><figcaption>${esc(z.name)}</figcaption></figure>`; }).join('')
    + (kinds.length > 6 ? `<span class="d3-more">+${kinds.length - 6} more</span>` : '');
  const zTotal = Object.values(comp.counts).reduce((a, b) => a + b, 0);

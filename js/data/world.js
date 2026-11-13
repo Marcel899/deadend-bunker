@@ -24,11 +24,11 @@ DE.Data.BOSS_EVERY = 10;
  * They shoot from cover rather than climb the wall: guards get hit even when the raid is beaten,
  * nobody gets infected, and a breach means they loot the stores. */
 DE.Data.BANDITS = [
-  { id: 'raider', name: 'Raider', prof: 'scavenger', weapon: 'pistol', hp: 30, dmg: 1.1, weight: 5, minWave: 1, desc: 'Scavenger with a pistol and nothing to lose.' },
-  { id: 'gunner', name: 'Gunner', prof: 'soldier', weapon: 'ak', hp: 55, dmg: 1.4, weight: 3, minWave: 1, desc: 'Assault rifle, short bursts, keeps your guards' + "'" + ' heads down.' },
-  { id: 'shotgunner', name: 'Shotgunner', prof: 'hunter', weapon: 'shotgun', hp: 70, dmg: 1.8, weight: 2, minWave: 6, desc: 'Charges the gate when it gets the chance.' },
-  { id: 'marksman', name: 'Marksman', prof: 'guard', weapon: 'sniper', hp: 45, dmg: 1.2, weight: 1, minWave: 9, desc: 'Stays by the trucks and picks off whoever looks over the wall.' },
-  { id: 'warlord', name: 'Warlord', prof: 'mechanic', weapon: 'lmg', hp: 0.25, dmg: 2.5, weight: 0, minWave: 12, boss: true, desc: 'Leads the big raids. hp = 25% of the raid.' },
+  { id: 'raider', name: 'Raider', prof: 'b_raider', weapon: 'pistol', hp: 30, dmg: 1.1, weight: 5, minWave: 1, desc: 'Scavenger with a pistol and nothing to lose.' },
+  { id: 'gunner', name: 'Gunner', prof: 'b_gunner', weapon: 'ak', hp: 55, dmg: 1.4, weight: 3, minWave: 1, desc: 'Assault rifle, short bursts, keeps your guards' + "'" + ' heads down.' },
+  { id: 'shotgunner', name: 'Shotgunner', prof: 'b_shotgunner', weapon: 'shotgun', hp: 70, dmg: 1.8, weight: 2, minWave: 6, desc: 'Charges the gate when it gets the chance.' },
+  { id: 'marksman', name: 'Marksman', prof: 'b_marksman', weapon: 'sniper', hp: 45, dmg: 1.2, weight: 1, minWave: 9, desc: 'Stays by the trucks and picks off whoever looks over the wall.' },
+  { id: 'warlord', name: 'Warlord', prof: 'b_warlord', weapon: 'lmg', hp: 0.25, dmg: 2.5, weight: 0, minWave: 12, boss: true, desc: 'Leads the big raids. hp = 25% of the raid.' },
 ];
 /* What they arrive in: seats, the first wave it shows up, how it looks on the surface. */
 DE.Data.RAID_VEHICLES = [
