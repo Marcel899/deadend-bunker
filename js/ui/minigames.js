@@ -15,6 +15,15 @@ DE.UI.MG = (function () {
   const esc = (s) => DE.Util.escapeHtml(String(s));
   const S = () => DE.Game.state;
   const ic = (k, c) => DE.Icons.img(k, c || 'ico-inline');
+  /** A cut-out sprite from the minigame sheets (assets/mg, made by tools/cut_mg.py). */
+  const SP = (n, c) => `<img class="sp ${c || ''}" src="assets/mg/${n}.png" alt="" draggable="false">`;
+  const preloaded = new Set();
+  function preload(names) { names.forEach(n => { if (preloaded.has(n)) return; preloaded.add(n); const im = new Image(); im.src = 'assets/mg/' + n + '.png'; }); }
+  const ART = { grid: ['generator', 'led_glow', 'rocker_on', 'bolt'], radio: ['radio_set', 'mic', 'dish'], sort: ['crate_open', 'can_tomato', 'rad_barrel', 'bullets'],
+    triage: ['medkit', 'syringe', 'pills', 'bandage'], range: ['crosshair', 'pistol', 'bullets'] };
+  const USES = { grid: ['generator', 'led_off', 'led_glow', 'rocker_off', 'rocker_on', 'bolt'], radio: ['knob', 'led_green', 'led_yellow', 'led_red', 'led_off', 'tower_ok', 'tower_lost', 'lock', 'static', 'dish', 'antenna'],
+    sort: ['bin_green', 'bin_blue', 'crate_open', 'crate_hazard', 'box_grey', 'crate_mil', 'drum', 'box_blue'], triage: ['face0', 'face1', 'face2', 'face3', 'bandage', 'gauze', 'bottle', 'syringe', 'pills', 'ok', 'no', 'ico_heart', 'stethoscope'],
+    range: ['cartridge', 'ico_heart', 'bullets', 'burst', 'crate', 'crate2', 'crate_mil'], common: ['star_gold', 'star_grey', 'trophy', 'ok', 'no', 'stopwatch'] };
   let root = null, shellFx = [], gameFx = [], current = null;
   const snd = (n, gap) => { try { DE.Audio.mg(n, gap); } catch (e) { /* no audio */ } };
   const note = (f, d, type, vol, glide) => { try { DE.Audio.mgTone(f, d, type, vol, glide); } catch (e) { /* no audio */ } };
@@ -28,7 +37,7 @@ DE.UI.MG = (function () {
   function shell(title, icon, sub) {
     close(true);
     root = document.createElement('div'); root.id = 'mg-root';
-    root.innerHTML = `<div class="mg-back"></div><div class="mg-panel" role="dialog"><div class="mg-head"><span class="mg-ico">${icon}</span><div class="mg-titles"><b>${esc(title)}</b><small>${sub}</small></div><button class="mg-x" type="button" aria-label="Close">✕</button></div><div class="mg-body"></div></div>`;
+    root.innerHTML = `<div class="mg-back"></div><div class="mg-panel" role="dialog"><div class="mg-head"><span class="mg-ico">${icon}</span><div class="mg-titles"><b>${esc(title)}</b><small>${sub}</small></div><button class="mg-x" type="button" aria-label="Close">${SP('no')}</button></div><div class="mg-body"></div></div>`;
     document.body.appendChild(root);
     const x = () => close(); root.querySelector('.mg-x').addEventListener('click', x); root.querySelector('.mg-back').addEventListener('click', x);
     const key = (e) => { if (e.key === 'Escape') close(); }; document.addEventListener('keydown', key); shellFx.push(() => document.removeEventListener('keydown', key));
@@ -65,8 +74,9 @@ DE.UI.MG = (function () {
     const c = DE.Minigames.canPlay(s, g); if (!c.ok) { DE.UI.toast(c.reason, 'err'); DE.Audio.sfx('error'); return; }
     const G = DE.Minigames.GAMES[g], room = c.room, tier = DE.Minigames.tier(s, g, room), skill = DE.Minigames.skill(s, g, room), lv = DE.Minigames.level(s, g), chal = CHAL[g](tier);
     const body = shell(G.name, DE.Icons.room(room.type, 'mg-room'), `${esc(DE.Data.ROOMS[room.type].name)} · <span class="mg-stars-sm">${'★'.repeat(tier)}${'☆'.repeat(4 - tier)}</span> · Mastery ${lv}`);
-    body.innerHTML = `<div class="mg-intro"><p class="mg-how">${HOW[g]}</p><div class="mg-perks"><span>${ic('star')} Difficulty ${tier}/4</span><span>${ic('pop')} Staff bonus +${Math.round(skill * 100)}%</span><span>${ic('chest')} ${esc(PAYS[g])}</span></div>
-      <div class="mg-chal">${ic('trophy')}<span><small>Challenge</small>${esc(chal.text)}</span><b>+25%</b></div>
+    preload(USES[g].concat(USES.common));
+    body.innerHTML = `<div class="mg-intro"><div class="mg-art">${ART[g].map((n, i) => SP(n, 'a' + i)).join('')}</div><p class="mg-how">${HOW[g]}</p><div class="mg-perks"><span>${ic('star')} Difficulty ${tier}/4</span><span>${ic('pop')} Staff bonus +${Math.round(skill * 100)}%</span><span>${ic('chest')} ${esc(PAYS[g])}</span></div>
+      <div class="mg-chal">${SP('trophy')}<span><small>Challenge</small>${esc(chal.text)}</span><b>+25%</b></div>
       <button class="btn primary mg-go" type="button">Start</button></div>`;
     body.querySelector('.mg-go').addEventListener('click', () => { snd('click'); run(g, body, { tier, skill, level: lv, room, chal }); });
   }
@@ -81,10 +91,10 @@ DE.UI.MG = (function () {
     const s = S(), out = g === 'forge' ? ctx.out : DE.Minigames.finish(s, g, score, ctx);
     const n = stars(score), nx = DE.Minigames.xpToNext(s, g);
     body.innerHTML = `<div class="mg-res">
-      <div class="mg-starrow">${[0, 1, 2].map(i => `<i class="${i < n ? 'on' : ''}" style="animation-delay:${(.15 + i * .2).toFixed(2)}s">★</i>`).join('')}</div>
+      ${n === 3 ? SP('trophy', 'mg-trophy') : ''}<div class="mg-starrow">${[0, 1, 2].map(i => `<i class="${i < n ? 'on' : ''}" style="animation-delay:${(.15 + i * .2).toFixed(2)}s">${SP(i < n ? 'star_gold' : 'star_grey')}</i>`).join('')}</div>
       <div class="mg-score"><b data-to="${Math.round(score * 100)}">0</b><small>%</small></div>
       ${ctx.headline ? `<p class="mg-headline">${ctx.headline}</p>` : ''}
-      ${env.chal ? `<div class="mg-chalr ${ctx.challenge ? 'ok' : ''}">${ic(ctx.challenge ? 'check' : 'cross')}<span>Challenge: ${esc(env.chal.text)}</span>${ctx.challenge ? '<b>+25%</b>' : ''}</div>` : ''}
+      ${env.chal ? `<div class="mg-chalr ${ctx.challenge ? 'ok' : ''}">${SP(ctx.challenge ? 'ok' : 'no')}<span>Challenge: ${esc(env.chal.text)}</span>${ctx.challenge ? '<b>+25%</b>' : ''}</div>` : ''}
       ${ctx.card || ''}
       <div class="mg-rewards">${Object.keys(out.rewards || {}).map((r, i) => `<span class="mg-rw" style="animation-delay:${(.5 + i * .12).toFixed(2)}s">${DE.Icons.res(r, 'ico-inline')} +<b data-to="${out.rewards[r]}">0</b></span>`).join('')}</div>
       <ul class="mg-lines">${(out.lines || []).map((l, i) => `<li style="animation-delay:${(.7 + i * .15).toFixed(2)}s">${esc(l)}</li>`).join('')}</ul>
@@ -99,7 +109,7 @@ DE.UI.MG = (function () {
     if (DE.Game.afterAction) DE.Game.afterAction();
   }
   const hudSet = (env, html) => { if (env.hud.innerHTML !== html) env.hud.innerHTML = html; };
-  const clock = (sec) => `<span class="mg-clock ${sec < 6 ? 'low' : ''}">${ic('clock')} ${Math.max(0, Math.ceil(sec))}s</span>`;
+  const clock = (sec) => `<span class="mg-clock ${sec < 6 ? 'low' : ''}">${SP('stopwatch')} ${Math.max(0, Math.ceil(sec))}s</span>`;
 
   /* ================= POWER GRID ================= */
   const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];   // N E S W as bits 1 2 4 8
@@ -121,7 +131,8 @@ DE.UI.MG = (function () {
     for (const c of cells) { if (!c.m) c.m = pick([5, 10, 3, 6, 12, 9]); c.dead = !path.includes(c) && c !== src && !cons.has(c); c.r = c.sw ? 0 : irnd(0, 3); c.cur = rot(c.m, -c.r); }
     // the generator turns too, so it is never a giveaway; the board is never solved from the start
     const S2 = 64, pad = 6, W = n * S2;
-    stage.innerHTML = `<svg class="gr-board" viewBox="${-pad} ${-pad} ${W + 2 * pad} ${W + 2 * pad}">${cells.map((c, i) => `<g class="gc${c === src ? ' src' : ''}${cons.has(c) ? ' cons' : ''}${c.broken ? ' broken' : ''}${c.sw ? ' sw' : ''}" data-i="${i}" transform="translate(${c.x * S2} ${c.y * S2})"><rect class="gbg" x="2" y="2" width="${S2 - 4}" height="${S2 - 4}" rx="9"/><g class="gp" style="transform:rotate(${c.r * 90}deg)">${pipes(c.m, S2)}${c === src ? `<circle cx="${S2 / 2}" cy="${S2 / 2}" r="15" class="gsrc"/><path d="M${S2 / 2 - 4} ${S2 / 2 - 9} l-5 10 h7 l-4 9 l10 -12 h-7 l4 -7 z" class="gbolt"/>` : ''}${cons.has(c) ? `<circle cx="${S2 / 2}" cy="${S2 / 2}" r="16" class="gglow"/><circle cx="${S2 / 2}" cy="${S2 / 2}" r="13" class="gbulb"/><path d="M${S2 / 2 - 6} ${S2 / 2 + 2} q3 -8 6 0 q3 8 6 0" class="gfil"/>` : ''}${c.sw ? `<rect x="${S2 / 2 - 9}" y="${S2 / 2 - 9}" width="18" height="18" rx="4" class="gswitch"/>` : ''}${c.broken ? `<path d="M${S2 / 2 - 10} ${S2 / 2 - 10} l20 20 M${S2 / 2 + 10} ${S2 / 2 - 10} l-20 20" class="gx"/>` : ''}</g></g>`).join('')}</svg><div class="gr-legend"><span><i class="lg lg-src"></i>Generator</span><span><i class="lg lg-lamp"></i>Lamp</span>${nBroken ? '<span><i class="lg lg-brk"></i>Broken: tap to patch</span>' : ''}${nSwitch ? '<span><i class="lg lg-sw"></i>Switch: tap to flip</span>' : ''}</div>`;
+    stage.innerHTML = `<svg class="gr-board" viewBox="${-pad} ${-pad} ${W + 2 * pad} ${W + 2 * pad}">${cells.map((c, i) => `<g class="gc${c === src ? ' src' : ''}${cons.has(c) ? ' cons' : ''}${c.broken ? ' broken' : ''}${c.sw ? ' sw' : ''}" data-i="${i}" transform="translate(${c.x * S2} ${c.y * S2})"><rect class="gbg" x="2" y="2" width="${S2 - 4}" height="${S2 - 4}" rx="9"/><g class="gp" style="transform:rotate(${c.r * 90}deg)">${pipes(c.m, S2)}</g>${c === src ? img('generator', 8, 6, 48, 52, 'gsrc') : ''}${cons.has(c) ? `<circle cx="${S2 / 2}" cy="${S2 / 2}" r="19" class="gglow"/>${img('led_off', 17, 17, 30, 30, 'goff')}${img('led_glow', 13, 13, 38, 38, 'gon')}` : ''}${c.sw ? img('rocker_off', 19, 16, 26, 32, 'goff') + img('rocker_on', 19, 16, 26, 32, 'gon') : ''}${c.broken ? img('bolt', 20, 14, 24, 34, 'gspark') : ''}</g>`).join('')}</svg><div class="gr-legend"><span>${SP('generator', 'lg')}Generator</span><span>${SP('led_glow', 'lg')}Lamp</span>${nBroken ? `<span>${SP('bolt', 'lg')}Sparking: tap to patch</span>` : ''}${nSwitch ? `<span>${SP('rocker_off', 'lg')}Switch: tap to flip</span>` : ''}</div>`;
+    function img(n, x, y, w, h, cls) { return `<image href="assets/mg/${n}.png" x="${x}" y="${y}" width="${w}" height="${h}" class="${cls}" preserveAspectRatio="xMidYMid meet"/>`; }
     function pipes(m, s) { let o = ''; const h = s / 2; [[h, 0], [s, h], [h, s], [0, h]].forEach(([x, y], d) => { if (m & (1 << d)) o += `<path d="M${h} ${h} L${x} ${y}" class="gw"/><path d="M${h} ${h} L${x} ${y}" class="gw-in"/>`; }); return o + `<circle cx="${h}" cy="${h}" r="7" class="gn"/>`; }
     const els = Array.from(stage.querySelectorAll('.gc'));
     // par: the fewest moves to the intended solution (straight runs solve at two turns, a cross at any)
@@ -158,23 +169,29 @@ DE.UI.MG = (function () {
     const T = env.tier, s = S(), sig = DE.Minigames.pickSignal(s);
     const limit = (30 - T * 2) * (1 + env.skill), bw = (5.2 - T * .7) * (1 + env.skill * 1.5), drift = [0, .25, .5, .8][T - 1];
     let fT = rnd(89, 107), gT = rnd(.35, .9), f = rnd(88, 108), g = .5, lock = 0, t = 0, best = 0, burst = 0, over = false;
-    stage.innerHTML = `<div class="rd-wrap"><canvas class="rd-scope" width="640" height="200"></canvas>
-      <div class="rd-row"><div class="rd-dial"><div class="rd-band"></div><div class="rd-needle"></div><span class="rd-mhz">${f.toFixed(1)} MHz</span></div>
+    stage.innerHTML = `<div class="rd-wrap"><div class="rd-top">${SP('dish', 'rd-dish')}<div class="rd-screen"><canvas class="rd-scope" width="640" height="200"></canvas>${SP('static', 'rd-static')}</div>${SP('antenna', 'rd-ant')}</div>
+      <div class="rd-row"><button class="rd-knob" type="button" aria-label="Tuning knob">${SP('knob')}</button><div class="rd-dial"><div class="rd-band"></div><div class="rd-needle"></div><span class="rd-mhz">${f.toFixed(1)} MHz</span></div>
       <label class="rd-gain">Gain<input type="range" min="0" max="1" step="0.01" value="${g}"></label></div>
-      <div class="rd-meter"><i></i><b>LOCK</b></div><p class="rd-tx"></p></div>`;
+      <div class="rd-status"><span class="rd-tower">${SP('tower_lost', 'off')}${SP('tower_ok', 'on')}</span><span class="rd-leds">${Array.from({ length: 10 }, (_, i) => `<i>${SP('led_off', 'o')}${SP(i < 6 ? 'led_green' : i < 8 ? 'led_yellow' : 'led_red', 'l')}</i>`).join('')}</span><div class="rd-meter"><i></i><b>LOCK</b></div></div><p class="rd-tx"></p></div>`;
     const cv = stage.querySelector('canvas'), cx = cv.getContext('2d'), dial = stage.querySelector('.rd-dial'), needle = stage.querySelector('.rd-needle'), mhz = stage.querySelector('.rd-mhz'), gain = stage.querySelector('.rd-gain input'), meter = stage.querySelector('.rd-meter i'), tx = stage.querySelector('.rd-tx');
-    const setF = (v) => { f = Math.max(88, Math.min(108, v)); needle.style.left = ((f - 88) / 20 * 100).toFixed(2) + '%'; mhz.textContent = f.toFixed(1) + ' MHz'; };
+    const knob = stage.querySelector('.rd-knob'), knobImg = knob.querySelector('img'), leds = Array.from(stage.querySelectorAll('.rd-leds i')), tower = stage.querySelector('.rd-tower'), stat = stage.querySelector('.rd-static'); let litN = -1;
+    const setF = (v) => { f = Math.max(88, Math.min(108, v)); needle.style.left = ((f - 88) / 20 * 100).toFixed(2) + '%'; mhz.textContent = f.toFixed(1) + ' MHz'; knobImg.style.transform = `rotate(${((f - 88) / 20 * 300 - 150).toFixed(1)}deg)`; };
     setF(f);
     let drag = false, x0 = 0, f0 = 0;
     on(dial, 'pointerdown', (e) => { drag = true; x0 = e.clientX; f0 = f; dial.setPointerCapture(e.pointerId); });
     on(dial, 'pointermove', (e) => { if (!drag) return; const w = dial.getBoundingClientRect().width; setF(f0 + (e.clientX - x0) / w * 20 * .6); });
     on(dial, 'pointerup', () => { drag = false; });
+    // the knob turns too: drag sideways or up and down
+    let kd = null;
+    on(knob, 'pointerdown', (e) => { e.preventDefault(); kd = { x: e.clientX, y: e.clientY, f }; knob.setPointerCapture(e.pointerId); });
+    on(knob, 'pointermove', (e) => { if (!kd) return; setF(kd.f + ((e.clientX - kd.x) - (e.clientY - kd.y)) * .04); });
+    on(knob, 'pointerup', () => { kd = null; });
     on(gain, 'input', () => { g = +gain.value; });
     on(document, 'keydown', (e) => { if (e.key === 'ArrowLeft') setF(f - .1); if (e.key === 'ArrowRight') setF(f + .1); if (e.key === 'ArrowUp') { g = Math.min(1, g + .03); gain.value = g; } if (e.key === 'ArrowDown') { g = Math.max(0, g - .03); gain.value = g; } });
     const lines = { survivor: '…anyone… we\'re hiding in the old school… three of us… please…', location: '…grid reference seven-four-two… fuel inside, the dead are thin there…', research: '…the experiment logs, part twelve… the samples respond to cold…', blueprint: '…the pump schematics are in the control room, second cabinet…', trader: '…caravan heading east, trading fuel for food, friendly…', rare: '…%#& …encrypted packet… cache… coordinates… &%#…' };
     function finish(locked) { if (over) return; over = true;
       const score = locked ? Math.min(1, .6 + .4 * Math.max(0, 1 - t / limit)) : .35 * best;
-      if (locked) { snd('reveal'); tx.textContent = ''; const L = lines[sig.id]; let i = 0; const st = () => { if (!root) return; i++; tx.textContent = '“' + L.slice(0, i); if (i < L.length) later(st, 26); }; st(); }
+      if (locked) { snd('reveal'); tower.classList.add('locked'); tower.insertAdjacentHTML('beforeend', SP('lock', 'lk')); tx.textContent = ''; const L = lines[sig.id]; let i = 0; const st = () => { if (!root) return; i++; tx.textContent = '“' + L.slice(0, i); if (i < L.length) later(st, 26); }; st(); }
       const chal = locked && (env.chal.id === 'fast' ? t <= limit / 2 : best >= .95);
       later(() => env.done(score, { signal: sig.id, challenge: chal, headline: locked ? 'Locked on: ' + esc(sig.name) + '.' : 'The signal faded into static.' }), locked ? 2600 : 300);
     }
@@ -186,6 +203,8 @@ DE.UI.MG = (function () {
       best = Math.max(best, match);
       lock = match > .8 ? lock + dt / (1.6 - env.skill) : Math.max(0, lock - dt * .8);
       meter.style.width = Math.round(Math.min(1, lock) * 100) + '%'; meter.parentElement.classList.toggle('hot', match > .8);
+      const nl = Math.round(match * 10); if (nl !== litN) { litN = nl; leds.forEach((l, i) => l.classList.toggle('on', i < nl)); tower.classList.toggle('ok', match > .55 && burst <= 0); }
+      stat.style.opacity = Math.min(.75, (1 - match) * .45 + (burst > 0 ? .4 : 0)).toFixed(2);
       if (match > .8 && Math.random() < dt * 6) note(1400 + match * 400, .03, 'sine', .025);
       // the scope: static, with the station's wave coming through as it is tuned in
       const W = cv.width, H = cv.height; cx.fillStyle = '#0c1a12'; cx.fillRect(0, 0, W, H);
@@ -200,25 +219,31 @@ DE.UI.MG = (function () {
 
   /* ================= SUPPLY SORTING ================= */
   const BINS = [
-    { id: 'food', name: 'Food', icon: () => DE.Icons.res('food', 'ico-inline') },
-    { id: 'water', name: 'Water', icon: () => DE.Icons.res('water', 'ico-inline') },
-    { id: 'scrap', name: 'Scrap', icon: () => DE.Icons.res('scrap', 'ico-inline') },
-    { id: 'hazard', name: 'Hazard', icon: () => ic('biohazard') },
-    { id: 'medicine', name: 'Medicine', icon: () => ic('medkit') },
-    { id: 'ammo', name: 'Ammo', icon: () => `<svg class="ico-inline" viewBox="0 0 20 20"><rect x="7" y="6" width="6" height="12" rx="1" fill="#c9a24a" stroke="#1c1020" stroke-width="1.5"/><path d="M7 6 Q10 0 13 6 Z" fill="#d8b06e" stroke="#1c1020" stroke-width="1.5"/></svg>` },
-    { id: 'fuel', name: 'Fuel', icon: () => DE.Icons.res('fuel', 'ico-inline') },
-    { id: 'rare', name: 'Rare', icon: () => ic('diamond') },
+    { id: 'food', name: 'Food', box: 'bin_green', icon: () => DE.Icons.res('food', 'ico-inline') },
+    { id: 'water', name: 'Water', box: 'bin_blue', icon: () => DE.Icons.res('water', 'ico-inline') },
+    { id: 'scrap', name: 'Scrap', box: 'crate_open', icon: () => DE.Icons.res('scrap', 'ico-inline') },
+    { id: 'hazard', name: 'Hazard', box: 'crate_hazard', icon: () => ic('biohazard') },
+    { id: 'medicine', name: 'Medicine', box: 'box_grey', icon: () => ic('medkit') },
+    { id: 'ammo', name: 'Ammo', box: 'crate_mil', icon: () => `<svg class="ico-inline" viewBox="0 0 20 20"><rect x="7" y="6" width="6" height="12" rx="1" fill="#c9a24a" stroke="#1c1020" stroke-width="1.5"/><path d="M7 6 Q10 0 13 6 Z" fill="#d8b06e" stroke="#1c1020" stroke-width="1.5"/></svg>` },
+    { id: 'fuel', name: 'Fuel', box: 'drum', icon: () => DE.Icons.res('fuel', 'ico-inline') },
+    { id: 'rare', name: 'Rare', box: 'box_blue', icon: () => ic('diamond') },
   ];
-  const ITEMS = { food: ['Canned beans', 'Rice sack', 'Dried meat', 'Apples'], water: ['Water jug', 'Bottled water', 'Rain barrel'], scrap: ['Copper pipe', 'Car door', 'Bent rebar', 'Toaster'], hazard: ['Leaking battery', 'Toxic barrel', 'Bloody rags'], medicine: ['Painkillers', 'Bandages', 'Antibiotics'], ammo: ['9mm box', 'Shotgun shells'], fuel: ['Jerry can', 'Gas canister'], rare: ['Circuit board', 'Alloy plate', 'Sealed vial'] };
+  const ITEMS = {
+    food: [['can_tomato', 'Tomato soup'], ['can_fish', 'Canned fish']], water: [['water_bottle', 'Bottled water'], ['water_jug', 'Water jug'], ['canister_blue', 'Water flask']],
+    scrap: [['metal_bars', 'Scrap metal'], ['gear', 'Old gear'], ['tire', 'Tyre'], ['wrench', 'Wrench'], ['pliers', 'Pliers'], ['crowbar', 'Crowbar'], ['hammer_s', 'Hammer']],
+    hazard: [['rad_barrel', 'Toxic barrel'], ['rad_canister', 'Leaking canister'], ['rad_box', 'Hot crate'], ['leaky_can', 'Leaking can']],
+    medicine: [['medkit_small', 'First-aid kit'], ['bandage_roll', 'Bandages'], ['tape', 'Medical tape'], ['firstaid', 'Field dressing']],
+    ammo: [['bullets', 'Loose rounds'], ['grenade', 'Grenade'], ['grenade2', 'Frag grenade']], fuel: [['jerrycan', 'Jerry can'], ['fuel_can', 'Petrol can'], ['fuel_yellow', 'Fuel tin'], ['cartridge', 'Gas cartridge']],
+    rare: [['circuit', 'Circuit board'], ['crystal_blue', 'Strange crystal'], ['crystal_purple', 'Purple crystal'], ['cell_green', 'Power cell'], ['cell_blue', 'Charged cell'], ['alien_device', 'Odd device'], ['orb', 'Glowing orb']] };
   function sortGame(stage, env) {
     const T = env.tier, bins = BINS.slice(0, [4, 6, 7, 8][T - 1]), limit = (40 + 10 * env.skill) | 0, every = [1.25, 1.05, .9, .75][T - 1], beltT = [6.5, 5.6, 4.8, 4.1][T - 1] * (1 + env.skill * .5);
-    stage.innerHTML = `<div class="so-belt"><i class="so-rollers"></i></div><div class="so-items"></div><div class="so-bins">${bins.map(b => `<button class="so-bin b-${b.id}" data-bin="${b.id}" type="button">${b.icon()}<span>${b.name}</span></button>`).join('')}</div><div class="so-pop"></div><div class="so-combo"><b>×1</b><small>combo</small><em></em></div>`;
+    stage.innerHTML = `<div class="so-belt"><i class="so-rollers"></i></div><div class="so-items"></div><div class="so-bins">${bins.map(b => `<button class="so-bin b-${b.id}" data-bin="${b.id}" type="button">${SP(b.box, 'so-box')}<span>${b.icon()}${b.name}</span></button>`).join('')}</div><div class="so-pop"></div><div class="so-combo"><b>×1</b><small>combo</small><em></em></div>`;
     const lane = stage.querySelector('.so-items'), pop = stage.querySelector('.so-pop'), comboEl = stage.querySelector('.so-combo');
     const showCombo = (bad) => { const m = Math.min(5, 1 + Math.floor(combo / 3)); comboEl.querySelector('b').textContent = '×' + m; comboEl.querySelector('em').textContent = good + ' sorted' + (total - good > 0 ? ' · ' + (total - good) + ' missed' : ''); comboEl.className = 'so-combo m' + m + (bad ? ' bad' : ''); void comboEl.offsetWidth; comboEl.classList.add(bad ? 'shake' : 'pulse'); };
     let t = 0, next = .4, items = [], score = 0, combo = 0, best = 0, wrong = 0, good = 0, total = 0, sel = null, over = false; const sorted = {};
     const binAt = (x, y) => { for (const b of stage.querySelectorAll('.so-bin')) { const r = b.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return b; } return null; };
     function spawn() {
-      const b = pick(bins), name = pick(ITEMS[b.id]); const el = document.createElement('button'); el.type = 'button'; el.className = 'so-item' + (b.id === 'hazard' ? ' haz' : ''); el.innerHTML = `${b.icon()}<small>${esc(name)}</small>`;
+      const b = pick(bins), [spr, name] = pick(ITEMS[b.id]); const el = document.createElement('button'); el.type = 'button'; el.className = 'so-item' + (b.id === 'hazard' ? ' haz' : ''); el.innerHTML = `${SP(spr)}<small>${esc(name)}</small>`;
       lane.appendChild(el); const it = { el, kind: b.id, x: -12, y: rnd(28, 72), dead: false }; items.push(it); total++;
       on(el, 'pointerdown', (e) => { e.preventDefault(); if (it.dead) return; sel && sel.el.classList.remove('sel'); sel = it; it.el.classList.add('sel', 'held'); it.drag = { px: e.clientX, py: e.clientY }; el.setPointerCapture(e.pointerId); });
       on(el, 'pointermove', (e) => { if (!it.drag) return; it.el.style.translate = `${e.clientX - it.drag.px}px ${e.clientY - it.drag.py}px`; });
@@ -253,6 +278,7 @@ DE.UI.MG = (function () {
     { id: 'shock', name: 'Shock', sym: 'Shaking, cold sweat, racing pulse', cure: 'painkillers', rate: 1.2 },
   ];
   const CURES = [['bandage', 'Bandage'], ['splint', 'Splint'], ['antibiotics', 'Antibiotics'], ['antiviral', 'Antiviral'], ['painkillers', 'Painkillers']];
+  const CURE_SP = { bandage: 'bandage', splint: 'gauze', antibiotics: 'bottle', antiviral: 'syringe', painkillers: 'pills' };
   const ECG = (() => { let d = 'M0 12'; for (let k = 0; k < 4; k++) { const o = k * 60; d += ` H${o + 18} l3 -9 l4 18 l3 -13 l2 4 H${o + 60}`; } return d; })();
   const VISITORS = ['A stranger', 'A scavenger', 'A trader', 'A lost kid', 'A soldier'];
   function triageGame(stage, env) {
@@ -260,10 +286,11 @@ DE.UI.MG = (function () {
     const real = Object.values(s.survivors).filter(v => !(v.assignment && v.assignment.kind === 'expedition') && (v.hp < 75 || v.infection)).sort((a, b) => (b.infection ? 1 : 0) - (a.infection ? 1 : 0) || a.hp - b.hp).slice(0, n);
     const pats = real.map(v => ({ id: v.id, name: v.name, prof: v.profession, ail: v.infection ? AIL[3] : v.hp < 40 ? pick([AIL[0], AIL[1]]) : pick([AIL[2], AIL[4], AIL[1]]) }));
     while (pats.length < n) pats.push({ id: null, name: pick(VISITORS), prof: pick(['scavenger', 'farmer', 'mechanic', 'soldier', 'medic']), ail: pick(AIL) });
-    pats.forEach(p => { p.stab = rnd(.55, .95); p.known = false; p.done = false; p.ok = false; });
+    const faces = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9].sort(() => Math.random() - .5);   // strangers get faces from the portrait sheet
+    pats.forEach(p => { p.stab = rnd(.55, .95); p.known = false; p.done = false; p.ok = false; if (!p.id) p.face = 'face' + faces.pop(); });
     const stock = {}; CURES.forEach(([id]) => stock[id] = 0); pats.forEach(p => stock[p.ail.cure]++); for (let i = 0; i < Math.max(1, 3 - T); i++) stock[pick(CURES)[0]]++;
-    stage.innerHTML = `<div class="tr-pats">${pats.map((p, i) => `<div class="tr-pat" data-i="${i}"><div class="tr-top"><div class="tr-face">${DE.Chars.portrait(p.prof)}</div><div class="tr-info"><b>${esc(p.name)}</b><small class="tr-sym">Not examined</small></div></div><svg class="tr-ecg" viewBox="0 0 120 24" preserveAspectRatio="none"><path class="tr-wave" d="${ECG}"/><path class="tr-flat" d="M0 12 H120"/></svg><i class="tr-stab"><b></b></i><button class="btn small tr-ex" type="button">Examine</button></div>`).join('')}</div>
-      <div class="tr-tray">${CURES.map(([id, nm]) => `<button class="tr-cure" data-c="${id}" type="button"><span>${esc(nm)}</span><b>${stock[id]}</b></button>`).join('')}</div>`;
+    stage.innerHTML = `<div class="tr-pats">${pats.map((p, i) => `<div class="tr-pat" data-i="${i}"><div class="tr-top"><div class="tr-face">${p.face ? SP(p.face) : DE.Icons.prof(p.prof, 'tr-pic')}<i class="tr-badge"></i></div><div class="tr-info"><b>${esc(p.name)}</b><small class="tr-sym">Not examined</small></div></div><svg class="tr-ecg" viewBox="0 0 120 24" preserveAspectRatio="none"><path class="tr-wave" d="${ECG}"/><path class="tr-flat" d="M0 12 H120"/></svg><span class="tr-vit">${SP('ico_heart')}<i class="tr-stab"><b></b></i></span><button class="btn small tr-ex" type="button">${SP('stethoscope')}Examine</button></div>`).join('')}</div>
+      <div class="tr-tray">${CURES.map(([id, nm]) => `<button class="tr-cure" data-c="${id}" type="button">${SP(CURE_SP[id])}<span>${esc(nm)}</span><b>${stock[id]}</b></button>`).join('')}</div>`;
     let chosen = null, t = 0, over = false, wrongs = 0;
     const rows = Array.from(stage.querySelectorAll('.tr-pat'));
     rows.forEach((row, i) => {
@@ -294,10 +321,10 @@ DE.UI.MG = (function () {
   /* ================= TRAINING RANGE ================= */
   function rangeGame(stage, env) {
     const T = env.tier, limit = 30, mag = 6, reloadT = 1.1 * (1 - env.skill), life = [3.2, 2.7, 2.2, 1.8][T - 1] * (1 + env.skill), every = [1, .85, .72, .6][T - 1], civ = [.1, .15, .2, .25][T - 1];
-    stage.innerHTML = `<div class="rg-field">${[0, 1, 2].map(r => `<div class="rg-lane l${r}"><i class="rg-bags"></i></div>`).join('')}</div><div class="rg-bar"><div class="rg-ammo"></div><button class="btn small rg-reload" type="button">Reload (R)</button><span class="rg-hearts"></span></div>`;
+    stage.innerHTML = `<div class="rg-field">${[0, 1, 2].map(r => `<div class="rg-lane l${r}"><i class="rg-bags"></i>${SP(pick(['crate', 'crate2', 'crate_mil']), 'rg-crate c' + r)}</div>`).join('')}</div><div class="rg-bar"><div class="rg-ammo"></div><button class="btn small rg-reload" type="button">${SP('bullets')}Reload (R)</button><span class="rg-hearts"></span></div>`;
     const field = stage.querySelector('.rg-field'), lanes = Array.from(stage.querySelectorAll('.rg-lane')), ammoEl = stage.querySelector('.rg-ammo'), hearts = stage.querySelector('.rg-hearts');
     let t = 0, next = .6, ammo = mag, reloading = 0, hits = 0, misses = 0, escaped = 0, civHit = 0, lives = 3, over = false, targets = [];
-    const drawAmmo = () => { ammoEl.innerHTML = Array.from({ length: mag }, (_, i) => `<i class="${i < ammo ? 'on' : ''}"></i>`).join('') + (reloading > 0 ? '<b>Reloading…</b>' : ''); hearts.innerHTML = '♥'.repeat(lives) + '<i>' + '♥'.repeat(3 - lives) + '</i>'; };
+    const drawAmmo = () => { ammoEl.innerHTML = Array.from({ length: mag }, (_, i) => SP('cartridge', i < ammo ? 'on' : 'off')).join('') + (reloading > 0 ? '<b>Reloading…</b>' : ''); hearts.innerHTML = [0, 1, 2].map(i => SP('ico_heart', i < lives ? 'on' : 'off')).join(''); };
     drawAmmo();
     const reload = () => { if (reloading > 0 || ammo === mag || over) return; reloading = reloadT; snd('ratchet'); drawAmmo(); };
     on(stage.querySelector('.rg-reload'), 'click', reload); on(document, 'keydown', (e) => { if (e.key === 'r' || e.key === 'R') reload(); });
@@ -339,6 +366,7 @@ DE.UI.MG = (function () {
   function forgeMenu() {
     const s = S(); if (!s) return;
     const lvl = DE.Gear.forgeLevel(s); const g = DE.Gear.ensure(s);
+    preload(['furnace', 'anvil_base', 'hammer', 'barrels', 'pillar', 'plank', 'arrow', 'btn_hammer'].concat(USES.common));
     const body = shell('Blacksmith Forge', DE.Icons.room('forge', 'mg-room'), lvl ? `Forge level ${lvl} · ${g.items.length} item${g.items.length === 1 ? '' : 's'} in stock · ${g.ammo} rounds` : 'Build a Blacksmith Forge');
     const stat = (r) => r.kind === 'weapon' ? `×${r.dmg.toFixed(2)} damage · ${r.dur} waves${r.ammo ? ' · ' + r.ammo + ' rnd/wave' : ' · no ammo'}` : r.kind === 'armor' ? `stops ${Math.round(r.guard * 100)}% of injuries & bites · ${r.dur} hits` : `${r.amount} rounds (more if well made)`;
     body.innerHTML = `<div class="fg-list">${DE.Gear.recipes().map(r => { const c = DE.Gear.canCraft(s, r.id);
@@ -348,15 +376,18 @@ DE.UI.MG = (function () {
       <p class="muted center">Forged gear goes to the Armory; guards carry it into fights. ${DE.Bunker && Object.values(s.rooms).some(r => r.type === 'armory' && r.level > 0) ? '' : 'Build an Armory to hand it out.'}</p>`;
     body.querySelectorAll('.fg-go').forEach(b => b.addEventListener('click', () => { snd('click'); forge(body, b.dataset.id); }));
   }
+  /* item pictures: weapons and gear from the item / workshop sheets (two long guns from the weapon sprites) */
+  const ITEM_SP = { machete: 'mg/machete', pistol: 'mg/pistol', shotgun: 'mg/shotgun', rifle: 'sprites/rifle', carbine: 'mg/ak', marksman: 'sprites/sniper',
+    vest: 'mg/armor_vest', riot: 'mg/armor_riot', plate: 'mg/armor_plate', ammo: 'mg/bullets' };
   function itemIcon(r) {
-    if (r.kind === 'ammo' || r.id === 'ammo') return `<svg viewBox="0 0 40 40" class="fg-svg"><rect x="6" y="14" width="28" height="20" rx="3" fill="#5a6f3a" stroke="#1c1020" stroke-width="2.5"/><path d="M10 14 v-6 q2 -4 4 0 v6 M18 14 v-6 q2 -4 4 0 v6 M26 14 v-6 q2 -4 4 0 v6" fill="#c9a24a" stroke="#1c1020" stroke-width="2"/></svg>`;
-    if (r.kind === 'armor') return `<svg viewBox="0 0 40 40" class="fg-svg"><path d="M8 8 l8 -3 q4 4 8 0 l8 3 l-2 8 v18 h-20 v-18 z" fill="${r.id === 'plate' ? '#a9b4c8' : r.id === 'riot' ? '#3a4a6a' : '#8a7a5a'}" stroke="#1c1020" stroke-width="2.5" stroke-linejoin="round"/><path d="M14 18 h12 M14 24 h12" stroke="#1c1020" stroke-width="1.5" opacity=".5"/></svg>`;
-    return `<span class="fg-wpn">${DE.Chars.crew('soldier', { anim: 'idle', h: 56, item: r.item })}</span>`;
+    const k = ITEM_SP[r.id] || (r.kind === 'ammo' ? 'mg/bullets' : 'mg/pistol');
+    return `<img class="sp fg-pic k-${r.kind || 'weapon'}" src="assets/${k}.png" alt="" draggable="false">`;
   }
   function forge(body, id) {
     const s = S(), r = DE.Gear.recipe(id), c = DE.Gear.canCraft(s, id); if (!c.ok) { DE.UI.toast(c.reason, 'err'); return; }
     const room = DE.Minigames.bestRoom(s, 'forge'), skill = DE.Minigames.skill(s, 'forge', room), tier = r.tier || 1;
-    body.innerHTML = `<div class="mg-hud"></div><div class="mg-stage mg-forge"><div class="fg-scene"><div class="fg-furnace"><i class="fg-fire"></i></div><div class="fg-anvil"><i class="fg-bar"></i><i class="fg-hammer"></i><span class="fg-sparks"></span></div></div><div class="fg-ui"></div></div>`;
+    body.innerHTML = `<div class="mg-hud"></div><div class="mg-stage mg-forge"><div class="fg-scene">${SP('pillar', 'fg-pil')}<div class="fg-furnace">${SP('furnace')}<i class="fg-fire"></i></div><div class="fg-anvil">${SP('anvil_base', 'fg-anv')}<i class="fg-bar"></i>${SP('hammer', 'fg-hammer')}<span class="fg-sparks"></span></div>${SP('barrels', 'fg-tub')}
+      <div class="fg-craft"><span class="fg-slot">${DE.Icons.res('scrap', 'fg-mat')}</span>${SP('arrow', 'fg-arr')}<span class="fg-slot out">${itemIcon(r)}</span></div>${SP('plank', 'fg-plank')}</div><div class="fg-ui"></div></div>`;
     const hud = body.querySelector('.mg-hud'), ui = body.querySelector('.fg-ui'), bar = body.querySelector('.fg-bar'), fire = body.querySelector('.fg-fire'), hammer = body.querySelector('.fg-hammer'), sparks = body.querySelector('.fg-sparks');
     const score = { heat: 0, hammer: 0, quench: 0 }, chal = CHAL.forge(); let perfect = 0;
     const chalTag = `<span class="mg-hchal">${ic('trophy')} ${esc(chal.text)}</span>`;
@@ -380,7 +411,7 @@ DE.UI.MG = (function () {
     const hammerPhase = () => {
       const strikes = 3 + tier; let n = 0, sum = 0, x = 0, dir = 1;
       hud.innerHTML = `<b>2 · Hammer</b><span>Strike when the marker is in the green — ${strikes} blows</span>` + chalTag;
-      ui.innerHTML = `<div class="fg-track"><i class="fg-sweet"></i><b class="fg-mark"></b></div><button class="btn primary fg-strike" type="button">Strike (Space)</button><div class="fg-blows"></div>`;
+      ui.innerHTML = `<div class="fg-track"><i class="fg-sweet"></i><b class="fg-mark"></b></div><button class="fg-strike" type="button" aria-label="Strike">${SP('btn_hammer')}<small>Strike · Space</small></button><div class="fg-blows"></div>`;
       const mark = ui.querySelector('.fg-mark'), sweet = ui.querySelector('.fg-sweet'), blows = ui.querySelector('.fg-blows');
       const width = () => Math.max(.06, (.26 - .03 * tier - .02 * n) * (1 + skill));
       const strike = () => { if (n >= strikes) return; const w = width(), acc = Math.max(0, 1 - Math.abs(x - .5) / (w / 2) * .5 - Math.max(0, Math.abs(x - .5) - w / 2) * 3); sum += Math.min(1, acc); n++; if (acc > .8) perfect++;
@@ -405,6 +436,7 @@ DE.UI.MG = (function () {
       const met = chal.id === 'perfect' ? perfect >= 2 : chal.id === 'cherry' ? score.quench >= .75 : score.heat >= .9;
       const sc = Math.max(0, Math.min(1, .3 * score.heat + .5 * score.hammer + .2 * score.quench + (met ? .08 : 0)));
       const res = DE.Gear.craft(S(), id, sc); if (!res.ok) { DE.UI.toast(res.reason, 'err'); return close(); }
+      const outSlot = body.querySelector('.fg-slot.out'); if (outSlot) outSlot.classList.add('made');
       const mg = DE.Minigames.ensure(S()); mg.plays.forge = (mg.plays.forge || 0) + 1; mg.best.forge = Math.max(mg.best.forge || 0, sc); mg.xp.forge = (mg.xp.forge || 0) + Math.round(10 + 25 * sc + (met ? 15 : 0));
       const q = res.quality, out = { rewards: {}, lines: res.kind === 'ammo' ? ['+' + res.amount + ' rounds for the armory'] : [q.name + ' ' + r.name + ' — ' + res.item.max + ' durability', 'Waiting in the Armory'], mastery: DE.Minigames.level(S(), 'forge') };
       const card = res.item ? `<div class="fg-made" style="--qc:${q.color}"><div class="fg-ico">${itemIcon(r)}</div><b>${esc(q.name)} ${esc(r.name)}</b><small>Heat ${Math.round(score.heat * 100)}% · Hammer ${Math.round(score.hammer * 100)}% · Quench ${Math.round(score.quench * 100)}%</small></div>` : '';
@@ -421,7 +453,7 @@ DE.UI.MG = (function () {
     const Q = (it) => DE.Data.QUALITY.find(x => x.id === it.q) || DE.Data.QUALITY[1];
     const itemHtml = (it, act) => { const d = DE.Gear.defOf(it), q = Q(it); return `<div class="ar-item ${it.dur <= 0 ? 'broken' : ''}" style="--qc:${q.color}"><div class="fg-ico">${itemIcon(Object.assign({ kind: it.kind }, d))}</div><div><b>${esc(q.name)} ${esc(d.name)}</b><i class="ar-dur"><b style="width:${Math.round(100 * it.dur / it.max)}%"></b></i><small>${it.dur}/${it.max}${it.kind === 'weapon' ? ' · ×' + (1 + (d.dmg - 1) * q.mult).toFixed(2) + ' dmg' : ' · stops ' + Math.round(Math.min(.6, d.guard * q.mult) * 100) + '%'}</small></div>${act}</div>`; };
     const free = g.items.filter(i => !i.owner);
-    body.innerHTML = `<div class="ar-wrap"><div class="ar-guards">${guards.length ? guards.map(v => { const gi = DE.Gear.itemsOf(s, v.id); return `<button class="ar-guard ${v.id === sel ? 'on' : ''}" data-sid="${v.id}" type="button">${DE.Icons.prof(v.profession, 'ava')}<span><b>${esc(v.name)}</b><small>${gi.weapon ? esc(DE.Data.WEAPONS[gi.weapon.type].name) : 'No weapon'} · ${gi.armor ? esc(DE.Data.ARMORS[gi.armor.type].name) : 'no armour'}${v.training ? ' · training ' + (+v.training).toFixed(1) : ''}</small></span><em>×${DE.Gear.guardMult(s, v).toFixed(2)}</em></button>`; }).join('') : '<p class="muted">No guards on duty. Post survivors as guards in the Defense screen.</p>'}</div>
+    body.innerHTML = `<div class="ar-deco">${['rifle_rack', 'gun_cabinet', 'armor_vest', 'ammo_cabinet', 'armor_plate', 'helmet_shelf'].map(n => SP(n)).join('')}</div><div class="ar-wrap"><div class="ar-guards">${guards.length ? guards.map(v => { const gi = DE.Gear.itemsOf(s, v.id); return `<button class="ar-guard ${v.id === sel ? 'on' : ''}" data-sid="${v.id}" type="button">${DE.Icons.prof(v.profession, 'ava')}<span><b>${esc(v.name)}</b><small>${gi.weapon ? esc(DE.Data.WEAPONS[gi.weapon.type].name) : 'No weapon'} · ${gi.armor ? esc(DE.Data.ARMORS[gi.armor.type].name) : 'no armour'}${v.training ? ' · training ' + (+v.training).toFixed(1) : ''}</small></span><em>×${DE.Gear.guardMult(s, v).toFixed(2)}</em></button>`; }).join('') : '<p class="muted">No guards on duty. Post survivors as guards in the Defense screen.</p>'}</div>
       <div class="ar-side">${sel ? `<h4>${esc(s.survivors[sel].name)}'s kit</h4>${['weapon', 'armor'].map(k => { const it = DE.Gear.itemsOf(s, sel)[k]; return it ? itemHtml(it, `<button class="btn tiny" data-un="${it.id}" type="button">Take back</button>`) : `<div class="ar-empty">No ${k === 'weapon' ? 'weapon' : 'armour'}</div>`; }).join('')}` : ''}
         <h4>In the racks <small class="muted">${free.length}</small></h4><div class="ar-rack">${free.length ? free.map(it => itemHtml(it, `<span class="ar-acts">${sel ? `<button class="btn tiny primary" data-eq="${it.id}" type="button">Hand out</button>` : ''}${it.dur < it.max ? `<button class="btn tiny" data-rep="${it.id}" type="button">Repair ${DE.Util.costText(DE.Gear.repairCost(it))}</button>` : ''}<button class="btn tiny danger" data-sal="${it.id}" type="button">Salvage</button></span>`)).join('') : '<p class="muted">Empty. Forge weapons and armour at the Blacksmith Forge.</p>'}</div>
         <div class="btn-row"><button class="btn" data-auto="1" type="button">Equip all guards</button>${DE.Gear.forgeLevel(s) ? '<button class="btn" data-forge="1" type="button">Open the forge</button>' : ''}</div></div></div>`;
