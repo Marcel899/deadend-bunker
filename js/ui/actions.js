@@ -213,7 +213,11 @@ DE.Actions = (function () {
  };
 
  /* ---- research ---- */
- A.researchBranch = (p) => { UI().ui.researchBranch = p.branch; UI().refresh(true); };
+ A.researchBranch = (p) => { if (UI().ui.researchBranch !== p.branch) { UI().ui.rtSel = null; DE.UI.RTree.replay(); } UI().ui.researchBranch = p.branch; DE.Audio.sfx('click'); UI().renderDrawer(true); };
+ /** Pick a project in the tech tree (switching to its branch when it lives in another one). */
+ A.rtSelect = (p) => { if (p.branch && p.branch !== UI().ui.researchBranch) { UI().ui.researchBranch = p.branch; DE.UI.RTree.replay(); } UI().ui.rtSel = p.id; DE.Audio.sfx('click'); UI().renderDrawer(true); };
+ /** From the tree straight to placing the room it unlocked. */
+ A.rtBuild = (p) => { if (!DE.Bunker.isUnlocked(S(), p.type)) { const why = DE.Bunker.lockReason ? DE.Bunker.lockReason(S(), p.type) : null; return fail({ reason: why || 'Not available yet' }); } UI().closeDrawer(); DE.UI.Placement.start({ type: p.type }); };
  A.research = (p) => { const r = DE.Research.start(S(), p.id); if (!r.ok) return fail(r); UI().toast('Researching ' + DE.Data.RESEARCH[p.id].name); done(); };
  A.cancelResearch = () => { DE.Research.cancel(S()); done(); };
 

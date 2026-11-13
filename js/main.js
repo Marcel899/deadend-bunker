@@ -124,7 +124,7 @@ DE.Game = (function () {
  if (e.facility) DE.UI.modal({ title: DE.Icons.img('facility', 'ico-inline') + ' Discovery: ' + esc(e.facility.name), cls: 'discovery', html: `<p class="lore">${esc(e.facility.lore)}</p><p>Floor B${e.depth} now contains a unique room: <b>${DE.Icons.room(e.facility.room, 'ico-inline')} ${esc(DE.Data.ROOMS[e.facility.room].name)}</b> — ${esc(DE.Data.ROOMS[e.facility.room].desc)}</p>` });
  else DE.UI.toast('Floor <b>B' + e.depth + '</b> is ready to build on', 'ok', 4000, 'floors');
  if (e.spoils && Object.values(e.spoils).some(v => v > 0)) { DE.UI.toast('Rubble from the ' + esc(e.layer || 'rock') + ': ' + U().costText(e.spoils), 'ok', 4500, 'dig'); DE.UI.Bunker.collectAt('#dig-site', e.spoils); }
- if (e.find) { const f = e.find; const what = f.loot ? ' ' + U().costText(f.loot) : ''; DE.UI.toast(esc(f.text) + what, 'ok', 5500, f.kind === 'survivor' ? 'pop' : f.kind === 'notes' ? 'research' : 'chest'); log('Digging B' + e.depth + ': ' + f.text); }
+ if (e.find) { const f = e.find; const what = f.loot ? ' ' + U().costText(f.loot) : ''; DE.UI.toast(esc(f.text) + what, 'ok', 5500, f.kind === 'survivor' ? 'pop' : f.kind === 'notes' ? 'research' : f.kind === 'tech' ? 'mat.' + f.mat : 'chest'); log('Digging B' + e.depth + ': ' + f.text); }
  break;
  case 'wave': {
  const r = e.result; DE.UI.Bunker.playWave(r);

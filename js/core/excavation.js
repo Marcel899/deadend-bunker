@@ -120,14 +120,20 @@ DE.Excavation = (function () {
     if (!U().chance(p)) return null;
     return U().weightedPick(candidates);
   }
-  /** Something turned up while digging: a supply cache, a survivor trapped in an old shelter, or
-   * research notes. Bigger finds deeper down. */
+  /** Something turned up while digging: a supply cache, a survivor trapped in an old shelter,
+   * research notes or, deeper down, sealed pre-war technology (rare materials that otherwise only
+   * expeditions bring home). Bigger finds deeper down. */
   function rollFind(state, depth) {
     const scale = Math.pow(1.55, depth - 2), r = Math.random();
     const give = (loot) => { for (const k in loot) { state.resources[k] = Math.min(DE.Economy.storageCap(state, k), state.resources[k] + loot[k]); } return loot; };
     if (r < .45) return { kind: 'cache', text: 'An old supply cache in the rubble.', loot: give(depth >= 3 ? { scrap: Math.round(140 * scale), concrete: Math.round(30 * scale) } : { scrap: Math.round(160 * scale) }) };
     if (r < .62 && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state)) { const sv = DE.Survivors.spawn(state); state.stats.recruited++; return { kind: 'survivor', text: sv.name + ' was trapped in a collapsed shelter — and is grateful.', name: sv.name, id: sv.id }; }
     if (r < .8) return { kind: 'notes', text: 'Water-stained research notes in a sealed tube.', loot: give({ research: Math.round(45 * scale) }) };
+    if (depth >= 4 && r < .93) {
+      const m = U().pick(depth >= 6 ? ['circuits', 'alloy', 'cells'] : ['circuits', 'alloy']), n = depth >= 8 ? 2 : 1;
+      state.materials[m] = (state.materials[m] || 0) + n;
+      return { kind: 'tech', text: 'Pre-war technology sealed in the rock: ' + n + ' ' + DE.Data.MATERIALS[m].short + '.', mat: m, n };
+    }
     return null;
   }
 

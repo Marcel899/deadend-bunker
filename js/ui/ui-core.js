@@ -12,7 +12,7 @@ DE.UI = (function () {
  selection: null,  // {type:'room', id} | {type:'slot', depth, slot}
  drawer: null,
  buyMode: 1,
- researchBranch: 'economy',
+ researchBranch: 'economy', rtSel: null,
  expedition: { location: 'suburbs', members: [] },
  survivorFilter: 'all',
  lastDrawerHtml: '', lastSideHtml: '',
@@ -24,7 +24,7 @@ DE.UI = (function () {
  /* While a finger is on a scrolling panel, or its momentum is still running, its HTML is not swapped:
   * replacing the content mid-scroll stops iOS momentum scrolling and makes the panel jump. */
  const scrollAt = new WeakMap(); let touching = null;
- const SCROLLERS = '#drawer-body, #sidepanel, #bunker-wrap, .modal-body';
+ const SCROLLERS = '[data-keep], #drawer-body, #sidepanel, #bunker-wrap, .modal-body';
  function scrollBusy(el) { if (!el) return false; if (touching && (touching === el || el.contains(touching) || touching.contains(el))) return true; const t = scrollAt.get(el); return !!t && Date.now() - t < 700; }
  function watchScrolling() {
    const mark = (el) => { if (el) scrollAt.set(el, Date.now()); };
@@ -42,7 +42,7 @@ DE.UI = (function () {
  document.addEventListener('input', e => { const el = e.target.closest && e.target.closest('[data-input]'); if (!el) return; const fn = DE.Actions[el.dataset.input]; if (fn) fn(Object.assign({}, el.dataset, { value: el.value }), el, e); });
  // subtle hover tick on interactive elements (mouse only; touch has no hover)
  let hoverEl = null;
- document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest('.btn:not(:disabled), .nav-btn, .menu-btn, .res, .chip, .dk-sec-head, .rs-card.avail, .cell, .room, .ov-tile'); if (el && el !== hoverEl) { hoverEl = el; DE.Audio.sfx('hover'); } else if (!el) hoverEl = null; });
+ document.addEventListener('pointerover', e => { if (e.pointerType !== 'mouse') return; const el = e.target.closest('.btn:not(:disabled), .nav-btn, .menu-btn, .res, .chip, .dk-sec-head, .rt-node, .rt-tab, .cell, .room, .ov-tile'); if (el && el !== hoverEl) { hoverEl = el; DE.Audio.sfx('hover'); } else if (!el) hoverEl = null; });
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-place]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ type: el.dataset.place }, e); });
  document.addEventListener('pointerdown', e => { const el = e.target.closest('[data-move]'); if (!el || e.button !== 0) return; e.preventDefault(); DE.UI.Placement.start({ roomId: el.dataset.move }, e); });
  const KEYS = { b: 'bunker', s: 'survivors', r: 'research', x: 'excavate', d: 'defense', e: 'expeditions', t: 'economy', l: 'legacy', o: 'settings' };
@@ -432,14 +432,18 @@ DE.UI = (function () {
  const def = DE.UI.Drawers[ui.drawer]; if (!def) return;
  if (!force && def.live === false && ui.lastDrawerHtml) return; // drawers with text inputs only re-render on demand
  $('#drawer-title').innerHTML = DE.Icons.nav(ui.drawer, 'ico-title') + def.title(state());
- if (!force && scrollBusy($('#drawer-body'))) { if (def.tick) def.tick(state()); return; }
+ // somebody is scrolling the drawer or one of its inner panes (the research tree): wait
+ if (!force && (scrollBusy($('#drawer-body')) || Array.from($('#drawer-body').querySelectorAll('[data-keep]')).some(scrollBusy))) { if (def.tick) def.tick(state()); return; }
  // someone is typing in a search box or has a picker open: rebuilding would steal it from them
  const ae = document.activeElement;
  if (!force && ae && /^(INPUT|SELECT|TEXTAREA)$/.test(ae.tagName) && $('#drawer-body').contains(ae)) { if (def.tick) def.tick(state()); return; }
  const html = def.render(state());
  if (force || html !== ui.lastDrawerHtml) {
  const body = $('#drawer-body'); const st = body.scrollTop;
+ // inner panes that scroll on their own keep their place too (data-keep="key")
+ const keep = {}; body.querySelectorAll('[data-keep]').forEach(e => { keep[e.dataset.keep] = [e.scrollLeft, e.scrollTop]; });
  body.innerHTML = html; body.scrollTop = st; ui.lastDrawerHtml = html;
+ body.querySelectorAll('[data-keep]').forEach(e => { const k = keep[e.dataset.keep]; if (k) { e.scrollLeft = k[0]; e.scrollTop = k[1]; } });
  }
  if (def.tick) def.tick(state());   // live bits (positions, timers) without rebuilding the HTML
  }

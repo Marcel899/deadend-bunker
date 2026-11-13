@@ -289,55 +289,9 @@ DE.UI.Drawers = (function () {
  };
 
  /* ================= RESEARCH ================= */
- /* Research: a tech tree per branch. Nodes sit in tiers by prerequisite depth and are joined by
-  * connector lines; each card shows an effect icon, name, cost/time and its state. */
- const RS_ICON = { roomMult: null, consumptionMult: 'recycle', unmannedBase: 'gear', storageMult: 'chest', globalMult: 'up', unlockRoom: 'build', buildTimeMult: 'timer', maxFloor: 'dig2',
-   powerUseMult: 'power', excavationCostMult: 'dig2', unlockTurrets: 'turret', buildCostMult: 'coin', fuelUseMult: 'res.fuel', noiseMult: 'noise', healMult: 'medkit', housingPerLevel: 'rooms',
-   unlockTraps: 'traps', wallHpMult: 'wallicon', workerEff: 'repair2', guardDmgMult: 'guards', turretDmgMult: 'turret', moraleBonus: 'morale', survivorConsumptionMult: 'res.food', offlineCapHours: 'timer', xpMult: 'star' };
- function rsIcon(n) { const e = n.effects[0] || {}; if (e.type === 'roomMult' || e.type === 'unlockRoom') return DE.Icons.room(e.room, 'rs-ico'); return DE.Icons.img(RS_ICON[e.type] || 'research', 'rs-ico'); }
- function rsLayout(nodes) {
-   const depth = {}; const d = (n) => depth[n.id] != null ? depth[n.id] : (depth[n.id] = n.requires.length ? 1 + Math.max(...n.requires.map(r => d(DE.Data.RESEARCH[r]))) : 0);
-   nodes.forEach(d); const tiers = []; nodes.forEach(n => (tiers[depth[n.id]] = tiers[depth[n.id]] || []).push(n));
-   // order each tier by the average column of its parents so lines cross less
-   const col = {}; tiers.forEach((t, i) => { if (i) t.sort((a, b) => avg(a) - avg(b)); t.forEach((n, k) => col[n.id] = k); });
-   function avg(n) { return n.requires.reduce((s, r) => s + (col[r] || 0), 0) / Math.max(1, n.requires.length); }
-   return { tiers, col, depth };
- }
- const research = {
- title: (s) => `Research <small>${U().fmt(s.resources.research)} research points available</small>`,
- render(s) {
- const cur = s.research.current; const now = Date.now(); const B = DE.Data.RESEARCH_BRANCHES;
- const hasLab = Object.values(s.rooms).some(r => (r.type === 'lab' || r.type === 'server') && r.level > 0);
- const rate = (s._rates && s._rates.net && s._rates.net.research) || 0;
- let html = `<div class="rs-top"><div class="rs-points">${DE.Icons.img('research', 'rs-big')}<span><small>Research points</small><b>${U().fmt(s.resources.research)}</b><i class="${rate > 0 ? 'pos' : ''}">${U().fmtRate(rate)}</i></span></div>`;
- if (cur) { const n = DE.Data.RESEARCH[cur.id]; const pct = 100 * (1 - (cur.endsAt - now) / (cur.duration * 1000));
-   html += `<div class="rs-current">${rsIcon(n)}<div><small>Researching</small><b>${esc(n.name)}</b><div class="dk-bar"><i style="width:${pct}%;background:linear-gradient(180deg,#d7a6ff,#9a5ae0)"></i></div><small>${U().fmtTime((cur.endsAt - now) / 1000)} left</small></div><button class="btn small danger" data-action="cancelResearch">Cancel</button></div>`; }
- else html += `<div class="rs-current idle">${DE.Icons.img(hasLab ? 'info' : 'warning', 'rs-ico')}<div><b>${hasLab ? 'No project running' : 'No Research Lab'}</b><small>${hasLab ? 'Pick an available project below.' : 'Build a Research Lab to generate research points.'}</small></div></div>`;
- html += `</div>`;
- const br = ui().researchBranch;
- html += `<div class="rs-tabs">${Object.keys(B).map(b => { const nodes = DE.Research.byBranch(b); const done = nodes.filter(n => s.research.done[n.id]).length; return `<button class="btn ${br === b ? 'active' : ''}" data-action="researchBranch" data-branch="${b}">${DE.Icons.branch(b, 'ico-btn')} ${B[b].name} <span class="cost">${done}/${nodes.length}</span></button>`; }).join('')}</div>`;
- const nodes = DE.Research.byBranch(br); const L = rsLayout(nodes);
- const CW = 200, CH = 128, GX = 26, GY = 44, cols = Math.max(...L.tiers.map(t => t.length));
- const W = cols * CW + (cols - 1) * GX, H = L.tiers.length * CH + (L.tiers.length - 1) * GY;
- const pos = (n) => { const t = L.tiers[L.depth[n.id]]; const off = (W - (t.length * CW + (t.length - 1) * GX)) / 2; return { x: off + L.col[n.id] * (CW + GX), y: L.depth[n.id] * (CH + GY) }; };
- let lines = '';
- nodes.forEach(n => n.requires.forEach(r => { const a = pos(DE.Data.RESEARCH[r]), b = pos(n); const x1 = a.x + CW / 2, y1 = a.y + CH, x2 = b.x + CW / 2, y2 = b.y, my = (y1 + y2) / 2;
-   const lit = s.research.done[r]; lines += `<path d="M${x1} ${y1} C${x1} ${my} ${x2} ${my} ${x2} ${y2}" class="rs-link ${lit ? 'lit' : ''}"/>`; }));
- let cards = '';
- nodes.forEach(n => {
-   const done = s.research.done[n.id]; const avail = DE.Research.isAvailable(s, n.id); const c = DE.Research.canStart(s, n.id); const active = cur && cur.id === n.id;
-   const cls = done ? 'done' : active ? 'active' : avail ? 'avail' : 'locked'; const p = pos(n);
-   const state = done ? `<span class="rs-state ok">${DE.Icons.img('check', '')} Done</span>` : active ? `<span class="rs-state run">In progress</span>`
-     : avail ? `<button class="btn primary small ${c.ok ? '' : 'cant'}" data-action="research" data-id="${n.id}" ${c.ok ? '' : 'disabled'} title="${esc(c.reason || '')}">Research</button>`
-     : `<span class="rs-state lock">${DE.Icons.img('lock', '')} Locked</span>`;
-   cards += `<div class="rs-card ${cls}" style="left:${p.x}px;top:${p.y}px;width:${CW}px;height:${CH}px" title="${esc(n.desc)}${n.requires.length && !done ? '\nRequires: ' + n.requires.map(r => DE.Data.RESEARCH[r].name).join(', ') : ''}">
-     <div class="rs-head">${rsIcon(n)}<b>${esc(n.name)}</b></div><p>${esc(n.desc)}</p>
-     <div class="rs-foot"><span class="rs-cost">${DE.Icons.img('research', '')}${U().fmt(n.cost)} · ${U().fmtTime(DE.Research.duration(s, n.id))}</span>${state}</div></div>`;
- });
- html += `<div class="rs-tree-wrap"><div class="rs-tree" style="width:${W}px;height:${H}px"><svg class="rs-lines" width="${W}" height="${H}">${lines}</svg>${cards}</div></div>`;
- return html;
- },
- };
+ /* The tech tree lives in js/ui/research.js (DE.UI.RTree): it renders only when something meaningful
+  * changes and keeps the live numbers current in tick(). */
+ const research = { title: (s) => DE.UI.RTree.title(s), render: (s) => DE.UI.RTree.render(s), tick: (s) => DE.UI.RTree.tick(s) };
 
  /* ================= EXCAVATE ================= */
  /* The dig site: the dig in progress or the next floor (what the rock asks for and what it gives
