@@ -273,14 +273,50 @@ DE.UI.Overworld = (function () {
         <rect x="${doorL - 30}" y="424" width="24" height="${GROUND + 24 - 424}" fill="url(#ow-hazard)"/><rect x="${doorR + 6}" y="424" width="24" height="${GROUND + 24 - 424}" fill="url(#ow-hazard)"/>
         <path d="M${doorL - 30} 424 H${doorL - 6} V${GROUND + 24} M${doorR + 6} 424 H${doorR + 30} V${GROUND + 24}" fill="none"/>
         <g class="ow-door"><rect x="${doorL}" y="430" width="100" height="${GROUND + 24 - 430}" fill="url(#ow-steel)"/><rect x="${doorR - 100}" y="430" width="100" height="${GROUND + 24 - 430}" fill="url(#ow-steel)"/>
-          <path d="M${doorL} 452 H${doorL + 100} M${doorL} 480 H${doorL + 100} M${doorR - 100} 452 H${doorR} M${doorR - 100} 480 H${doorR}" stroke="#2d2f36" stroke-width="3"/><circle cx="${doorL + 88}" cy="468" r="6" fill="#d7d9de"/><circle cx="${doorR - 88}" cy="468" r="6" fill="#d7d9de"/></g>
+          <rect x="${doorL}" y="430" width="${doorR - doorL}" height="12" fill="#3a3c44"/><rect x="${doorL}" y="494" width="${doorR - doorL}" height="${GROUND + 24 - 494}" fill="url(#ow-hazard)"/>
+          <path d="M${doorL} 494 H${doorR} M${doorL} 442 H${doorR} M${c} 430 V${GROUND + 24}" stroke-width="4"/>
+          <path d="M${doorL + 14} 452 V488 M${doorL + 36} 452 V488 M${doorR - 14} 452 V488 M${doorR - 36} 452 V488" stroke="#2d2f36" stroke-width="3" opacity=".7"/>
+          <g fill="#c9ccd4" stroke="none">${[doorL + 6, doorL + 94, doorR - 94, doorR - 6].map(x => [448, 470, 488].map(y => `<circle cx="${x}" cy="${y}" r="2.6"/>`).join('')).join('')}</g>
+          <g class="ow-vault"><circle cx="${c}" cy="466" r="27" fill="#5a5d66" stroke-width="5"/><circle cx="${c}" cy="466" r="19" fill="none" stroke="#2d2f36" stroke-width="4"/>
+            <path d="M${c - 19} 466 H${c + 19} M${c} 447 V485 M${c - 13} 452 L${c + 13} 480 M${c + 13} 452 L${c - 13} 480" stroke="#2d2f36" stroke-width="4" stroke-linecap="round"/><circle cx="${c}" cy="466" r="7" fill="#d7d9de" stroke-width="3"/>
+            <path d="M${c - 20} 456 q8 -10 20 -10" fill="none" stroke="#fff" stroke-width="2.5" opacity=".35"/></g></g>
         <rect class="ow-doorlamp" x="${c - 49}" y="398" width="98" height="12" rx="5" fill="url(#ow-lamp)"/>
         <rect x="${l + 82}" y="430" width="30" height="26" rx="3" fill="#ffb13a"/><rect x="${r - 112}" y="430" width="30" height="26" rx="3" fill="#ffb13a"/>
         <path d="M${l + 86} 438 H${l + 108} M${l + 86} 446 H${l + 108} M${r - 108} 438 H${r - 86} M${r - 108} 446 H${r - 86}" stroke="#6b3c10" stroke-width="2.5"/>
       </g>
-      ${wallTiers()}
+      ${wallTiers()}${bunkerDetail()}
       <path d="M${l + 30} 360 H${r - 30}" stroke="#ffe3b0" stroke-width="3" opacity=".55" stroke-linecap="round"/><path d="M${l + 84} 374 H${r - 84}" stroke="#fff4d0" stroke-width="2" opacity=".5"/>
       <ellipse class="ow-doorglow" cx="${c}" cy="424" rx="130" ry="40" fill="url(#ow-lampglow)"/><ellipse class="ow-doorglow" cx="${c}" cy="${GROUND + 6}" rx="120" ry="12" fill="#ffd36a" opacity=".22" filter="url(#ow-blur6)"/>
+    </g>`;
+  }
+  /* Details on the shell at every wall level: grime at the foot, a riveted lintel with a stencilled
+   * name, louvred vents, an exhaust stack that puffs, a keypad by the door, roof floodlights, sandbags
+   * on the roof (until the parapet is built) and in front, and a red alarm lamp over the door that
+   * flashes when a wave is coming. */
+  function bunkerDetail() {
+    const { l, r, c, doorL, doorR } = BK, B = GROUND + 24;
+    const bag = (x, y, w, col) => `<path d="M${x - w / 2} ${y} q0 -12 ${w / 2} -12 q${w / 2} 0 ${w / 2} 12 q0 5 ${-w / 2} 5 q${-w / 2} 0 ${-w / 2} -5 z" fill="${col}"/><path d="M${x - w / 2 + 5} ${y - 5} q${w / 2 - 5} -4 ${w - 10} 0" fill="none" stroke="#7a6038" stroke-width="2" opacity=".6"/>`;
+    const pile = (x0, n, rows) => { let o = ''; for (let rr = 0; rr < rows; rr++) for (let k = 0; k < n - rr; k++) o += bag(x0 + k * 26 + rr * 13, GROUND + 6 - rr * 13, 28, (k + rr) % 2 ? '#c9a86a' : '#b8965a'); return o; };
+    const rivets = (y) => Array.from({ length: 15 }, (_, k) => `<circle cx="${l + 92 + k * 22.5}" cy="${y}" r="2.4"/>`).join('');
+    const louver = (x, y) => `<rect x="${x}" y="${y}" width="40" height="24" rx="3" fill="#4e5058"/><path d="M${x + 4} ${y + 6} h32 M${x + 4} ${y + 12} h32 M${x + 4} ${y + 18} h32" stroke="#1c1020" stroke-width="2.5"/>`;
+    const trefoil = (x, y, rad) => `<circle cx="${x}" cy="${y}" r="${rad * .22}"/>` + [0, 120, 240].map(a => { const a1 = (a - 90 - 30) * Math.PI / 180, a2 = (a - 90 + 30) * Math.PI / 180, r1 = rad * .32, r2 = rad;
+      return `<path d="M${(x + Math.cos(a1) * r1).toFixed(1)} ${(y + Math.sin(a1) * r1).toFixed(1)} L${(x + Math.cos(a1) * r2).toFixed(1)} ${(y + Math.sin(a1) * r2).toFixed(1)} A${r2} ${r2} 0 0 1 ${(x + Math.cos(a2) * r2).toFixed(1)} ${(y + Math.sin(a2) * r2).toFixed(1)} L${(x + Math.cos(a2) * r1).toFixed(1)} ${(y + Math.sin(a2) * r1).toFixed(1)} A${r1} ${r1} 0 0 0 ${(x + Math.cos(a1) * r1).toFixed(1)} ${(y + Math.sin(a1) * r1).toFixed(1)} z"/>`; }).join('');
+    return `<g class="ow-bk-detail">
+      <defs><linearGradient id="ow-grime" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#2a1a12" stop-opacity="0"/><stop offset="1" stop-color="#2a1a12" stop-opacity=".42"/></linearGradient></defs>
+      <rect x="${l}" y="${B - 46}" width="${doorL - 30 - l}" height="46" fill="url(#ow-grime)"/><rect x="${doorR + 30}" y="${B - 46}" width="${r - doorR - 30}" height="46" fill="url(#ow-grime)"/>
+      <g fill="#3a3c44" opacity=".55">${rivets(377)}${rivets(397)}</g>
+      <text x="${l + 96}" y="394" class="ow-stencil">SHELTER 07</text><g fill="#3a3a3a" opacity=".55">${trefoil(r - 104, 387, 11)}</g>
+      <g stroke="${INK}" stroke-width="3" stroke-linejoin="round">${louver(l + 24, 366)}${louver(r - 64, 366)}
+        <rect x="${doorR + 36}" y="438" width="24" height="34" rx="4" fill="#3a3f4a"/><rect x="${doorR + 40}" y="444" width="16" height="12" rx="2" fill="#1a2a20"/><circle class="ow-keyled" cx="${doorR + 48}" cy="465" r="3.2" fill="#6fdc4a"/>
+        <path d="M${doorR + 48} 438 V420 H${r - 18} V368" fill="none" stroke="#2a2a30" stroke-width="4"/>
+        <g class="ow-exhaust-pipe"><rect x="${l + 6}" y="300" width="18" height="${440 - 300}" fill="#6a6e78"/><rect x="${l + 2}" y="292" width="26" height="12" rx="3" fill="#4e5058"/><rect x="${l + 4}" y="340" width="22" height="8" fill="#4e5058"/><rect x="${l + 4}" y="404" width="22" height="8" fill="#4e5058"/><path d="M${l + 9} 306 V436" stroke="#9a9ea8" stroke-width="3" opacity=".6"/></g>
+        <g class="ow-flood"><path d="M${l + 40} 358 V338" stroke-width="4"/><path d="M${l + 30} 336 l20 -10 l6 14 l-20 8 z" fill="#4e5058"/><path d="M${l + 50} 326 l6 14" stroke="#fff6c8" stroke-width="3"/></g>
+        <g class="ow-flood"><path d="M${r - 46} 358 V338" stroke-width="4"/><path d="M${r - 36} 336 l-20 -10 l-6 14 l20 8 z" fill="#4e5058"/><path d="M${r - 56} 326 l-6 14" stroke="#fff6c8" stroke-width="3"/></g>
+        <rect class="ow-alarm" x="${c - 10}" y="404" width="20" height="9" rx="4" fill="#ff3a2a" opacity="0"/></g>
+      <g class="ow-smoke-exhaust">${[0, 1, 2].map(k => `<circle cx="${l + 15}" cy="290" r="${9 + k * 3}" style="--k:${k}"/>`).join('')}</g>
+      <g class="lv eq-walltier-0" stroke="${INK}" stroke-width="3">${[0, 1].map(side => Array.from({ length: 7 }, (_, k) => bag(side ? r - 60 - k * 24 : l + 60 + k * 24, 358, 26, k % 2 ? '#c9a86a' : '#b8965a')).join('')).join('')}</g>
+      <g class="lv eq-walltier-1" stroke="${INK}" stroke-width="3">${[0, 1].map(side => Array.from({ length: 4 }, (_, k) => bag(side ? r - 60 - k * 24 : l + 60 + k * 24, 358, 26, k % 2 ? '#8a9a6a' : '#7a8a5a')).join('')).join('')}</g>
+      <g stroke="${INK}" stroke-width="3">${pile(doorL - 86, 3, 2)}${pile(doorR + 64, 3, 2)}</g>
     </g>`;
   }
   /* The bunker shell changes with the wall level: cracked and patched at the start (tier 0),
