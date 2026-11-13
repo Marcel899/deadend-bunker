@@ -1,0 +1,406 @@
+/* ============ ROOM SCENES & ACTORS ============
+   Rooms are cutaway environments drawn by js/ui/scenes.js. The svg fills the room; the name
+   plate, rate and progress overlays sit on top. Survivors are separate actors (js/ui/actors.js)
+   that walk between rooms in an overlay layer, so rooms themselves never re-render for them. */
+
+
+
+.room .room-scene { position: absolute; inset: 0; }
+.room .room-scene svg.scene { width: 100%; height: 100%; display: block; }
+.room .room-head { position: absolute; top: 4px; left: 6px; right: 6px; z-index: 2; pointer-events: none; }
+.room .room-name { background: rgba(28, 16, 32, .72); padding: 2px 8px; border-radius: 8px; border: 2px solid var(--ink); font-size: 12px; flex: 0 1 auto; }
+.room .room-foot { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; pointer-events: none; padding: 3px 8px 4px; background: linear-gradient(0deg, rgba(10, 8, 14, .85), transparent); }
+.room .room-art, .room .room-deco, .room .room-lamp, .room .room-workers { display: none; }
+.room .room-progress { z-index: 3; }
+.room.selected { box-shadow: inset 0 0 0 3px var(--gold), 0 0 16px rgba(255, 197, 49, .45); }
+.room.unstaffed .room-scene { filter: saturate(.75) brightness(.9); }
+.room .room-scene { transition: filter .8s; }
+/* power out: the room goes dark in proportion to the missing power (--pw 0..1), bulbs dim */
+.room.brownout .room-scene { filter: brightness(calc(.22 + .6 * var(--pw, 0))) saturate(.7); }
+.room.brownout .p-lamp { opacity: calc(.15 + .6 * var(--pw, 0)); }
+.room.brownout .p-lamp, .room.brownout .p-lampcone, .room.brownout .p-neon { animation: flicker 1s infinite; }
+.room.building .room-scene { filter: saturate(.5) brightness(.8); }
+.room.just-upgraded .room-scene .prop { animation: installpop .8s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes installpop { 0% { transform: translateY(6px); opacity: .2; } 100% { transform: none; opacity: 1; } }
+.room .builder { position: absolute; left: 50%; bottom: 10px; transform: translateX(-50%); z-index: 2; display: none; pointer-events: none; }
+.room.building .builder, .room.upgrading .builder { display: block; }
+.room .builder .rig { height: 48px; }
+.room .vig { fill: url(#sc-vig); }
+
+/* ---- prop animations (transform-box keeps origins local) ---- */
+.scene .prop * { transform-box: fill-box; }
+.p-screen { animation: sc-flicker 3.7s steps(1) infinite; filter: drop-shadow(0 0 4px rgba(140, 210, 255, .6)); }
+@keyframes sc-flicker { 0%, 100% { opacity: 1; } 42% { opacity: .85; } 45% { opacity: 1; } 71% { opacity: .9; } 73% { opacity: 1; } }
+.p-led { animation: sc-blink 1.6s steps(1) infinite; filter: drop-shadow(0 0 2px #7dff5a); } .p-led2 { animation: sc-blink 2.3s steps(1) infinite; animation-delay: .6s; }
+@keyframes sc-blink { 0%, 60% { opacity: 1; } 61%, 100% { opacity: .25; } }
+.p-blink { animation: sc-blink 1s steps(1) infinite; }
+.p-lamp { animation: sc-lamp 5s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 220, 140, .9)); } .p-lampcone { animation: sc-lamp 5s ease-in-out infinite; }
+@keyframes sc-lamp { 0%, 100% { opacity: 1; } 48% { opacity: .85; } 50% { opacity: .6; } 52% { opacity: .9; } }
+.p-glow { animation: sc-glow 2.6s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 255, 255, .45)); }
+@keyframes sc-glow { 50% { filter: drop-shadow(0 0 9px rgba(255, 255, 255, .75)) brightness(1.15); } }
+.p-core { transform-origin: center; animation: sc-core 1.8s ease-in-out infinite; }
+@keyframes sc-core { 50% { transform: scale(1.15); opacity: .8; } }
+.p-spin { transform-origin: center; animation: sc-spin 1.2s linear infinite; }
+.p-spin-slow { transform-origin: center; animation: sc-spin 9s linear infinite; }
+.p-fan { animation: sc-spin 1.5s linear infinite; }
+.p-rotor { transform-origin: center; animation: sc-rotor .25s linear infinite; }
+@keyframes sc-spin { to { transform: rotate(360deg); } }
+@keyframes sc-rotor { 50% { transform: scaleX(.3); } }
+.p-vibrate { animation: sc-vib .12s linear infinite; } .p-vibrate-slow { animation: sc-vib .5s ease-in-out infinite; }
+@keyframes sc-vib { 25% { transform: translate(.6px, -.4px); } 75% { transform: translate(-.6px, .4px); } }
+.p-smoke { animation: sc-smoke 2.4s ease-out infinite; } .p-steam { animation: sc-smoke 2s ease-out infinite; }
+@keyframes sc-smoke { 0% { transform: translateY(0); opacity: .9; } 100% { transform: translateY(-22px) scale(1.5); opacity: 0; } }
+.p-bubbles { animation: sc-rise 3s linear infinite; }
+@keyframes sc-rise { 0% { transform: translateY(8px); opacity: 0; } 20% { opacity: .9; } 100% { transform: translateY(-26px); opacity: 0; } }
+.p-piston { animation: sc-piston 1s ease-in-out infinite; }
+@keyframes sc-piston { 50% { transform: translateY(10px); } }
+.p-press { animation: sc-press 2.2s ease-in infinite; }
+@keyframes sc-press { 0%, 40% { transform: translateY(0); } 55% { transform: translateY(14px); } 70%, 100% { transform: translateY(0); } }
+.p-belt path { animation: sc-belt 1s linear infinite; }
+@keyframes sc-belt { to { stroke-dashoffset: -12; } }
+.p-cargo { animation: sc-cargo 3.6s linear infinite; }
+@keyframes sc-cargo { from { transform: translateX(-30px); opacity: 0; } 10% { opacity: 1; } 90% { opacity: 1; } to { transform: translateX(60px); opacity: 0; } }
+.p-arm { transform-origin: bottom center; animation: sc-arm 3s ease-in-out infinite; }
+.p-arm2 { animation: sc-arm2 3s ease-in-out infinite; }
+@keyframes sc-arm { 0%, 100% { transform: rotate(-14deg); } 50% { transform: rotate(14deg); } }
+@keyframes sc-arm2 { 0%, 100% { transform: rotate(10deg); } 50% { transform: rotate(-30deg); } }
+.p-hover { animation: sc-hover 2.2s ease-in-out infinite; }
+@keyframes sc-hover { 50% { transform: translateY(-6px); } }
+.p-swing { transform-origin: top center; animation: sc-swing 2.6s ease-in-out infinite; }
+@keyframes sc-swing { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+.p-sway { transform-origin: bottom center; animation: sc-sway 3.4s ease-in-out infinite; }
+@keyframes sc-sway { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2.5deg); } }
+.p-flame { transform-origin: bottom center; animation: sc-flame .5s ease-in-out infinite alternate; }
+@keyframes sc-flame { from { transform: scaleY(.9) scaleX(1.05); } to { transform: scaleY(1.12) scaleX(.95); } }
+.p-sparks { animation: sc-sparks .7s steps(1) infinite; }
+@keyframes sc-sparks { 0% { opacity: 1; } 40% { opacity: 0; } 60% { opacity: 1; transform: translate(2px, -3px); } }
+.p-needle { transform-origin: bottom left; animation: sc-needle 1.1s ease-in-out infinite alternate; }
+@keyframes sc-needle { from { transform: rotate(-12deg); } to { transform: rotate(16deg); } }
+.p-seis { animation: sc-belt .5s linear infinite; }
+.p-helix { transform-origin: center; animation: sc-helix 4s linear infinite; }
+@keyframes sc-helix { 50% { transform: scaleX(-1); } }
+.p-helix-x { animation: sc-helixx 3s linear infinite; }
+@keyframes sc-helixx { to { transform: translateX(8px); } }
+.p-radar { transform-origin: center; animation: sc-radar 2s linear infinite; }
+@keyframes sc-radar { 0% { transform: scale(.2); opacity: 1; } 100% { transform: scale(1.4); opacity: 0; } }
+.p-radio { animation: sc-blink 1.2s steps(1) infinite; }
+.p-dish { transform-origin: bottom center; animation: sc-dish 12s ease-in-out infinite alternate; }
+@keyframes sc-dish { from { transform: rotate(-8deg); } to { transform: rotate(8deg); } }
+.p-scan { animation: sc-scan 5s ease-in-out infinite alternate; }
+@keyframes sc-scan { from { transform: rotate(-20deg); } to { transform: rotate(20deg); } }
+.p-growlight { animation: sc-glow 3s ease-in-out infinite; filter: drop-shadow(0 0 5px rgba(255, 200, 255, .8)); }
+.p-uv { animation: sc-blink 2s steps(1) infinite; }
+.p-drip { animation: sc-drip 1.6s linear infinite; }
+@keyframes sc-drip { 0% { transform: translateY(0); opacity: 0; } 20% { opacity: 1; } 100% { transform: translateY(22px); opacity: 0; } }
+.p-wave { animation: sc-wave 2.4s ease-in-out infinite alternate; }
+@keyframes sc-wave { to { transform: translateX(6px); } }
+.p-lift { animation: sc-lift 8s ease-in-out infinite; }
+@keyframes sc-lift { 0%, 20% { transform: translateY(0); } 50%, 70% { transform: translateY(-16px); } 100% { transform: translateY(0); } }
+.p-frost { animation: sc-glow 4s ease-in-out infinite; }
+.p-flagwave { transform-origin: left center; animation: ow-wave 2.4s ease-in-out infinite; }
+.p-ecg { animation: sc-belt .6s linear infinite; stroke-dasharray: 40 10; }
+.p-neon { animation: sc-lamp 7s ease-in-out infinite; }
+
+/* offscreen rooms pause everything (set by IntersectionObserver in ui-bunker.js) */
+.room.offscreen .scene *, .room.offscreen .rig *, .room.offscreen .rig { animation-play-state: paused !important; }
+body.no-anim .scene * { animation: none !important; }
+
+/* ---- actors (survivors walking the bunker) ---- */
+#bunker { position: relative; }
+#actors { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; z-index: 4; overflow: visible; }
+/* what a room makes: drawn over the survivors (see placeTags in ui-bunker.js) */
+#room-tags { position: absolute; left: 0; right: 0; top: 0; height: 0; pointer-events: none; z-index: 5; overflow: visible; }
+#room-tags .rtag { position: absolute; }
+#room-tags .rtag:empty { display: none; }
+.actor { position: absolute; left: 0; top: 0; width: 0; height: 0; will-change: transform; }
+.actor .rig { position: absolute; left: -17px; bottom: 0; height: 54px; width: 34px; pointer-events: auto; cursor: pointer; }
+.actor .bubble { position: absolute; left: 10px; bottom: 56px; font-family: var(--display); font-size: 10px; color: #fff; background: rgba(28, 16, 32, .8); border: 2px solid var(--ink); border-radius: 8px; padding: 1px 6px; white-space: nowrap; opacity: 0; transform: translateY(4px); transition: opacity .3s, transform .3s; pointer-events: none; }
+.actor .bubble.show { opacity: 1; transform: none; }
+.actor .bubble.zz { color: #9fe3ff; } .actor .bubble.eat { color: #ffd34a; } .actor .bubble.hurt { color: #ff8a7a; }
+.actor.riding .rig { filter: drop-shadow(0 0 6px rgba(255, 211, 74, .6)); }
+.actor.paused .rig * { animation-play-state: paused !important; }
+.actor.hurt .rig { filter: drop-shadow(0 0 3px rgba(231, 76, 90, .85)) drop-shadow(0 3px 2px rgba(0, 0, 0, .5)); }
+.actor:hover .bubble { opacity: 1; transform: none; }
+
+.p-light { mix-blend-mode: screen; }
+.p-light .p-lampcone { animation: sc-lamp 5s ease-in-out infinite; }
+.p-flame { filter: drop-shadow(0 0 6px rgba(255, 150, 60, .8)); }
+.p-core, .orb { filter: drop-shadow(0 0 8px rgba(160, 255, 160, .8)); }
+.room.brownout .p-light { opacity: .25; }
+
+/* ============ UNDERGROUND STRATA ============
+   The geology is one continuous SVG behind every floor (js/ui/geology.js); floors are transparent. */
+#bunker { background: #1d1b26; }
+#geology { position: absolute; left: 0; z-index: 0; pointer-events: none; }
+#geology svg { display: block; }
+#floors { position: relative; z-index: 1; }
+.floor.dig .dig-zone { background: rgba(10, 8, 14, .55); }
+/* concrete slab between levels, with rebar ends and a dark seam */
+
+
+
+
+
+
+
+
+
+/* ============ CONNECTED BUNKER GRID ============
+   A floor = 80px elevator column + a cell grid (100px cells, 200px rooms) + a 36px corridor +
+   a 16px concrete slab. Rooms share pillar walls with their neighbours and open onto the corridor. */
+.floor { position: relative; display: grid; grid-template-columns: 80px auto; align-items: stretch; }
+.shaft-slot { position: relative; }
+.floor .cells { position: relative; display: grid; grid-auto-rows: 200px; align-items: stretch; padding: 14px 0 52px; }
+.floor .ceiling { position: absolute; left: 0; right: 0; top: 0; height: 14px; background: linear-gradient(180deg, #4d4a48, #2f2c2a 60%, #1c1020); border-bottom: 3px solid var(--ink); z-index: 2; pointer-events: none;
+  background-image: repeating-linear-gradient(90deg, transparent 0 46px, rgba(255, 255, 255, .08) 46px 50px), linear-gradient(180deg, #4d4a48, #2f2c2a 60%, #1c1020); }
+.floor .ceiling::before { content: ''; position: absolute; left: 0; right: 0; top: 4px; height: 5px; background: linear-gradient(180deg, #9a8c6a, #5a4e3a); border-top: 1px solid #c9b48a; border-bottom: 1px solid var(--ink); opacity: .9; }
+.floor .ceiling::after { content: ''; position: absolute; left: 0; right: 0; top: 10px; height: 2px; background: #d8303a; opacity: .7; }
+.floor .corridor { position: absolute; left: 0; right: 0; bottom: 16px; height: 36px; background: linear-gradient(180deg, #3b3744 0, #2e2a36 60%, #221e2a); border-top: 3px solid var(--ink); z-index: 1; pointer-events: none;
+  box-shadow: inset 0 6px 10px rgba(0, 0, 0, .45); }
+.floor .corridor .stripe { position: absolute; left: 0; right: 0; bottom: 6px; height: 3px; background: repeating-linear-gradient(90deg, #ffd34a 0 18px, transparent 18px 30px); opacity: .5; }
+.floor .corridor::after { content: ''; position: absolute; left: 0; right: 0; top: 4px; height: 2px; background: repeating-linear-gradient(90deg, #8a8e98 0 60px, transparent 60px 64px); opacity: .35; }
+.floor::after { content: ''; position: absolute; left: 0; right: 0; bottom: 0; height: 16px; background: linear-gradient(180deg, #9a9794 0, #6c6865 45%, #4d4a48 100%); border-top: 3px solid var(--ink); border-bottom: 3px solid var(--ink); box-shadow: inset 0 2px 0 rgba(255, 255, 255, .25); z-index: 2; pointer-events: none;
+  background-image: repeating-linear-gradient(90deg, transparent 0 96px, rgba(0, 0, 0, .25) 96px 100px), linear-gradient(180deg, #9a9794 0, #6c6865 45%, #4d4a48 100%); }
+.floor.dig::after, .floor.bedrock::after { display: none; }
+.floor.dig { grid-template-columns: 80px 1fr; min-height: 90px; } .floor.dig .dig-zone { margin: 14px; }
+.floor.bedrock { grid-template-columns: 80px 1fr; }
+.floor-num { position: absolute; top: 18px; left: 8px; font-family: var(--display); font-size: 15px; color: #d8d0b0; text-shadow: 0 2px 0 var(--ink); z-index: 6; pointer-events: none; }
+.facility-tag { z-index: 3; }
+
+/* rooms: shared pillars, doorway, light spill into the corridor */
+.room { position: relative; overflow: visible; min-height: 200px; height: 200px; padding: 0; background: #2a2634; border: 0; border-radius: 0; box-shadow: none; grid-row: 1; z-index: 1; }
+.room .room-scene { position: absolute; inset: 0; overflow: hidden; border-top: 3px solid var(--ink); }
+.room::before, .room::after { content: ''; position: absolute; top: -14px; bottom: -36px; width: 12px; background: linear-gradient(90deg, #4d4a48, #8f8c89 40%, #6c6865 70%, #3a3836); border-left: 3px solid var(--ink); border-right: 3px solid var(--ink); z-index: 3; pointer-events: none;
+  background-image: repeating-linear-gradient(180deg, transparent 0 28px, rgba(0, 0, 0, .25) 28px 31px), linear-gradient(90deg, #4d4a48, #8f8c89 40%, #6c6865 70%, #3a3836); }
+.room::before { left: -7px; } .room::after { right: -7px; }
+.room .door { position: absolute; left: 18px; bottom: -36px; width: 34px; height: 40px; background: linear-gradient(180deg, #1a1620, #0e0b12); border: 3px solid var(--ink); border-bottom: 0; border-radius: 6px 6px 0 0; z-index: 2; box-shadow: inset 0 0 12px rgba(0, 0, 0, .8); }
+.room .door::after { content: ''; position: absolute; left: -6px; right: -6px; top: -6px; height: 6px; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='6'><rect width='6' height='6' fill='%23ffd34a'/><rect x='6' width='6' height='6' fill='%231c1020'/></svg>"); }
+.room .light-spill { display: none; }
+.room.selected { box-shadow: inset 0 0 0 3px var(--gold), 0 0 16px rgba(255, 197, 49, .45); z-index: 2; }
+.room.w-4 .room-name { font-size: 13px; }
+/* empty cells = rock pockets */
+.cell { position: relative; grid-row: 1; margin: 0; background: rgba(10, 8, 14, .42); border-top: 3px solid var(--ink); box-shadow: inset 0 0 22px rgba(0, 0, 0, .55); cursor: pointer; display: flex; align-items: center; justify-content: center; color: rgba(255, 255, 255, .18); transition: background .15s, color .15s; }
+.cell .plus { font-family: var(--display); font-size: 30px; }
+.cell:hover, .cell.selected { background: rgba(255, 197, 49, .12); color: var(--gold); }
+.cells.placing .cell { outline: 1px dashed rgba(255, 255, 255, .25); outline-offset: -4px; }
+.cell.target { background: rgba(124, 196, 106, .3); color: #fff; } .cell.target.bad { background: rgba(231, 76, 90, .35); }
+/* sideways digging */
+.wing { grid-row: 1; margin: 20px 0 0 8px; display: flex; align-items: center; justify-content: center; text-align: center; border: 3px dashed #6b4a2e; border-radius: 12px; background: rgba(0, 0, 0, .35); color: var(--muted); cursor: pointer; font-family: var(--display); transition: all .15s; }
+.wing:hover { border-color: var(--gold); color: var(--gold); background: rgba(255, 197, 49, .08); } .wing.cant { opacity: .6; } .wing.digging { cursor: default; border-style: solid; animation: digshake .3s linear infinite; }
+@keyframes digshake { 25% { transform: translate(1px, 0); } 75% { transform: translate(-1px, 1px); } }
+.wing-body { display: flex; flex-direction: column; align-items: center; gap: 4px; font-size: 13px; padding: 8px; } .wing-body small { font-family: var(--body); font-size: 11px; } .wing-body .cost { font-family: var(--body); font-size: 11px; display: flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.wing-body .dig-prog { width: 70px; }
+/* elevator */
+#elevator { position: absolute; left: 0; width: 80px; top: 0; z-index: 3; pointer-events: none; background: linear-gradient(90deg, #1a1620, #2a2634 20%, #2a2634 80%, #1a1620); border-right: 3px solid var(--ink); box-shadow: inset 0 0 30px rgba(0, 0, 0, .6); overflow: visible; }
+.ev-rails { position: absolute; top: 0; bottom: 0; left: 14px; right: 14px; background: repeating-linear-gradient(180deg, transparent 0 22px, rgba(255, 255, 255, .05) 22px 24px); border-left: 3px solid #5a5560; border-right: 3px solid #5a5560; }
+.ev-cable { position: absolute; top: 0; bottom: 0; left: 50%; width: 3px; margin-left: -1px; background: #6b6578; }
+.ev-winch { position: absolute; top: -18px; left: 10px; right: 10px; height: 20px; background: linear-gradient(180deg, #6c6865, #3a3836); border: 3px solid var(--ink); border-radius: 6px; display: flex; justify-content: space-around; align-items: center; z-index: 4; }
+.ev-wheel { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--ink); background: conic-gradient(#c9ccd4 0 25%, #6c6865 25% 50%, #c9ccd4 50% 75%, #6c6865 75%); animation: sc-spin 2s linear infinite paused; }
+#elevator.up .ev-wheel, #elevator.down .ev-wheel { animation-play-state: running; } #elevator.up .ev-wheel { animation-direction: reverse; }
+.ev-stop { position: absolute; left: 0; width: 80px; height: 90px; }
+.ev-frame { position: absolute; left: 10px; right: 10px; top: 14px; bottom: 0; border: 3px solid var(--ink); border-bottom: 0; background: #15121a; border-radius: 6px 6px 0 0; overflow: hidden; }
+.ev-doors { position: absolute; inset: 0; display: flex; }
+.ev-doors i, .ev-cab-doors i { flex: 1; background: linear-gradient(90deg, #7a7f8a, #a0a6b2 50%, #6a6f7a); border-right: 2px solid var(--ink); transition: transform .5s ease-in-out; }
+.ev-doors i:last-child, .ev-cab-doors i:last-child { border-right: 0; border-left: 2px solid var(--ink); }
+.ev-stop.open .ev-doors i:first-child { transform: translateX(-92%); } .ev-stop.open .ev-doors i:last-child { transform: translateX(92%); }
+.ev-sill { position: absolute; left: 6px; right: 6px; bottom: -4px; height: 6px; background: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='12' height='6'><rect width='6' height='6' fill='%23ffd34a'/><rect x='6' width='6' height='6' fill='%231c1020'/></svg>"); border: 2px solid var(--ink); }
+.ev-ind { position: absolute; left: 24px; top: -2px; width: 32px; height: 14px; background: #0e0b12; border: 2px solid var(--ink); border-radius: 4px; font-family: var(--display); font-size: 9px; color: #ff5a3c; text-align: center; line-height: 11px; }
+.ev-stop.open .ev-ind { color: #7dff5a; box-shadow: 0 0 6px rgba(125, 255, 90, .6); }
+.ev-call { position: absolute; right: 2px; top: 40px; width: 6px; height: 10px; background: #3a3f4a; border: 1px solid var(--ink); border-radius: 2px; } .ev-call i { display: block; margin: 2px auto; width: 2px; height: 2px; background: #ffd34a; }
+.ev-cabin { position: absolute; left: 12px; width: 56px; height: 84px; background: linear-gradient(180deg, #8a8e98, #5a5f6a); border: 3px solid var(--ink); border-radius: 6px; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .3), 0 4px 10px rgba(0, 0, 0, .6); overflow: hidden; z-index: 2; will-change: transform; }
+.ev-cab-light { position: absolute; left: 6px; right: 6px; top: 5px; height: 4px; background: #fff7c0; box-shadow: 0 0 8px #ffd98a; border-radius: 2px; animation: sc-lamp 4s ease-in-out infinite; }
+.ev-cab-doors { position: absolute; left: 4px; right: 4px; top: 14px; bottom: 4px; display: flex; background: #1a1620; border: 2px solid var(--ink); border-radius: 4px; overflow: hidden; }
+.ev-cabin.open .ev-cab-doors i:first-child { transform: translateX(-92%); } .ev-cabin.open .ev-cab-doors i:last-child { transform: translateX(92%); }
+.ev-cab-panel { position: absolute; right: 6px; top: 16px; width: 14px; height: 10px; background: #0e0b12; border: 1px solid var(--ink); font-family: var(--display); font-size: 7px; color: #7dff5a; text-align: center; line-height: 9px; z-index: 2; }
+.ev-cabin.moving { box-shadow: inset 0 2px 0 rgba(255, 255, 255, .3), 0 0 14px rgba(255, 211, 74, .35); }
+#actors { z-index: 4; }
+/* placement ghost */
+body.placing { cursor: grabbing; user-select: none; }
+.room-ghost { position: absolute; z-index: 8; pointer-events: none; opacity: .72; border: 3px solid var(--gold); border-radius: 4px; overflow: hidden; box-shadow: 0 0 0 4px rgba(255, 197, 49, .25), 0 10px 30px rgba(0, 0, 0, .6); background: #2a2634; }
+.room-ghost .room-scene { position: absolute; inset: 0; } .room-ghost .room-scene svg { width: 100%; height: 100%; }
+.room-ghost.invalid { border-color: var(--red); box-shadow: 0 0 0 4px rgba(231, 76, 90, .3); filter: saturate(.4); }
+.room-ghost.valid { border-color: var(--green); box-shadow: 0 0 0 4px rgba(124, 196, 106, .35); }
+.ghost-label { position: absolute; left: 6px; top: 6px; background: rgba(28, 16, 32, .85); border: 2px solid var(--ink); border-radius: 8px; padding: 2px 8px; font-family: var(--display); font-size: 12px; color: #fff; } .ghost-label small { margin-left: 6px; color: var(--muted); font-family: var(--body); }
+.ghost-tip { position: absolute; z-index: 9; pointer-events: none; background: linear-gradient(180deg, var(--plate2), var(--plate)); border: 3px solid var(--ink); border-radius: 10px; padding: 3px 10px; font-size: 12px; font-weight: 800; white-space: nowrap; display: flex; gap: 6px; align-items: center; box-shadow: 0 3px 0 var(--ink2); }
+.ghost-tip .cost-item { display: inline-flex; align-items: center; gap: 2px; }
+.drag-handle { cursor: grab; } .drag-handle:active { cursor: grabbing; }
+.bc-actions { display: flex; flex-direction: column; gap: 6px; }
+/* selection is drawn INSIDE the room; the room itself never moves or changes layer, so the shared side pillars stay identical */
+.room, .room:hover, .room.selected { transform: none !important; z-index: 1 !important; box-shadow: none !important; border: 0 !important; }
+/* selection: a gold frame on the room's boundaries (above the artwork), an outer glow, pulsing corner
+   brackets and a gold name tag; the selected room sits above its neighbours so the glow shows */
+.room .sel-frame { display: none; position: absolute; inset: 0; z-index: 6; pointer-events: none; }
+.floor .room.selected { z-index: 2 !important; }
+.room.selected .sel-frame { display: block; }
+.room.selected .sel-frame::before { content: ''; position: absolute; inset: 0; border: 4px solid #ffc531; border-radius: 3px;
+  box-shadow: inset 0 0 0 2px rgba(28, 16, 32, .85), inset 0 0 26px rgba(255, 197, 49, .45), 0 0 0 2px #1c1020, 0 0 18px 3px rgba(255, 197, 49, .6); animation: selGlow 1.8s ease-in-out infinite; }
+.sel-frame i { position: absolute; width: 24px; height: 24px; border: 0 solid #fff8dc; filter: drop-shadow(0 0 1.5px #1c1020) drop-shadow(0 0 5px rgba(255, 197, 49, .95)); animation: selCorner 1.8s ease-in-out infinite; }
+.sel-frame i:nth-child(1) { left: 8px; top: 8px; border-left-width: 5px; border-top-width: 5px; --cx: -3px; --cy: -3px; }
+.sel-frame i:nth-child(2) { right: 8px; top: 8px; border-right-width: 5px; border-top-width: 5px; --cx: 3px; --cy: -3px; }
+.sel-frame i:nth-child(3) { left: 8px; bottom: 8px; border-left-width: 5px; border-bottom-width: 5px; --cx: -3px; --cy: 3px; }
+.sel-frame i:nth-child(4) { right: 8px; bottom: 8px; border-right-width: 5px; border-bottom-width: 5px; --cx: 3px; --cy: 3px; }
+@keyframes selCorner { 50% { transform: translate(var(--cx), var(--cy)); } }
+@keyframes selGlow { 50% { box-shadow: inset 0 0 0 2px rgba(28, 16, 32, .85), inset 0 0 40px rgba(255, 197, 49, .62), 0 0 0 2px #1c1020, 0 0 28px 6px rgba(255, 197, 49, .8); } }
+.room.selected .room-name { background: #ffc531; color: #1c1020; border-color: #1c1020; text-shadow: none; }
+body.no-anim .sel-frame::before, body.no-anim .sel-frame i { animation: none; }
+/* hover (mouse only): a quiet white frame */
+@media (hover: hover) {
+  .room:hover:not(.selected) .sel-frame { display: block; }
+  .room:hover:not(.selected) .sel-frame::before { content: ''; position: absolute; inset: 0; border: 2px solid rgba(255, 255, 255, .4); border-radius: 3px; }
+  .room:hover:not(.selected) .sel-frame i { display: none; }
+}
+.room .door::after { display: none; }
+
+/* ============ DIG SITE (js/ui/digsite.js) ============
+   The level under the deepest floor: a tunnel carved into the rock as the dig progresses. The rock
+   beyond the face is the geology layer behind (the floor itself is transparent). */
+.floor.dig { background: none !important; min-height: 0 !important; cursor: default; grid-template-columns: 80px auto !important; box-shadow: none !important; }
+.floor.dig .dig-cells { padding: 14px 0 52px; }
+.floor.dig .dig-row { grid-row: 1; height: 200px; }
+.floor.dig .dig-site { position: absolute; left: 0; top: 0; bottom: 0; cursor: pointer; z-index: 1; }
+.dig-art, .dig-art svg { position: absolute; left: 0; top: 0; display: block; }
+.floor.dig .corridor.dig-ground { background: none !important; border: 0 !important; box-shadow: none !important; pointer-events: none; }
+.floor.dig .corridor.dig-ground::before, .floor.dig .corridor.dig-ground::after { display: none !important; }
+.dig-hud { position: absolute; left: 10px; top: 8px; max-width: 290px; display: flex; flex-direction: column; gap: 3px; padding: 7px 11px 8px; border-radius: 10px;
+  background: rgba(20, 14, 24, .82); border: 3px solid var(--ink); box-shadow: 0 3px 0 rgba(0, 0, 0, .4); color: #e9e2d0; font-size: 11.5px; font-weight: 800; line-height: 1.25; pointer-events: none; }
+.dig-hud b { font-family: var(--display); font-weight: 400; font-size: 14px; color: #ffd98a; display: flex; align-items: center; gap: 5px; }
+.dig-hud span { display: flex; align-items: center; gap: 3px; flex-wrap: wrap; }
+.dig-hud .dig-prog { width: 100%; height: 10px; }
+.dig-hud .dh-crew { color: #b9e08a; } .dig-hud .dh-go { color: var(--gold); font-family: var(--display); font-weight: 400; letter-spacing: .3px; }
+.dig-hud .neg { color: #ff8a7a; font-style: normal; }
+.dig-site:hover .dig-hud { border-color: var(--gold); }
+.dig-dust circle { opacity: 0; transform-box: fill-box; transform-origin: center; animation: dig-dust 1.8s ease-out infinite; }
+@keyframes dig-dust { 0% { opacity: 0; transform: scale(.4); } 25% { opacity: .5; } 100% { opacity: 0; transform: translate(-20px, -12px) scale(1.7); } }
+.dig-pebbles circle { animation: dig-peb 1.9s ease-in infinite; }
+@keyframes dig-peb { 0% { transform: translateY(0); opacity: 0; } 10% { opacity: 1; } 85% { opacity: 1; } 100% { transform: translateY(160px); opacity: 0; } }
+.dig-bit { animation: dig-vib .14s linear infinite; }
+@keyframes dig-vib { 50% { transform: translate(1.6px, -1px); } }
+.dig-heat, .dig-ember { animation: dig-heat 1.3s ease-in-out infinite; }
+@keyframes dig-heat { 50% { opacity: .6; } }
+.dig-sparks circle { animation: dig-spark .45s steps(2) infinite; } @keyframes dig-spark { 50% { opacity: 0; } }
+.dig-lamp { animation: dig-flicker 7s ease-in-out infinite; } @keyframes dig-flicker { 0%, 100% { opacity: 1; } 47% { opacity: 1; } 49% { opacity: .55; } 51% { opacity: 1; } }
+.dig-site:not(.crewed) .dig-fx { display: none; }
+/* the tunnel is revealed up to the face; the face, machine and effects travel with it (js/ui/digsite.js) */
+.dig-art .dig-reveal { position: absolute; left: 0; top: 0; height: 266px; overflow: hidden; }
+.dig-art .dig-front { position: absolute; top: 0; width: 470px; height: 266px; pointer-events: none; will-change: transform; }
+.dig-art.smooth .dig-reveal { transition: width 1.2s linear; }
+.dig-art.smooth .dig-front { transition: transform 1.2s linear; }
+.dig-art .dig-cart { position: absolute; width: 44px; height: 40px; will-change: transform; }
+.dig-art .dig-cart img { display: block; }
+.dig-art .dig-cart-load { position: absolute; left: 2px; top: -9px; width: 40px; height: 22px; opacity: 0; }
+.dig-art .dig-cart-load svg { position: static; }
+.dig-pile { transform-box: fill-box; transform-origin: 50% 100%; }
+/* work effects, timed from the dig's pace (--pace: shorter when the crew digs faster) */
+.dig-dust circle { animation-duration: calc(1.8s * var(--pace, 1)); }
+.dig-chips path { opacity: 0; transform-box: fill-box; animation: dig-chip calc(1.1s * var(--pace, 1)) ease-out infinite; }
+@keyframes dig-chip { 0% { opacity: 0; transform: translate(0, 0) rotate(0); } 12% { opacity: 1; } 55% { transform: translate(calc(var(--cx) * .6), calc(var(--cy) * -1.4)) rotate(160deg); } 100% { opacity: 0; transform: translate(var(--cx), var(--cy)) rotate(320deg); } }
+.dig-dirt rect { opacity: 0; animation: dig-dirt calc(2.6s * var(--pace, 1)) ease-in infinite; }
+@keyframes dig-dirt { 0% { opacity: 0; transform: translateY(0) scaleY(.4); } 15% { opacity: .9; transform: translateY(8px) scaleY(1); } 100% { opacity: 0; transform: translateY(190px) scaleY(1.6); } }
+.dig-site.active .dig-shake { animation: dig-shake .18s linear infinite; }
+@keyframes dig-shake { 50% { transform: translate(.8px, -.6px); } }
+.dig-beacon { animation: dig-spark .9s steps(2) infinite; }
+body.no-anim .dig-site *, body.no-anim .wing-mine * { animation: none !important; }
+/* a wing being dug out sideways: a tunnel mouth, rubble and a miner at work */
+.wing.digging { position: relative; overflow: hidden; animation: none !important; border-style: solid; }
+.wing-mine { position: absolute; inset: 0; pointer-events: none; }
+.wing-mine svg { position: absolute; left: 0; bottom: 0; width: 100%; height: 100%; }
+.wing-mine .rig { position: absolute; left: 22px; bottom: 6px; height: 46px; width: 30px; }
+.wing.digging .wing-body { position: relative; z-index: 1; background: rgba(20, 14, 24, .72); border-radius: 8px; margin-top: -60px; }
+
+/* ============ BUILDING SITES & CELEBRATIONS ============ */
+/* a new room assembles from the floor up: blueprint behind, the built part rising with --bp */
+.room.building, .room.building .room-scene { filter: none !important; }
+.room .room-scene .bp-ghost, .room .room-scene .bp-real { position: absolute; inset: 0; }
+.room .room-scene .bp-ghost { filter: grayscale(1) sepia(1) hue-rotate(165deg) saturate(2.6) brightness(1.15); opacity: .38; }
+.room .room-scene .bp-ghost::after { content: ''; position: absolute; inset: 0; background-image: linear-gradient(rgba(140, 220, 255, .22) 1px, transparent 1px), linear-gradient(90deg, rgba(140, 220, 255, .22) 1px, transparent 1px); background-size: 20px 20px; }
+.room .room-scene .bp-real { -webkit-clip-path: inset(calc((1 - var(--bp, 0)) * 100%) 0 0 0); clip-path: inset(calc((1 - var(--bp, 0)) * 100%) 0 0 0); transition: clip-path .4s, -webkit-clip-path .4s; }
+.room .room-scene .bp-real::before { content: ''; position: absolute; left: 0; right: 0; top: calc((1 - var(--bp, 0)) * 100%); height: 3px; background: #7fe3ff; box-shadow: 0 0 10px #7fe3ff; z-index: 1; }
+.room .room-scene svg.site { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; pointer-events: none; }
+.site .sparks circle:not(.weld) { animation: sparkFly .9s ease-out infinite; opacity: 0; }
+@keyframes sparkFly { 0% { transform: translate(0, 0); opacity: 1; } 100% { transform: translate(var(--sx), calc(var(--sy) + 40px)); opacity: 0; } }
+.site .sparks .weld { animation: weldFlick .18s steps(2) infinite; } @keyframes weldFlick { 50% { opacity: .2; } }
+.site .site-dust circle { opacity: 0; animation: siteDust 2.4s ease-out infinite; transform-box: fill-box; transform-origin: center bottom; }
+@keyframes siteDust { 0% { opacity: 0; transform: scale(.4); } 30% { opacity: .45; } 100% { opacity: 0; transform: translateY(-10px) scale(1.5); } }
+.room.offscreen .site * { animation-play-state: paused !important; }
+body.no-anim .site * { animation: none !important; }
+/* a finish that improves with levels */
+.scene .p-accent { animation: accentGlow 3.2s ease-in-out infinite; } @keyframes accentGlow { 50% { opacity: .45; } }
+/* the celebration when a room is finished or levels up */
+.room-cele { position: absolute; inset: 0; z-index: 8; pointer-events: none; overflow: hidden; }
+.room-cele .rc-sweep { position: absolute; top: 0; bottom: 0; width: 40%; left: -45%; background: linear-gradient(100deg, transparent, rgba(255, 255, 255, .55), transparent); animation: rcSweep .9s ease-out .05s forwards; }
+@keyframes rcSweep { to { left: 110%; } }
+.room-cele .rc-dust i { position: absolute; bottom: 0; left: var(--x); width: 70px; height: 50px; margin-left: -35px; border-radius: 50%; background: radial-gradient(circle, rgba(220, 210, 190, .75), rgba(220, 210, 190, 0) 70%); animation: rcDust 1.2s ease-out forwards; opacity: 0; }
+.room-cele.just-upgraded:not(.big) .rc-dust { display: none; }
+@keyframes rcDust { 0% { opacity: .9; transform: scale(.5) translateY(10px); } 100% { opacity: 0; transform: scale(1.8) translateY(-20px); } }
+.room-cele em { position: absolute; top: -12px; left: var(--x); width: 7px; height: 11px; background: var(--c); border: 1.5px solid #1c1020; border-radius: 2px; animation: rcConf 1.9s cubic-bezier(.25, .6, .4, 1) forwards; }
+@keyframes rcConf { 0% { transform: translate(0, 0) rotate(0); opacity: 1; } 85% { opacity: 1; } 100% { transform: translate(var(--dx), 230px) rotate(var(--r)); opacity: 0; } }
+.lvl-burst.big b { font-size: 24px; background: linear-gradient(180deg, #fff3a0, #ffb02a); color: #3a1c00; text-shadow: none; }
+#bunker-wrap.thump { animation: thump .45s ease-out; } @keyframes thump { 20% { transform: translateY(3px); } 45% { transform: translateY(-2px); } 70% { transform: translateY(1px); } }
+/* a perimeter structure upgraded on the surface */
+.ow-burst { position: absolute; z-index: 6; pointer-events: none; width: 0; height: 0; }
+.ow-burst b { position: absolute; left: 0; top: -40px; transform: translateX(-50%); white-space: nowrap; font-family: var(--display); font-weight: 400; font-size: 16px; color: #3a1c00; padding: 3px 12px; border-radius: 10px; border: 3px solid #1c1020; background: linear-gradient(180deg, #fff3a0, #ffb02a); animation: owRibbon 1.8s ease-out forwards; }
+@keyframes owRibbon { 0% { transform: translate(-50%, 10px) scale(.4); opacity: 0; } 15% { transform: translate(-50%, 0) scale(1.1); opacity: 1; } 25% { transform: translate(-50%, 0) scale(1); } 80% { opacity: 1; } 100% { transform: translate(-50%, -16px); opacity: 0; } }
+.ow-burst i { position: absolute; width: 10px; height: 10px; margin: -5px; background: #ffd76a; clip-path: polygon(50% 0, 62% 38%, 100% 50%, 62% 62%, 50% 100%, 38% 62%, 0 50%, 38% 38%); animation: owStar .9s ease-out forwards; }
+@keyframes owStar { 0% { transform: rotate(var(--a)) translateX(0) scale(.4); opacity: 1; } 100% { transform: rotate(var(--a)) translateX(var(--d)) scale(1); opacity: 0; } }
+.ow-burst em { position: absolute; left: var(--x); top: 0; width: 46px; height: 32px; margin: -16px -23px; border-radius: 50%; background: radial-gradient(circle, rgba(220, 210, 190, .8), rgba(220, 210, 190, 0) 70%); animation: rcDust 1.1s ease-out forwards; opacity: 0; }
+/* room header: the level badge never wraps; long names shorten first; narrow rooms show the status as an icon */
+.room .room-head .room-lvl { white-space: nowrap; flex: none; }
+.room .room-head .room-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; flex: 0 1 auto; }
+.room-head .room-flag.icon { padding: 0 3px; max-width: none; flex: none; line-height: 1; display: inline-flex; align-items: center; height: 18px; }
+.room-head .room-flag.icon .ico-inline { width: 13px; height: 13px; }
+/* speech bubbles (js/ui/actors.js talk): small, white, with a tail pointing at the speaker's head */
+.actor .say, .room .builder .say { position: absolute; bottom: 60px; left: -20px; z-index: 6; pointer-events: none; width: max-content; max-width: 150px; padding: 4px 9px 5px;
+  border-radius: 12px; background: #fffaf0; color: #1c1020; border: 2px solid #1c1020; font: 800 11px/1.2 var(--body); text-align: left; white-space: normal;
+  box-shadow: 0 2px 0 rgba(0, 0, 0, .35); opacity: 0; transform: translateY(6px) scale(.5); transform-origin: 20px 100%; transition: opacity .18s ease-out, transform .3s cubic-bezier(.2, 1.5, .4, 1); }
+.actor .say::after, .room .builder .say::after { content: ''; position: absolute; left: 14px; bottom: -6px; width: 9px; height: 9px; background: inherit; border-right: 2px solid #1c1020; border-bottom: 2px solid #1c1020; transform: rotate(45deg); }
+.actor .say.on, .room .builder .say.on { opacity: 1; transform: none; }
+.actor .say.bad, .room .builder .say.bad { background: #ffe3dc; } .actor .say.warn { background: #fff1c8; } .actor .say.good, .room .builder .say.good { background: #e8f8d8; }
+.actor .say.alarm { background: #ffd6cf; color: #7a1010; }
+.room .builder .say { bottom: 54px; left: calc(50% - 20px); }
+.actor.saying .bubble { opacity: 0 !important; }
+.actor.saying { z-index: 2; }
+body.no-anim .actor .say { transition: none; }
+.say .sr { display: none; }   /* the bubble grows with the typed text */
+.actor .say, .room .builder .say { max-width: 170px; padding: 3px 8px 4px; }
+/* smaller speech bubbles */
+.actor .say, .room .builder .say { max-width: 128px; padding: 2px 6px 3px; font-size: 9.5px; line-height: 1.18; border-width: 1.5px; border-radius: 9px; bottom: 58px; left: -14px; box-shadow: 0 1.5px 0 rgba(0, 0, 0, .35); transform-origin: 14px 100%; }
+.actor .say::after, .room .builder .say::after { left: 10px; bottom: -5px; width: 7px; height: 7px; border-right-width: 1.5px; border-bottom-width: 1.5px; }
+.room .builder .say { bottom: 52px; left: calc(50% - 14px); }
+/* machine details (js/ui/digsite.js): exhaust smoke, spinning bit flutes, a pecking boom, a twitching gauge */
+.dig-smoke circle { opacity: 0; transform-box: fill-box; transform-origin: center; animation: dig-smoke 2.4s ease-out infinite; }
+@keyframes dig-smoke { 0% { opacity: 0; transform: translate(0, 0) scale(.5); } 20% { opacity: .5; } 100% { opacity: 0; transform: translate(-16px, -30px) scale(1.9); } }
+.dig-site.active .dig-flute { animation: dig-flute .22s linear infinite; } @keyframes dig-flute { to { stroke-dashoffset: -11; } }
+.dig-site.active .dig-boom { transform-box: fill-box; transform-origin: 2% 92%; animation: dig-peck 2.4s ease-in-out infinite; } @keyframes dig-peck { 50% { transform: rotate(-1.2deg); } }
+.dig-gauge { transform-box: fill-box; transform-origin: 50% 100%; animation: dig-gauge 1.7s ease-in-out infinite; } @keyframes dig-gauge { 0%, 100% { transform: rotate(-30deg); } 50% { transform: rotate(40deg); } }
+.dig-site:not(.active) .dig-smoke { display: none; }
+/* infection: symptoms on the character (js/ui/actors.js), worse with the stage */
+.actor.infected .rig { filter: drop-shadow(0 0 3px rgba(130, 220, 70, .85)) drop-shadow(0 3px 2px rgba(0, 0, 0, .5)) saturate(.85); }
+.actor[data-inf="sick"] .rig { filter: drop-shadow(0 0 4px rgba(130, 220, 70, .95)) drop-shadow(0 3px 2px rgba(0, 0, 0, .5)) sepia(.25) hue-rotate(40deg) saturate(.9); }
+.actor[data-inf="turning"] .rig { filter: drop-shadow(0 0 6px rgba(150, 240, 60, 1)) drop-shadow(0 3px 2px rgba(0, 0, 0, .5)) sepia(.45) hue-rotate(55deg) saturate(.8) brightness(.92); }
+.actor.infected::after { content: ''; position: absolute; left: -3px; bottom: 44px; width: 5px; height: 5px; border-radius: 50%; background: #9be860; pointer-events: none;
+  box-shadow: 8px -5px 0 -1px #9be860, -7px -9px 0 -1.5px #7fd04a; opacity: 0; animation: infSpores 2.2s ease-out infinite; }
+@keyframes infSpores { 0% { opacity: 0; transform: translateY(6px) scale(.6); } 25% { opacity: .9; } 100% { opacity: 0; transform: translateY(-16px) scale(1.2); } }
+.actor.infected[data-inf="incubating"]::after { display: none; }
+body.no-anim .actor.infected::after { animation: none; opacity: .7; }
+
+/* ============ HIGH QUALITY MODE — bunker lighting ============ */
+/* each room: a light cone from the ceiling lamp, ambient occlusion in the corners and along floor and
+   walls, and dust motes drifting slowly up through the light (visible rooms only) */
+body.hq .room .room-scene::after { content: ''; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background:
+    radial-gradient(ellipse 48% 62% at 50% 4%, rgba(255, 236, 190, .17), rgba(255, 236, 190, .05) 55%, transparent 72%),
+    linear-gradient(180deg, rgba(0, 0, 0, .26), transparent 13%, transparent 80%, rgba(0, 0, 0, .3)),
+    linear-gradient(90deg, rgba(0, 0, 0, .3), transparent 8%, transparent 92%, rgba(0, 0, 0, .3)); }
+body.hq .room:not(.offscreen) .room-scene::before { content: ''; position: absolute; left: 0; right: 0; top: 0; bottom: -60px; pointer-events: none; z-index: 1; opacity: .55;
+  background-image: radial-gradient(circle, rgba(255, 240, 205, .75) 0 1px, transparent 1.8px), radial-gradient(circle, rgba(255, 240, 205, .5) 0 .8px, transparent 1.5px);
+  background-size: 73px 61px, 109px 83px; background-position: 11px 7px, 47px 31px; animation: hqMotes 18s linear infinite; }
+@keyframes hqMotes { to { transform: translateY(-60px); } }
+body.hq.no-ambient .room .room-scene::before { animation: none; }
+/* contact shadows under the survivors */
+body.hq .actor::before { content: ''; position: absolute; left: -15px; bottom: -4px; width: 30px; height: 8px; border-radius: 50%; pointer-events: none;
+  background: radial-gradient(closest-side, rgba(0, 0, 0, .45), transparent); }
+/* the dig site gets the same soft depth */
+body.hq .dig-site::after { content: ''; position: absolute; inset: 0; pointer-events: none; background: linear-gradient(180deg, rgba(0, 0, 0, .25), transparent 18%, transparent 82%, rgba(0, 0, 0, .3)); }
+/* performance: anything scrolled out of view holds still (no repaints of off-screen art) */
+.surface.offscreen *, .dig-site.offscreen *, .room.offscreen .room-scene *, .room.offscreen .sel-frame * { animation-play-state: paused !important; }
+.room.offscreen .room-scene::before { animation-play-state: paused; }

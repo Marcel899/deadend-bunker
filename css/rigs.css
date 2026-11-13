@@ -1,0 +1,45 @@
+/* ============ CHARACTER RIGS ============
+   Rigs come from js/ui/chars.js; js/ui/anim.js poses their bones (.j-*) every frame through SVG
+   transform attributes, so no CSS here may set `transform` on a bone (CSS would win over the
+   attribute). This sheet only handles facing, what is shown in which animation, and small effects
+   on non-bone parts (blinking, glowing orbs, a burning fuse, dripping slime, a torch beam). */
+.rig { display: inline-block; overflow: visible; vertical-align: bottom; }
+.rig.flip { transform: scaleX(-1); }
+
+/* props per animation: hands are free for work, talk, meals and sleep; a crate when hauling,
+   a hammer when repairing */
+.rig .crate, .rig .hammer, .rig .pick, .rig .rocks, .rig .barrow, .rig .eyes-shut { display: none; }
+.rig.a-carry .crate, .rig.a-repair .hammer, .rig.a-dig .pick, .rig.a-haul .rocks, .rig.a-push .barrow { display: inline; }
+.rig.a-work .item, .rig.a-carry .item, .rig.a-interact .item, .rig.a-eat .item, .rig.a-sleep .item, .rig.a-heal .item, .rig.a-repair .item,
+.rig.a-dig .item, .rig.a-haul .item, .rig.a-push .item { display: none; }
+
+/* eyes blink now and then; closed while asleep, treated or dead */
+.rig .eyes { transform-box: fill-box; transform-origin: 50% 55%; animation: ri-blink 5.3s linear infinite; animation-delay: var(--ph, 0s); }
+@keyframes ri-blink { 0%, 94%, 100% { transform: scaleY(1); } 96.5% { transform: scaleY(.1); } }
+.rig.a-sleep .eyes, .rig.a-heal .eyes, .rig.a-die .eyes { display: none; }
+.rig.a-sleep .eyes-shut, .rig.a-heal .eyes-shut, .rig.a-die .eyes-shut { display: inline; }
+
+/* the ground shadow follows the pose */
+.rig .shadow { transition: opacity .4s; }
+.rig.a-sleep .shadow, .rig.a-heal .shadow { opacity: 0; }
+.rig.a-die .shadow { opacity: 0; transition: opacity .6s .6s; }
+
+/* small effects */
+.rig .orb { transform-box: fill-box; transform-origin: center; animation: ri-orb 1.4s ease-in-out infinite; }
+@keyframes ri-orb { 50% { transform: scale(1.3); opacity: .85; } }
+.rig-bomber .fuse { animation: ri-fuse .3s steps(2) infinite; } @keyframes ri-fuse { 50% { fill: #fff4a8; } }
+.rig-toxic .slime { transform-box: fill-box; transform-origin: top; animation: ri-drip 2s ease-in infinite; }
+@keyframes ri-drip { 0% { transform: scaleY(.6); } 70% { transform: scaleY(1.1); } 100% { transform: scaleY(.6); } }
+.rig-mutant .spikes, .rig-boss .spikes { transform-box: fill-box; transform-origin: left center; animation: ri-spikes 2.4s ease-in-out infinite; }
+@keyframes ri-spikes { 50% { transform: scale(1.06); } }
+.rig-scout .beam { animation: ri-beam 2.6s ease-in-out infinite; } @keyframes ri-beam { 50% { opacity: .1; } }
+
+body.no-anim .rig *, body.no-anim .rig { animation: none !important; }
+/* room tools in the front hand (js/ui/chars.js), shown by the job animation */
+.rig .trowel, .rig .clip, .rig .ladle { display: none; }
+.rig.a-farm .trowel, .rig.a-study .clip, .rig.a-cook .ladle { display: inline; }
+.rig.a-farm .item, .rig.a-study .item, .rig.a-operate .item, .rig.a-cook .item { display: none; }
+/* standing still: tools are put away, guns stay in hand */
+.rig.a-idle:not([data-hold="gun"]):not([data-hold="pistol"]) .item { display: none; }
+/* climbing: both hands are on the ladder */
+.rig.a-climb .item { display: none; }
