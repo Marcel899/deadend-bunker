@@ -234,7 +234,8 @@ DE.UI.Bunker = (function () {
     const info = $('#wave-info');
     if (info) {
       const say = verdict === 'ok' ? 'defense holds' : verdict === 'warn' ? 'the wall will take hits' : 'defense too weak!';
-      setHtml(info, `${Ic().img('wave', 'ico-inline')} ${DE.Defense.isBossWave(d.wave) ? 'BOSS ' : ''}Wave ${d.wave} in <b>${U().fmtTime(secs)}</b> · <span class="wi-v">${say}</span>`);
+      const raid = DE.Defense.isRaid(s, d.wave);
+      setHtml(info, `${Ic().img(raid ? 'truck' : 'wave', 'ico-inline')} ${DE.Defense.isBossWave(d.wave) ? 'BOSS ' : ''}${raid ? 'Bandit raid' : 'Wave'} ${d.wave} in <b>${U().fmtTime(secs)}</b> · <span class="wi-v">${say}</span>`);
       info.title = `Threat ${U().fmt(hp)} vs your ${U().fmt(power.total)} damage per fight — click to open Defense`;
       info.className = 'wave-info ' + verdict;
     }

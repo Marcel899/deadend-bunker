@@ -277,6 +277,7 @@ DE.Events = (function () {
         case 'levelA': if (A) { const n = Math.round(DE.Survivors.xpNeeded(A.level) * v); A.xp += n; out.push(A.name + ' +' + n + ' xp'); } break;
         case 'injureA': if (A) { DE.Survivors.injure(A, v); out.push(A.name + ' injured'); } break;
         case 'recruitN': { let n = 0; for (let k = 0; k < v && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state); k++) { DE.Survivors.spawn(state); state.stats.recruited++; n++; } out.push(n ? '+' + n + ' survivor' + (n > 1 ? 's' : '') : 'no free beds'); break; }
+        case 'raid': state.defense.raidNext = true; out.push('a raid is coming'); break;
         case 'waveHp': state.defense.waveMult = U().clamp((state.defense.waveMult || 1) * v, 0.3, 3); out.push('next wave ' + (v >= 1 ? '+' : '−') + Math.round(Math.abs(v - 1) * 100) + '%'); break;
         case 'chain': if (U().chance(v[3] == null ? 1 : v[3])) { ensure(state); state.eventChains.push({ def: v[0], at: state.playtime + U().rand(v[1], v[2]), ctx: { A: ctx.A, B: ctx.B, aId: ctx.aId, bId: ctx.bId, D: ctx.D, R: ctx.R, room: ctx.room } }); } break;
         case 'waterPct': gainRes(state, 'water', state.resources.water * v); out.push('lost water'); break;

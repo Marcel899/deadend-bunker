@@ -283,12 +283,12 @@ DE.Chars = (function () {
    * Drawn in the HAND's frame: origin = centre of the palm, +y points along the forearm away from
    * the elbow (the direction the item extends / a gun fires), +x is the thumb side. So a weapon
    * always points where the forearm points — angled down at low ready, level when aiming. */
-  const GUNS = { rifle: 1, shotgun: 1, pistol: 1, sniper: 1, ak: 1 };
+  const GUNS = { rifle: 1, shotgun: 1, pistol: 1, sniper: 1, ak: 1, lmg: 1 };
   /* Cut-out sprites (assets/sprites): size = longest side in rig units; grip / tip = points in the
    * sprite (0..1): the grip sits in the palm and grip→tip points along +y. `hang` items dangle. */
   const HELD = {
     rifle: { s: 'rifle', size: 92, grip: [.4, .72], tip: [1, .3] }, shotgun: { s: 'shotgun', size: 90, grip: [.33, .7], tip: [1, .25] },
-    pistol: { s: 'pistol', size: 40, grip: [.22, .8], tip: [1, .22] }, sniper: { s: 'sniper', size: 102, grip: [.42, .7], tip: [1, .3] }, ak: { s: 'ak', size: 90, grip: [.42, .72], tip: [1, .3] },
+    pistol: { s: 'pistol', size: 40, grip: [.22, .8], tip: [1, .22] }, sniper: { s: 'sniper', size: 102, grip: [.42, .7], tip: [1, .3] }, ak: { s: 'ak', size: 90, grip: [.42, .72], tip: [1, .3] }, lmg: { s: 'lmg', size: 104, grip: [.4, .72], tip: [1, .3] },
     wrench: { s: 'wrench', size: 60, grip: [.2, .82], tip: [.85, .15] }, pipewrench: { s: 'pipewrench', size: 55, grip: [.22, .85], tip: [.8, .12] },
     crowbar: { s: 'crowbar', size: 72, grip: [.14, .86], tip: [.9, .1] }, cleaver: { s: 'cleaver', size: 50, grip: [.86, .45], tip: [.1, .5] },
     shovel: { s: 'shovel', size: 70, grip: [.8, .18], tip: [.2, .85] },

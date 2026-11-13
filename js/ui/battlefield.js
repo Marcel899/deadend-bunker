@@ -35,7 +35,7 @@ DE.UI.Battlefield = (function () {
       root = document.createElement('div'); root.className = 'bf'; root.id = 'bf';
       root.innerHTML = `<div class="bf-world"><svg class="bf-decals" viewBox="0 0 ${OW().W} ${OW().H}" width="${OW().W}" height="${OW().H}" aria-hidden="true"></svg><svg class="bf-fx" viewBox="0 0 ${OW().W} ${OW().H}" width="${OW().W}" height="${OW().H}" aria-hidden="true"></svg></div>`;
       scene.appendChild(root); world = root.firstChild; decals = world.firstChild; fx = world.children[1]; scaleSig = '';
-      st.zombies = []; st.turrets = []; st.guards = {}; st.party = {}; st.missiles = []; st.launcher = null; st.turretSig = ''; st.missileLvl = 0; st.wave = -1;
+      st.zombies = []; st.turrets = []; st.guards = {}; st.party = {}; st.missiles = []; st.launcher = null; st.turretSig = ''; st.missileLvl = 0; st.wave = -1; st.cars = [];
       // the clickable wall / hatch hot-spots and the entrance sign live in world space too
       ['hatch', 'wall', 'entrance-sign'].forEach(c => { const e = scene.querySelector('.ow-overlay .' + c); if (e) world.appendChild(e); });
     }
@@ -203,8 +203,10 @@ DE.UI.Battlefield = (function () {
     return f;
   }
   function spawnHorde(s) {
-    st.zombies.forEach(z => z.el.remove()); st.zombies = [];
-    const all = DE.Defense.waveComposition(DE.Defense.waveHp(s), s.defense.wave);
+    st.zombies.forEach(z => z.el.remove()); st.zombies = []; clearCars();
+    const raid = DE.Defense.isRaid(s, s.defense.wave);
+    const all = DE.Defense.waveComposition(DE.Defense.waveHp(s), s.defense.wave, raid);
+    if (raid) return spawnRaid(s, all);
     const comp = all.slice(0, 24);
     const pw = DE.Defense.defensePower(s), hp = DE.Defense.waveHp(s);
     st.ratio = hp > 0 ? pw.total / hp : 1; st.kills = 0; st.resolved = false; st.result = null;
@@ -225,6 +227,115 @@ DE.UI.Battlefield = (function () {
     st.spawned = comp.length;
     st.killBudget = Math.round(comp.length * Math.min(1, st.ratio) * .9);
   }
+  /* ---------- bandit raids ----------
+   * Raiders come up the road in vehicles, brake hard, jump out and fight from around their trucks:
+   * some take cover behind the vehicle, the rest step out in front. They shoot at the guards and
+   * the wall instead of climbing it. They are ordinary targets (in st.zombies, .bandit) for the
+   * guards, turrets and missiles. A pickup's mounted gun fires while its crew lives. When the raid
+   * is beaten the wrecks burn; after a breach the survivors run for the gate and the trucks leave. */
+  const CAR = { buggy: { w: 124, h: 66, wheels: [[26, 52, 14], [98, 52, 14]] }, pickup: { w: 176, h: 84, wheels: [[38, 68, 16], [140, 68, 16]] }, truck: { w: 216, h: 112, wheels: [[42, 94, 18], [112, 94, 18], [176, 94, 18]] } };
+  function carSvg(type) {
+    const I = '#1c1020', c = CAR[type], wheels = c.wheels.map(([x, y, r]) => `<g class="bf-wheel" style="transform-origin:${x}px ${y}px"><circle cx="${x}" cy="${y}" r="${r}" fill="#26232c" stroke="${I}" stroke-width="4"/><circle cx="${x}" cy="${y}" r="${r * .45}" fill="#8a8e98" stroke="${I}" stroke-width="2.5"/><path d="M${x - r * .45} ${y} H${x + r * .45} M${x} ${y - r * .45} V${y + r * .45}" stroke="${I}" stroke-width="2"/></g>`).join('');
+    let body = '';
+    if (type === 'buggy') body = `<path d="M8 46 L18 30 H58 L70 18 H96 L112 34 L118 46 Z" fill="#c8662a" stroke="${I}" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M44 30 L54 6 H92 L100 30 M60 6 L56 30 M86 6 L88 30" fill="none" stroke="${I}" stroke-width="4" stroke-linecap="round"/><rect x="14" y="38" width="22" height="6" rx="2" fill="#7a3a1a"/>
+      <path d="M96 4 V-18" stroke="${I}" stroke-width="3"/><path d="M96 -18 L118 -12 L96 -6 Z" fill="#2a1a20" stroke="${I}" stroke-width="2"/><circle cx="103" cy="-12" r="2.4" fill="#e8e2d0"/>
+      <path d="M2 44 L10 40 M2 50 L12 48" stroke="#8a8e98" stroke-width="4" stroke-linecap="round"/>`;
+    else if (type === 'pickup') body = `<path d="M6 60 V40 L30 36 L44 14 H84 L92 36 H170 V60 Z" fill="#8a2a2a" stroke="${I}" stroke-width="4" stroke-linejoin="round"/>
+      <path d="M50 18 H80 L86 36 H44 Z" fill="#9fd0e8" stroke="${I}" stroke-width="3" stroke-linejoin="round" opacity=".85"/><path d="M92 36 H170" stroke="${I}" stroke-width="3"/><rect x="100" y="42" width="60" height="5" rx="2" fill="#5a1a1a"/>
+      <path d="M0 52 l-6 -4 M0 58 l-7 2 M2 46 l-5 -7" stroke="#b8bcc6" stroke-width="4" stroke-linecap="round"/><rect x="2" y="52" width="16" height="8" rx="2" fill="#6a6e78" stroke="${I}" stroke-width="2.5"/>
+      <g class="bf-cargun"><rect x="120" y="14" width="10" height="22" fill="#3a3f4a" stroke="${I}" stroke-width="3"/><rect x="92" y="10" width="40" height="9" rx="3" fill="#2d2f36" stroke="${I}" stroke-width="3"/><rect x="118" y="6" width="16" height="16" rx="3" fill="#4e5058" stroke="${I}" stroke-width="3"/><circle class="bf-carflash" cx="86" cy="14" r="7" fill="#fff4a8" opacity="0"/></g>
+      <circle cx="160" cy="40" r="5" fill="#ff5a3c"/>`;
+    else body = `<path d="M8 84 V42 L26 20 H120 V10 H204 V84 Z" fill="#5a6248" stroke="${I}" stroke-width="5" stroke-linejoin="round"/>
+      <path d="M30 26 H62 V40 H22 Z" fill="#2a2a32" stroke="${I}" stroke-width="3"/><rect x="132" y="22" width="56" height="10" rx="3" fill="#2a2a32"/>
+      <path d="M8 60 H204 M120 10 V84" stroke="${I}" stroke-width="3" opacity=".6"/><g fill="#8a8e98">${[20, 60, 100, 140, 180].map(x => `<circle cx="${x}" cy="72" r="3"/>`).join('')}</g>
+      <path d="M-4 84 L8 56 V84 Z M-8 70 L8 64" fill="#6a6e78" stroke="${I}" stroke-width="4" stroke-linejoin="round"/><path d="M140 10 l6 -12 l6 12 M168 10 l6 -12 l6 12" fill="#b8bcc6" stroke="${I}" stroke-width="2.5"/>
+      <path d="M150 -2 V-26" stroke="${I}" stroke-width="3"/><path d="M150 -26 L174 -20 L150 -14 Z" fill="#a3202a" stroke="${I}" stroke-width="2"/>`;
+    return `<svg viewBox="-10 -30 ${c.w + 20} ${c.h + 30}" width="${c.w + 20}" height="${c.h + 30}" aria-hidden="true"><ellipse cx="${c.w / 2}" cy="${c.h - 2}" rx="${c.w * .52}" ry="7" fill="#000" opacity=".25"/>${body}${wheels}</svg>`;
+  }
+  function clearCars() { (st.cars || []).forEach(c => c.el.remove()); st.cars = []; }
+  function spawnRaid(s, all) {
+    const comp = all.slice(0, 16), n = comp.length, W = OW().W;
+    const pw = DE.Defense.defensePower(s), hp = DE.Defense.waveHp(s);
+    st.ratio = hp > 0 ? pw.total / hp : 1; st.kills = 0; st.resolved = false; st.result = null; st.raid = true;
+    const used = [...new Set(comp.map(b => b.car))], secs = Math.max(20, (s.defense.nextWaveAt - Date.now()) / 1000);
+    st.cars = used.map((ci, k) => {
+      const v = all.cars[ci], C0 = CAR[v.id] || CAR.buggy;
+      const el = unit(carSvg(v.id), 'bf-car car-' + v.id); el.style.zIndex = 30;
+      const car = { el, type: v.id, w: C0.w, h: C0.h, x: W + 80 + k * 40, stop: Math.min(W - C0.w - 30, 1000 + k * 192), speed: v.id === 'buggy' ? 300 : v.id === 'truck' ? 180 : 240,
+        delay: Math.min(secs - 12, 3 + k * Math.max(3, (secs - 16) / Math.max(1, used.length))), mode: 'wait', crew: [], gunCd: 1, smoke: 0, gun: el.querySelector('.bf-cargun'), flash: el.querySelector('.bf-carflash') };
+      el.style.visibility = 'hidden'; placeCar(car); return car;
+    });
+    comp.forEach((b, i) => {
+      const car = st.cars[used.indexOf(b.car)], big = !!b.boss, h = big ? 78 : 62;
+      const el = unit(DE.Chars.crew(b.prof, { anim: 'idle', h, flip: true, item: b.weapon, phase: Math.random() * 4, tint: 'saturate(.75) brightness(.92)', title: b.name }), 'bf-z bf-bandit');
+      el.style.width = (h * 140 / 225) + 'px'; el.style.height = h + 'px'; el.style.visibility = 'hidden';
+      const k = car.crew.length, cover = b.id === 'marksman' || k % 3 === 2;
+      const z = { el, rig: el.querySelector('.rig'), id: b.id, bandit: true, big, boss: big, h, speed: b.id === 'shotgunner' ? 90 : 70, lane: i % LANES, x: car.x, y: OW().GROUND + 2 + (i % LANES) * 3,
+        hp: big ? 4 : b.id === 'shotgunner' ? 1.6 : 1.2, delay: 1e9, dead: false, through: false, retreat: false, mode: 'ride', atkCd: 1 + Math.random() * 2, groanAt: 1e9, car,
+        post: cover ? car.stop + car.w + 14 + k * 10 : car.stop - 40 - k * 34, rate: b.id === 'marksman' ? 2.6 : b.id === 'gunner' ? .9 : b.id === 'shotgunner' ? 1.6 : 1.3 };
+      // inside the defenders' reach (guards fire out to RANGE from the firing line), never on top of the wall
+      z.post = Math.min(1180, Math.max((st.front || 760) + 160, z.post)); el.style.zIndex = 31 + (i % LANES);
+      car.crew.push(z); place(z); st.zombies.push(z);
+    });
+    st.spawned = n; st.killBudget = Math.round(n * Math.min(1, st.ratio) * .9);
+    DE.UI.toast('<b>Bandits on the road!</b> ' + st.cars.length + ' vehicle' + (st.cars.length > 1 ? 's' : '') + ' coming for the bunker', 'err', 5000, 'truck', { key: 'raid' });
+  }
+  function placeCar(c) { put(c.el, c.x - 10, OW().GROUND + 14 - c.h - 30 + 2); }
+  function stepCars(dt) {
+    (st.cars || []).forEach(c => {
+      if (c.mode === 'wait') { c.delay -= dt; if (c.delay <= 0) { c.mode = 'drive'; c.el.style.visibility = ''; c.el.classList.add('moving'); DE.Audio.sfxAt('engine', sx(Math.min(c.x, OW().W - 40)), 300); } return; }
+      if (c.mode === 'drive' || c.mode === 'leave') {
+        const dir = c.mode === 'leave' ? 1 : -1, left = c.x - c.stop, v = dir < 0 ? Math.max(40, Math.min(c.speed, left * 2.2)) : Math.min(c.speed, (c.v || 0) + 200 * dt); c.v = v;
+        c.x += dir * v * dt; placeCar(c);
+        if (dir < 0 && c.x <= c.stop + 1) { c.x = c.stop; placeCar(c); c.mode = 'park'; c.el.classList.remove('moving'); DE.Audio.sfxAt('brake', sx(c.x), 200); for (let i = 0; i < 4; i++) puff(c.x + c.w * .3 + Math.random() * c.w * .6, OW().GROUND + 6 - Math.random() * 10, 8 + Math.random() * 6, 'bf-smoke');
+          c.crew.forEach((z, k) => setTimeout(() => { if (!root || z.dead) return; z.delay = 0; z.mode = 'walk'; z.x = c.x + 20 + k * 10; z.el.style.visibility = ''; anim(z.rig, 'run'); place(z); }, 250 + k * 320)); }
+        if (dir > 0 && c.x > OW().W + 60) { c.el.remove(); c.gone = true; }
+        return;
+      }
+      if (c.mode === 'park') {
+        // the mounted gun keeps firing while its crew is alive
+        const crewUp = c.crew.some(z => !z.dead && !z.through);
+        if (c.gun && crewUp && (st.incoming || st.fighting)) { c.gunCd -= dt; if (c.gunCd <= 0) { c.gunCd = .14; c.burst = (c.burst || 0) + 1; if (c.burst > 5) { c.burst = 0; c.gunCd = 1.6 + Math.random(); }
+          const tx = target(c.x); tracer(c.x + 86 - 10, OW().GROUND + 14 - c.h + 14 - 2, tx[0], tx[1], true); DE.Audio.sfxAt('heavy', sx(c.x), 70); c.flash.setAttribute('opacity', '1'); setTimeout(() => c.flash.setAttribute('opacity', '0'), 50); } }
+        if (!crewUp && !c.wreck && c.crew.every(z => z.dead)) { c.wreck = true; c.el.classList.add('wreck'); if (c.type !== 'buggy' || Math.random() < .5) explodeCar(c); }
+      }
+      if (c.wreck) { c.smoke -= dt; if (c.smoke <= 0) { c.smoke = .35 + Math.random() * .3; puff(c.x + c.w * (.3 + Math.random() * .4), OW().GROUND - c.h * .7, 10 + Math.random() * 8, 'bf-smoke big dark'); } }
+    });
+    st.cars = (st.cars || []).filter(c => !c.gone);
+  }
+  function explodeCar(c) {
+    const x = c.x + c.w / 2, y = OW().GROUND - c.h * .5;
+    const g = document.createElementNS(NS, 'g'); g.setAttribute('class', 'bf-boom'); g.setAttribute('transform', `translate(${x} ${y})`);
+    g.innerHTML = `<circle class="bf-boom-flash" r="60" fill="url(#ow-sunglow)"/><circle class="bf-boom-ball" r="34" fill="#ffb13a" stroke="#1c1020" stroke-width="3"/><circle class="bf-boom-core" r="18" fill="#fff4a8"/>`;
+    fx.appendChild(g); setTimeout(() => g.remove(), 1100); DE.Audio.sfxAt('boom', sx(x), 150);
+    root.classList.add('shake'); setTimeout(() => root && root.classList.remove('shake'), 260);
+  }
+  /** Where a bandit's shot goes: a guard on the firing line, else the wall. */
+  function target(x) {
+    const gs = Object.values(st.guards).filter(g => g.combat && g.x < x); const L = OW().LAYOUT;
+    if (gs.length && Math.random() < .55) { const g = gs[(Math.random() * gs.length) | 0]; g.el.classList.remove('pinged'); void g.el.offsetWidth; g.el.classList.add('pinged'); return [g.x + (Math.random() - .5) * 10, g.y - 64 * (.35 + Math.random() * .4)]; }
+    if (Math.random() < .3) { const b = document.querySelector('#scene .ow-bunker'); if (b) { b.classList.remove('struck'); void b.getBBox; b.classList.add('struck'); } }
+    return [L.wallR - Math.random() * 40, L.roofY + 20 + Math.random() * (OW().GROUND - L.roofY - 50)];
+  }
+  function stepBandits(dt) {
+    const age = st.fighting ? (performance.now() - st.fightStart) / 1000 : 0;
+    st.zombies.forEach(z => {
+      if (!z.bandit || z.dead || z.delay > 0 || z.through || z.mode === 'ride') return;
+      // after a breach the survivors rush the gate
+      if (st.resolved && st.result && st.result.breach && z.survivor && age > 5) { z.through = true; anim(z.rig, 'run'); face(z.rig, true); DE.UI.Anim.speed(z.rig, z.speed * 1.6); return; }
+      if (Math.abs(z.x - z.post) > 2) { const d = Math.sign(z.post - z.x); z.x += d * z.speed * dt; if (Math.sign(z.post - z.x) !== d) z.x = z.post; if (z._v !== z.speed) { z._v = z.speed; DE.UI.Anim.speed(z.rig, z.speed); } face(z.rig, d < 0); if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, 'run'); } place(z); return; }
+      face(z.rig, true);
+      if (!(st.incoming || st.fighting)) { if (z.mode !== 'idle') { z.mode = 'idle'; anim(z.rig, 'guard'); } return; }
+      z.atkCd -= dt;
+      if (z.atkCd <= 0) {
+        z.atkCd = z.rate * (.7 + Math.random() * .6); z.mode = 'shoot'; anim(z.rig, 'shoot');
+        const mx = z.x - z.h * .44, my = z.y - z.h * .55, t = target(z.x);
+        tracer(mx, my, t[0], t[1], z.boss); DE.Audio.sfxAt(z.boss ? 'heavy' : 'rifle', sx(z.x), 60);
+      } else if (z.mode === 'shoot' && z.atkCd < z.rate * .5) { z.mode = 'aim'; anim(z.rig, 'guard'); }
+    });
+  }
+
   /** Screen x of a battlefield x (for panning sounds to where they happen). */
   function sx(x) { if (!root || !root.isConnected) return null; const r = root.getBoundingClientRect(); return r.left + x / OW().W * r.width; }
   function place(z) { put(z.el, z.x - z.h * 70 / 225, z.y - z.h * 215 / 225); }
@@ -247,7 +358,7 @@ DE.UI.Battlefield = (function () {
     z.dead = true; st.kills++; anim(z.rig, 'die'); z.el.classList.add('dead');
     pool(z.x - 10, z.y, z.big ? 34 : 22, z.toxic);
     blood(z.x, z.y - z.h * .5, z.big ? 12 : 8, z.toxic);
-    DE.Audio.sfxAt(z.big ? 'bigdie' : 'zdie', sx(z.x), 90);
+    DE.Audio.sfxAt(z.bandit ? 'thud' : z.big ? 'bigdie' : 'zdie', sx(z.x), 90);
     if (z.big) { root.classList.add('shake'); setTimeout(() => root && root.classList.remove('shake'), 220); }
     setTimeout(() => z.el.remove(), 1800);
   }
@@ -274,7 +385,7 @@ DE.UI.Battlefield = (function () {
     const front = frontX();
     st.front = front;
     for (let lane = 0; lane < LANES; lane++) {
-      const q = st.zombies.filter(z => z.lane === lane && !z.dead && !z.through && !z.retreat && z.delay <= 0).sort((a, b) => a.x - b.x);
+      const q = st.zombies.filter(z => z.lane === lane && !z.bandit && !z.dead && !z.through && !z.retreat && z.delay <= 0).sort((a, b) => a.x - b.x);
       q.forEach((z, k) => {
         const ahead = q[k - 1];
         const gapX = ahead ? (ahead.big || z.big ? 40 : 26) : 0;
@@ -309,8 +420,9 @@ DE.UI.Battlefield = (function () {
     // entering the field, groaning, breaking through, retreating
     st.zombies.forEach(z => {
       if (z.dead) return;
+      if (z.bandit && z.delay > 0) return;
       if (z.delay > 0) { z.delay -= dt; if (z.delay <= 0) z.el.style.visibility = ''; return; }
-      if ((z.groanAt -= dt) <= 0) { z.groanAt = 5 + Math.random() * 9; if (z.x < OW().W) DE.Audio.sfxAt(z.big ? 'groanbig' : 'groan', sx(z.x), 700); }
+      if (!z.bandit && (z.groanAt -= dt) <= 0) { z.groanAt = 5 + Math.random() * 9; if (z.x < OW().W) DE.Audio.sfxAt(z.big ? 'groanbig' : 'groan', sx(z.x), 700); }
       if (z.through) { z.x -= z.speed * 1.6 * dt; place(z); if (z.x < OW().LAYOUT.doorX + 30) { z.dead = true; z.el.classList.add('gone'); setTimeout(() => z.el.remove(), 600); } }
       else if (z.retreat) { z.x += z.speed * dt; face(z.rig, false); if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, 'walk'); } place(z); if (z.x > OW().W + 30) { z.dead = true; z.el.remove(); } }
     });
@@ -394,7 +506,7 @@ DE.UI.Battlefield = (function () {
     const dt = Math.min(.05, Math.max(0, (t - (lastT || t)) / 1000)); lastT = t;
     if (!document.hidden) {
       const live = st.zombies.filter(z => !z.dead && !z.through && !z.retreat && z.delay <= 0 && z.x < OW().W - 10);
-      stepZombies(dt);
+      stepZombies(dt); stepCars(dt); stepBandits(dt);
       st.turrets.forEach(tu => stepTurret(tu, dt, live));
       if (st.launcher) stepLauncher(st.launcher, dt, live);
       st.missiles = st.missiles.filter(m => stepMissile(m, dt));
@@ -414,6 +526,8 @@ DE.UI.Battlefield = (function () {
     st.incoming = !!flags.incoming;
     if (st.incoming && st.wave !== s.defense.wave && !st.fighting) { st.wave = st.hordeWave = s.defense.wave; spawnHorde(s); DE.Audio.sfx('alarm', 5000); }
     if (!st.incoming && !st.fighting && st.zombies.length && st.wave !== -1) { st.zombies.forEach(z => z.el.remove()); st.zombies = []; st.wave = -1; }
+    // wrecks burn out a while after the fight
+    if (!st.incoming && !st.fighting && st.cars && st.cars.length && Date.now() > (st.carsClearAt || 0)) clearCars();
     const animOn = s.settings.animations;
     if (animOn && !running) { running = true; lastT = 0; raf = requestAnimationFrame(frame); }
     if (!animOn && running) { running = false; if (raf) cancelAnimationFrame(raf); raf = 0; }
@@ -434,7 +548,8 @@ DE.UI.Battlefield = (function () {
     if (st.hordeWave !== result.wave && s) { spawnHorde(s); st.zombies.forEach((z, i) => { z.delay = i * .35; z.x = 1250 + Math.random() * 300; }); }
     st.resolved = true; st.result = result; st.fighting = true; st.fightStart = performance.now();
     // anyone still waiting off-screen comes in quickly now
-    st.zombies.forEach(z => { if (z.delay > 3) z.delay = 1 + Math.random() * 2; });
+    st.zombies.forEach(z => { if (!z.bandit && z.delay > 3) z.delay = 1 + Math.random() * 2; });
+    (st.cars || []).forEach((c, k) => { if (c.mode === 'wait') c.delay = Math.min(c.delay, .4 + k * 1.2); });
     if (result.breach) { const live = st.zombies.filter(z => !z.dead); live.forEach((z, i) => { if (i % 5 < 2) z.survivor = true; }); }
     if (!running) { st.zombies.forEach(z => z.survivor ? (z.el.remove(), z.dead = true) : kill(z)); endFight(); }
   }
@@ -462,12 +577,16 @@ DE.UI.Battlefield = (function () {
     kill(z);
   }
   function endFight() {
+    const breach = st.result && st.result.breach;
     st.fighting = false; st.resolved = false; st.wallShotAt = 0;
+    // raid over: the wrecks burn for a while; after a breach the trucks drive off with the loot
+    (st.cars || []).forEach(c => { if (breach && !c.wreck) { c.mode = 'leave'; c.v = 0; c.el.classList.add('moving'); face(c.el, false); c.el.classList.add('leaving'); DE.Audio.sfxAt('engine', sx(c.x), 300); } else if (!c.wreck) { c.wreck = true; c.el.classList.add('wreck'); } });
+    st.carsClearAt = Date.now() + 14000; st.raid = false;
     // anything still out there (stragglers that never reached the wall) falls where it stands
     st.zombies.forEach(z => { if (!z.dead && !z.through && !z.retreat) kill(z); });
     st.wave = -1;
   }
-  function status() { return { zombies: st.zombies.filter(z => !z.dead).length, turrets: st.turrets.map(t => ({ x: t.px, y: t.py, a: +t.a.toFixed(1), target: t.target ? t.target.x : null })), launcher: st.launcher ? { a: st.launcher.a, cd: st.launcher.cd } : null, missiles: st.missiles.length, guards: Object.values(st.guards).map(g => ({ x: +g.x.toFixed(1), y: g.y })), fighting: st.fighting, incoming: st.incoming, front: st.front, kills: st.kills, budget: st.killBudget, zs: st.zombies.filter(z => !z.dead).map(z => ({ id: z.id, x: Math.round(z.x), lane: z.lane, mode: z.mode, d: +z.delay.toFixed(1), t: z.through, r: z.retreat })) }; }
+  function status() { return { cars: (st.cars || []).map(c => c.type + ':' + c.mode + ':' + Math.round(c.x)), bandits: st.zombies.filter(z => z.bandit && !z.dead).length, zombies: st.zombies.filter(z => !z.dead).length, turrets: st.turrets.map(t => ({ x: t.px, y: t.py, a: +t.a.toFixed(1), target: t.target ? t.target.x : null })), launcher: st.launcher ? { a: st.launcher.a, cd: st.launcher.cd } : null, missiles: st.missiles.length, guards: Object.values(st.guards).map(g => ({ x: +g.x.toFixed(1), y: g.y })), fighting: st.fighting, incoming: st.incoming, front: st.front, kills: st.kills, budget: st.killBudget, zs: st.zombies.filter(z => !z.dead).map(z => ({ id: z.id, x: Math.round(z.x), lane: z.lane, mode: z.mode, d: +z.delay.toFixed(1), t: z.through, r: z.retreat })) }; }
 
   return { sync, fight, status };
 })();

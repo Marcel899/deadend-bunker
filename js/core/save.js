@@ -195,7 +195,7 @@ DE.Save = (function () {
         s.defense.turretLevel = Math.min(50, NN(d.turretLevel, 0)); s.defense.breachStreak = Math.min(20, NN(d.breachStreak, 0)); s.defense.winStreak = Math.min(1000, NN(d.winStreak, 0));
         s.defense.nextWaveAt = N(d.nextWaveAt, now + C().FIRST_WAVE_SEC * 1000);
         s.defense.wave = Math.max(1, N(d.wave, 1)); s.defense.shock = NN(d.shock, 0); s.defense.calmUntil = NN(d.calmUntil, 0);
-        s.defense.waveMult = U().clamp(N(d.waveMult, 1), 0.3, 3);
+        s.defense.waveMult = U().clamp(N(d.waveMult, 1), 0.3, 3); s.defense.raidNext = !!d.raidNext;
         if (Array.isArray(d.log)) s.defense.log = d.log.filter(U().isObj).slice(-20);
         if (U().isObj(d.lastResult)) s.defense.lastResult = d.lastResult;
       }

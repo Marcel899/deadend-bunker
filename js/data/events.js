@@ -150,7 +150,7 @@ DE.Data.BUNKER_EVENTS = [
       { label: 'Keep it running', desc: 'Probably fine.', effects: { gamble: [0.6, { morale: 1 }, { buff: ['generator', -0.4, 900], injure: [0.2, 20] }, 'the panel held', 'the panel burned out'] } }] },
   { id: 'envoy', weight: 2, title: 'Raider envoy', cond: (s) => s.defense.wave >= 5, text: 'A man with a white rag on a rifle walks up to the wall. His crew wants tribute — or they will lead the horde to your door.',
     choices: [{ label: 'Pay the tribute', desc: 'They leave. They might come back for more.', effects: { cost: { scrap: 0.12, food: 0.08 }, chain: ['envoy2', 1500, 2700, 0.45, 'They might come back'] } },
-      { label: 'Refuse', desc: 'The next wave will be bigger. Nobody here bows.', effects: { waveHp: 1.35, morale: 3 } },
+      { label: 'Refuse', desc: 'His crew will come for you: armed, in trucks, and angrier. Nobody here bows.', effects: { waveHp: 1.2, raid: 1, morale: 3 } },
       { label: 'Call in the militia', desc: 'They owe you one — now they do not.', cond: (s) => (s.rep && s.rep.militia || 0) >= 1, effects: { rep: { militia: -1 } } }] },
   { id: 'envoy2', chainOnly: true, weight: 1, title: 'The raiders return', text: 'Same rag, same rifle, a bigger number. “Business is business.”',
     choices: [{ label: 'Pay again', desc: 'Expensive peace.', effects: { cost: { scrap: 0.15, food: 0.1 } } }, { label: 'Not this time', desc: 'They will make the next wave hurt.', effects: { waveHp: 1.5, morale: 4 } }] },

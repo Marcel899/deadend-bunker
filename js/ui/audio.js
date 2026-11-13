@@ -74,6 +74,9 @@ DE.Audio = (function () {
     shot: (t) => { noise(t, .07, .22, 1800, .8, 'bandpass', 600); tone(120, t, .06, 'square', .05, null, 60); },
     heavy: (t) => { noise(t, .12, .3, 900, .7, 'lowpass', 200); tone(90, t, .1, 'square', .09, null, 45); },
     launch: (t) => { noise(t, .7, .18, 400, .6, 'bandpass', 2400); tone(220, t, .5, 'sawtooth', .04, null, 660); },
+    engine: (t) => { tone(48, t, 1.6, 'sawtooth', .05, null, 72); tone(96, t + .1, 1.4, 'square', .018, null, 140); noise(t, 1.5, .06, 300, .6, 'lowpass', 500); },
+    brake: (t) => { noise(t, .5, .12, 2600, 3, 'bandpass', 1400); tone(60, t, .3, 'sawtooth', .04, null, 40); },
+    rifle: (t) => { noise(t, .09, .24, 2400, .9, 'bandpass', 900); tone(160, t, .05, 'square', .05, null, 70); noise(t + .04, .25, .05, 800, .5, 'lowpass', 200); },
     boom: (t) => { noise(t, .9, .4, 600, .5, 'lowpass', 60); tone(70, t, .6, 'sine', .26, null, 30); },
     // a two-tone siren (triangle + a quiet square an octave up: present, not harsh)
     alarm: (t) => { for (let i = 0; i < 3; i++) { tone(620, t + i * .6, .3, 'triangle', .09, null, 880); tone(1240, t + i * .6, .3, 'square', .012, null, 1760); tone(880, t + i * .6 + .3, .3, 'triangle', .09, null, 620); } },

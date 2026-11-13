@@ -128,16 +128,17 @@ DE.Game = (function () {
  break;
  case 'wave': {
  const r = e.result; DE.UI.Bunker.playWave(r);
+ if (r.raid && !r.breach && (r.ammo || r.weapon)) setTimeout(() => DE.UI.toast('Off the raiders: ' + (r.ammo ? '+' + r.ammo + ' rounds' : '') + (r.weapon ? (r.ammo ? ', ' : '') + 'a ' + esc(r.weapon.toLowerCase()) + ' for the Armory' : ''), 'ok', 5000, 'shield'), 900);
  const loot = r.reward && Object.keys(r.reward).length ? ' Salvaged ' + U().costText(r.reward) + '.' : '';
  if (loot) setTimeout(() => DE.UI.Bunker.collectAt('#wall', r.reward), 1200);
  if (r.refugee) { DE.UI.toast('<b>' + esc(r.refugee) + '</b> saw you hold the gate and joined', 'ok', 5000, 'pop'); log(r.refugee + ' joined after wave ' + r.wave + '.'); }
  // bites in the fight: who is infected is not known yet (a medic on duty screens for it)
  if (r.infected) setTimeout(() => DE.UI.toast('Some of the wounded were bitten. Watch for symptoms' + (DE.Infection.hasWard(DE.Game.state) ? '' : ' — a Medical Bay or Quarantine Ward can screen and treat') + '.', 'warn', 6000, 'biohazard', { key: 'bites' }), 1800);
- if (r.outcome === 'victory') { DE.UI.toast('<b>' + (r.boss ? 'BOSS wave ' : 'Wave ') + r.wave + ' repelled</b>' + (r.streak > 1 ? ' · ' + r.streak + ' in a row' : '') + (r.reward && Object.keys(r.reward).length ? ' · ' + U().costText(r.reward) : ''), 'ok', 4500, 'trophy'); log('Wave ' + r.wave + ' repelled.'); }
- else if (r.outcome === 'held') { DE.UI.toast('<b>Wave ' + r.wave + ' held</b> · wall −' + U().fmt(r.wallDamage) + (r.injured.length ? ' · ' + r.injured.length + ' injured' : '') + (r.reward && Object.keys(r.reward).length ? ' · ' + U().costText(r.reward) : ''), 'warn', 5000, 'wallicon'); log('Wave ' + r.wave + ': wall damaged (−' + r.wallDamage + ').'); }
+ if (r.outcome === 'victory') { DE.UI.toast('<b>' + (r.boss ? 'BOSS wave ' : r.raid ? 'Raid ' : 'Wave ') + r.wave + (r.raid ? ' driven off' : ' repelled') + '</b>' + (r.streak > 1 ? ' · ' + r.streak + ' in a row' : '') + (r.reward && Object.keys(r.reward).length ? ' · ' + U().costText(r.reward) : ''), 'ok', 4500, 'trophy'); log('Wave ' + r.wave + ' repelled.'); }
+ else if (r.outcome === 'held') { DE.UI.toast('<b>' + (r.raid ? 'Raid ' : 'Wave ') + r.wave + ' held</b> · wall −' + U().fmt(r.wallDamage) + (r.injured.length ? ' · ' + r.injured.length + ' injured' : '') + (r.reward && Object.keys(r.reward).length ? ' · ' + U().costText(r.reward) : ''), 'warn', 5000, 'wallicon'); log('Wave ' + r.wave + ': wall damaged (−' + r.wallDamage + ').'); }
  else {
  log('Wave ' + r.wave + ': BREACH! Resources lost.');
- DE.UI.modal({ title: 'Wave ' + r.wave + ' — BREACH', cls: 'breach', html: `<p>The horde broke through the wall.</p><p><b>Lost:</b> ${Object.keys(r.losses).map(k => DE.Icons.res(k, 'ico-inline') + '' + U().fmt(r.losses[k])).join(', ')}</p>${r.injured.length ? `<p><b>Injured:</b> ${r.injured.map(esc).join(', ')}</p>` : ''}<p class="muted">Repair the wall, post guards and consider turrets. Morale takes a hit for a while.</p>`, buttons: [{ label: 'To Defense', action: 'openDrawer', params: { drawer: 'defense' }, cls: 'primary' }, { label: 'Close', action: 'closeModal' }] });
+ DE.UI.modal({ title: (r.raid ? 'Raid ' : 'Wave ') + r.wave + ' — BREACH', cls: 'breach', html: `<p>${r.raid ? 'The raiders got through the gate and loaded up their trucks.' : 'The horde broke through the wall.'}</p><p><b>Lost:</b> ${Object.keys(r.losses).map(k => DE.Icons.res(k, 'ico-inline') + '' + U().fmt(r.losses[k])).join(', ')}</p>${r.injured.length ? `<p><b>Injured:</b> ${r.injured.map(esc).join(', ')}</p>` : ''}<p class="muted">Repair the wall, post guards and consider turrets. Morale takes a hit for a while.</p>`, buttons: [{ label: 'To Defense', action: 'openDrawer', params: { drawer: 'defense' }, cls: 'primary' }, { label: 'Close', action: 'closeModal' }] });
  }
  break;
  }

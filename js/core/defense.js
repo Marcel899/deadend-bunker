@@ -84,13 +84,20 @@ DE.Defense = (function () {
     return Math.floor(C().WAVE_BASE_HP * Math.pow(C().WAVE_GROWTH, n - 1) * (1 + 0.08 * (state.floors.length - 1)) * weaken * (mut ? mut.hp : 1) * noise * regroup * provoked);
   }
   function isBossWave(n) { return n % DE.Data.BOSS_EVERY === 0; }
+  /** Is wave n a bandit raid instead of a horde? From wave 4 every seventh wave (never a boss wave),
+   *  and the next one after you sent a raider envoy away empty-handed. */
+  function isRaid(state, n) {
+    n = n || state.defense.wave; if (isBossWave(n) || n < 4) return false;
+    return (n === state.defense.wave && !!state.defense.raidNext) || n % 7 === 4;
+  }
 
   /** The horde for wave n with total strength hp. Seeded by the wave and its strength, so the
    *  Defense forecast, the fight on the surface and the resolution all see the same horde. */
-  function waveComposition(hp, n) {
+  function waveComposition(hp, n, raid) {
     n = n || 1;
     let seed = ((n * 2654435761) ^ Math.floor(hp)) >>> 0;
     const rnd = () => { seed = (seed + 0x6D2B79F5) >>> 0; let t = seed; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+    if (raid) return raidComposition(hp, n, rnd);
     const pool = DE.Data.ZOMBIES.filter(z => !z.boss && z.minWave <= n);
     const total = pool.reduce((a, z) => a + (z.weight || 1), 0);
     const pickZ = () => { let r = rnd() * total; for (const z of pool) { r -= (z.weight || 1); if (r <= 0) return z; } return pool[pool.length - 1]; };
@@ -99,11 +106,25 @@ DE.Defense = (function () {
     while (left > 0 && guard++ < 400) { const z = pickZ(); list.push(z); left -= z.hp; }
     return list;
   }
+  /** A raid: bandits (a warlord leads from wave 12) seated in vehicles, biggest vehicle first. Each
+   *  bandit carries .car (index into list.cars). Bandits are tougher than zombies, so fewer come. */
+  function raidComposition(hp, n, rnd) {
+    const pool = DE.Data.BANDITS.filter(b => !b.boss && b.minWave <= n), total = pool.reduce((a, b) => a + b.weight, 0);
+    const pick = () => { let r = rnd() * total; for (const b of pool) { r -= b.weight; if (r <= 0) return b; } return pool[pool.length - 1]; };
+    const list = []; let left = hp, guard = 0;
+    if (n >= 12) { const w = DE.Data.BANDITS.find(b => b.boss); const whp = Math.floor(hp * w.hp); list.push(Object.assign({}, w, { hp: whp, bandit: true })); left -= whp; }
+    while (left > 0 && guard++ < 200) { const b = pick(); list.push(Object.assign({ bandit: true }, b)); left -= b.hp; }
+    // seat them: the biggest vehicle the wave allows, filled in order
+    const V = DE.Data.RAID_VEHICLES.filter(v => v.minWave <= n); const cars = []; let seat = 0;
+    list.forEach(b => { if (!cars.length || seat >= cars[cars.length - 1].seats) { const v = V[Math.floor(rnd() * V.length)]; cars.push(Object.assign({}, v)); seat = 0; } b.car = cars.length - 1; seat++; });
+    list.cars = cars;
+    return list;
+  }
   function compositionSummary(list) {
     const counts = {}; let dmgSum = 0, toxic = 0;
     list.forEach(z => { counts[z.id] = (counts[z.id] || 0) + 1; dmgSum += z.dmg * z.hp; if (z.toxic) toxic++; });
     const totalHp = list.reduce((s, z) => s + z.hp, 0) || 1;
-    return { counts, dmgMult: dmgSum / totalHp, toxic, boss: list.some(z => z.boss) };
+    return { counts, dmgMult: dmgSum / totalHp, toxic, boss: list.some(z => z.boss), raid: list.some(z => z.bandit), cars: list.cars || [] };
   }
   /** Loot for beating a wave: scales with wave number, bonus on boss waves. */
   function waveReward(n, outcome) {
@@ -135,8 +156,10 @@ DE.Defense = (function () {
     const hp = waveHp(state, n);
     const power = defensePower(state);
     const fx = DE.Effects.get(state);
-    const comp = compositionSummary(waveComposition(hp, n)); const mut = DE.Events.mutation(state); if (mut) { comp.dmgMult *= mut.dmg; comp.toxic += mut.toxic || 0; }
-    const result = { wave: n, hp, dealt: Math.floor(power.total), guards: power.guards, turrets: state.defense.turrets, trapsUsed: power.trapsUsed, t: now, breach: false, wallDamage: 0, losses: {}, injured: [], killed: 0, boss: comp.boss, counts: comp.counts, reward: {} };
+    const raid = isRaid(state, n);
+    const comp = compositionSummary(waveComposition(hp, n, raid)); const mut = raid ? null : DE.Events.mutation(state); if (mut) { comp.dmgMult *= mut.dmg; comp.toxic += mut.toxic || 0; }
+    const result = { wave: n, hp, dealt: Math.floor(power.total), guards: power.guards, turrets: state.defense.turrets, trapsUsed: power.trapsUsed, t: now, breach: false, wallDamage: 0, losses: {}, injured: [], killed: 0, boss: comp.boss, counts: comp.counts, reward: {}, raid };
+    if (raid) { state.defense.raidNext = false; result.cars = comp.cars.length; }
     state.defense.traps -= power.trapsUsed;
     const killedFraction = Math.min(1, power.total / hp);
     const total = Object.values(comp.counts).reduce((s, c) => s + c, 0);
@@ -144,6 +167,7 @@ DE.Defense = (function () {
     state.stats.zombiesKilled += result.killed;
     // toxic zombies poison guards even when they die at range
     if (comp.toxic > 0) DE.Survivors.guards(state).forEach(g => { if (U().chance(Math.min(0.6, 0.12 * comp.toxic) * (1 - (fx.toxicResist || 0)) * (1 - (DE.Gear ? DE.Gear.protection(state, g) : 0)))) { DE.Survivors.injure(g, 15); result.injured.push(g.name); if (DE.Infection && DE.Infection.expose(state, g, .3)) result.infected = (result.infected || 0) + 1; } });
+    if (raid) DE.Survivors.guards(state).forEach(g => { if (U().chance(Math.min(.45, .12 + .25 * Math.max(0, 1 - power.total / hp / 2)) * (1 - (DE.Gear ? DE.Gear.protection(state, g) : 0)))) { DE.Survivors.injure(g, 18); if (!result.injured.includes(g.name)) result.injured.push(g.name); } });
     if (power.total >= hp) {
       result.outcome = 'victory';
       state.stats.wavesSurvived++;
@@ -153,14 +177,15 @@ DE.Defense = (function () {
       result.wallDamage = Math.min(state.defense.wall.hp, dmg);
       state.defense.wall.hp -= result.wallDamage;
       // guards get hurt when the horde reaches the wall
-      DE.Survivors.guards(state).forEach(g => { if (U().chance(0.5 * (1 - (DE.Gear ? DE.Gear.protection(state, g) : 0)))) { DE.Survivors.injure(g, 25); if (!result.injured.includes(g.name)) result.injured.push(g.name); if (DE.Infection && DE.Infection.expose(state, g, .18)) result.infected = (result.infected || 0) + 1; } });
+      DE.Survivors.guards(state).forEach(g => { if (U().chance(0.5 * (1 - (DE.Gear ? DE.Gear.protection(state, g) : 0)))) { DE.Survivors.injure(g, 25); if (!result.injured.includes(g.name)) result.injured.push(g.name); if (!raid && DE.Infection && DE.Infection.expose(state, g, .18)) result.infected = (result.infected || 0) + 1; } });
       if (state.defense.wall.hp <= 0) {
         state.defense.wall.hp = 0;
         result.breach = true; result.outcome = 'breach';
         state.stats.breaches++;
-        ['food', 'water', 'scrap', 'fuel'].forEach(r => { const loss = Math.floor(state.resources[r] * 0.12); state.resources[r] -= loss; result.losses[r] = loss; });
+        // a horde wrecks a share of the stores; raiders load up their trucks with more of it
+        ['food', 'water', 'scrap', 'fuel'].forEach(r => { const loss = Math.floor(state.resources[r] * (raid ? 0.2 : 0.12)); state.resources[r] -= loss; result.losses[r] = loss; });
         const pool = Object.values(state.survivors).filter(s => !s.assignment || s.assignment.kind !== 'expedition');
-        for (let i = 0; i < Math.min(3, pool.length); i++) { const v = U().pick(pool); DE.Survivors.injure(v, 40); if (!result.injured.includes(v.name)) result.injured.push(v.name); if (DE.Infection && DE.Infection.expose(state, v, .3)) result.infected = (result.infected || 0) + 1; }
+        for (let i = 0; i < Math.min(3, pool.length); i++) { const v = U().pick(pool); DE.Survivors.injure(v, 40); if (!result.injured.includes(v.name)) result.injured.push(v.name); if (!raid && DE.Infection && DE.Infection.expose(state, v, .3)) result.infected = (result.infected || 0) + 1; }
         state.defense.shock = 25;
       } else {
         result.outcome = 'held';
@@ -178,6 +203,14 @@ DE.Defense = (function () {
     // every 5th wave held: refugees who watched the fight ask to come in
     if (n % 5 === 0 && !result.breach && DE.Bunker.population(state) < DE.Bunker.housingCapacity(state)) { const sv = DE.Survivors.spawn(state); state.stats.recruited++; result.refugee = sv.name; } if (mut) { for (const r in result.reward) result.reward[r] = Math.floor(result.reward[r] * mut.loot); result.mutation = mut.name; }
     for (const r in result.reward) result.reward[r] = Math.floor(result.reward[r] * (1 + (fx.waveLoot || 0)));
+    // what the raiders carried: fuel from their tanks, rounds for the armory, now and then a gun
+    if (raid && !result.breach) {
+      const k = result.outcome === 'victory' ? 1 : .5;
+      result.reward.fuel = (result.reward.fuel || 0) + Math.floor(25 * Math.pow(n, .9) * comp.cars.length * k);
+      if (DE.Gear) { const rounds = Math.round((8 + 3 * n) * k); DE.Gear.ensure(state).ammo += rounds; result.ammo = rounds;
+        if (U().chance(.35 * k)) { const t = U().pick(['pistol', 'machete', n >= 8 ? 'shotgun' : 'pistol']), d0 = DE.Data.WEAPONS[t], q = DE.Data.QUALITY[0], g = DE.Gear.ensure(state);
+          const it = { id: 'g' + (g.nextId++), kind: 'weapon', type: t, q: q.id, dur: Math.round(d0.dur * q.dur * .7), max: Math.round(d0.dur * q.dur), owner: null }; g.items.push(it); result.weapon = d0.name; } }
+    }
     for (const r in result.reward) { state.resources[r] = Math.min(DE.Economy.storageCap(state, r), state.resources[r] + result.reward[r]); state.stats.produced[r] += result.reward[r]; state.stats.runScore += result.reward[r] * DE.Data.RESOURCES[r].value; }
     // guards gain experience
     DE.Survivors.guards(state).forEach(g => { g.xp += 40 * fx.xpMult; });
@@ -230,5 +263,5 @@ DE.Defense = (function () {
   }
 
   return { turretDmg, calibreCost, upgradeCalibre, structureBlocked, wallMaxHp, wallUpgradeCost, repairCost, turretCost, trapCost, maxTurrets, upgradeWall, repairWall, buyTurret, buyTraps,
-    waveHp, waveComposition, compositionSummary, waveReward, isBossWave, defensePower, waveInterval, warningSec, resolveWave, tick, structureNext, upgradeStructure };
+    waveHp, waveComposition, compositionSummary, isRaid, waveReward, isBossWave, defensePower, waveInterval, warningSec, resolveWave, tick, structureNext, upgradeStructure };
 })();

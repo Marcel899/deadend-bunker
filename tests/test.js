@@ -619,6 +619,23 @@ t('minigames: triage heals the real injured and treats infection; radio can brin
   DE.Bunker.placeRoom(E, 'radio', 1, 8, 1, now); DE.Minigames.finish(E, 'radio', .9, { signal: 'survivor' });
   assert(Object.keys(E.survivors).length === n + 1, 'a survivor followed the directions');
 });
+t('raids: bandits in vehicles on raid waves; no bites, they shoot and loot; refusing the envoy brings one', () => {
+  const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E);
+  assert(!DE.Defense.isRaid(E, 1) && !DE.Defense.isRaid(E, 10) && DE.Defense.isRaid(E, 4) && DE.Defense.isRaid(E, 11), 'schedule');
+  const list = DE.Defense.waveComposition(2000, 11, true);
+  assert(list.length && list.every(b => b.bandit && b.car >= 0 && b.car < list.cars.length), 'bandits seated in vehicles');
+  assert(DE.Defense.waveComposition(2000, 11, false).every(z => !z.bandit), 'hordes stay zombies');
+  E.defense.wave = 4; E.defense.wall.hp = 1; DE.Defense.wallMaxHp(E); const g = Object.values(E.survivors)[0]; DE.Survivors.assign(E, g.id, { kind: 'guard' }); E._fx = null;
+  const food0 = E.resources.food; const r = DE.Defense.resolveWave(E, now);
+  assert(r.raid && r.breach && !r.infected && E.resources.food < food0, 'a breach in a raid loots the stores, nobody bitten: ' + JSON.stringify([r.raid, r.breach, r.infected]));
+  const F = DE.State.create(null, now); F._fx = DE.Effects.compute(F); F.defense.wave = 11; F.defense.turrets = 0; for (let i = 0; i < 6; i++) { const v = DE.Survivors.spawn(F); DE.Survivors.assign(F, v.id, { kind: 'guard' }); v.level = 30; } F._fx = null;
+  const sv = Object.values(F.survivors); sv.forEach(v => { v.hp = 100; }); F.defense.wall.hp = DE.Defense.wallMaxHp(F) * 50; F.defense.wall.level = 40;
+  const r2 = DE.Defense.resolveWave(F, now);
+  assert(r2.raid && !r2.breach && (r2.reward.fuel || 0) > 0 && r2.ammo > 0, 'beating a raid pays fuel and rounds: ' + JSON.stringify([r2.outcome, r2.reward, r2.ammo]));
+  const G = DE.State.create(null, now); G._fx = DE.Effects.compute(G); G.defense.wave = 6;
+  DE.Events.applyEffects(G, { raid: 1 }, {}); assert(G.defense.raidNext && DE.Defense.isRaid(G, 6), 'refusing the envoy brings a raid');
+  assert(DE.Save.sanitize(JSON.parse(JSON.stringify(G))).defense.raidNext === true, 'saved');
+});
 t('minigames: a met challenge pays more and teaches more; the radio brings traders to the fence', () => {
   const run = (ch) => { const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E); E.resources.electricity = 0; const r = DE.Minigames.finish(E, 'grid', .8, { challenge: ch }); return { e: r.rewards.electricity, xp: E.mg.xp.grid }; };
   const a = run(false), b = run(true);

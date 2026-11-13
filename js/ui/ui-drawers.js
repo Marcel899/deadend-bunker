@@ -360,7 +360,8 @@ DE.UI.Drawers = (function () {
  const I = (k, c) => DE.Icons.img(k, c || 'dk-ico'), W = DE.CONFIG.WAVE_DURATION;
  const hp = DE.Defense.waveHp(s), pw = DE.Defense.defensePower(s), maxHp = DE.Defense.wallMaxHp(s);
  const boss = DE.Defense.isBossWave(d.wave);
- const comp = DE.Defense.compositionSummary(DE.Defense.waveComposition(hp, d.wave));
+ const raid = DE.Defense.isRaid(s, d.wave);
+ const comp = DE.Defense.compositionSummary(DE.Defense.waveComposition(hp, d.wave, raid));
  // battle math: what the firepower shoots down, what the wall soaks up, what breaks through
  const killed = Math.min(hp, pw.total), toWall = Math.min(d.wall.hp, hp - killed), through = Math.max(0, hp - killed - toWall);
  const tone = through > 0 ? 'neg' : toWall > 0 ? 'warn' : 'pos';
@@ -370,6 +371,7 @@ DE.UI.Drawers = (function () {
  const verdict = tone === 'pos' ? ['Wiped out before the wall', 'Your firepower outmatches this wave — the wall stays untouched.']
    : tone === 'warn' ? [`The wall takes about ${U().fmt(Math.ceil(toWall * 1.2))} damage`, 'Post more guards, add turrets or stock traps to stop them sooner.']
    : ['Breach likely', 'They will get inside: supplies are lost and survivors get hurt. Reinforce now.'];
+ if (raid) { verdict[0] = tone === 'pos' ? 'The raid is driven off' : tone === 'warn' ? 'They shoot up the wall' : 'They will loot the stores'; verdict[1] = (tone === 'neg' ? 'Raiders take a fifth of your food, water, scrap and fuel. ' : '') + 'Bandits shoot from cover: guards can be wounded even if you win. Armour from the Armory helps.'; }
  const reward = DE.Defense.waveReward(d.wave, 'victory');
  const m = DE.Events.mutation(s), lvl = DE.Events.noiseLevel(DE.Events.noise(s));
  const chip = (icon, text, cls) => `<span class="d3-chip ${cls || ''}">${I(icon, 'ico-inline')}${text}</span>`;
@@ -380,18 +382,20 @@ DE.UI.Drawers = (function () {
    regroup ? chip('wave', `Horde regrouping · −${regroup}%`, 'pos') : '',
    comp.dmgMult > 1.05 ? chip('alert', `Wall damage ×${comp.dmgMult.toFixed(2)}`, 'warn') : '',
    comp.toxic ? chip('biohazard', `${comp.toxic} toxic`, 'warn') : '',
-   m ? chip('biohazard', 'Mutation: ' + esc(m.name), 'neg') : '',
+   m && !raid ? chip('biohazard', 'Mutation: ' + esc(m.name), 'neg') : '',
+   raid ? chip('truck', comp.cars.length + ' vehicle' + (comp.cars.length > 1 ? 's' : '') + ': ' + esc([...new Set(comp.cars.map(c => c.name))].join(', ')), 'warn') : '',
+   raid ? chip('jerrycan', 'Win: their fuel and ammo', 'gold') : '',
    chip('noise', 'Noise: ' + lvl, 'noise ' + lvl),
  ].join('');
- const kinds = DE.Data.ZOMBIES.filter(z => comp.counts[z.id]).sort((a, b) => (b.boss ? 1e9 : 0) + b.hp * comp.counts[b.id] - ((a.boss ? 1e9 : 0) + a.hp * comp.counts[a.id]));
- const horde = kinds.slice(0, 6).map((z, i) => `<figure class="d3-z${z.boss ? ' boss' : ''}${z.hp >= 60 ? ' big' : ''}" style="--i:${i}" title="${esc(z.name)} ×${comp.counts[z.id]} · ${z.hp} HP each">${DE.Chars.portrait(z.id, { cls: 'flip' })}<b>×${comp.counts[z.id]}</b><figcaption>${esc(z.name)}</figcaption></figure>`).join('')
+ const kinds = (raid ? DE.Data.BANDITS : DE.Data.ZOMBIES).filter(z => comp.counts[z.id]).sort((a, b) => (b.boss ? 1e9 : 0) + b.hp * comp.counts[b.id] - ((a.boss ? 1e9 : 0) + a.hp * comp.counts[a.id]));
+ const horde = kinds.slice(0, 6).map((z, i) => `<figure class="d3-z${z.boss ? ' boss' : ''}${z.hp >= 60 ? ' big' : ''}" style="--i:${i}" title="${esc(z.name)} ×${comp.counts[z.id]}${z.boss ? '' : ' · ' + z.hp + ' HP each'}">${DE.Chars.portrait(z.prof || z.id, { cls: 'flip' + (z.bandit || z.prof ? ' bandit' : '') })}<b>×${comp.counts[z.id]}</b><figcaption>${esc(z.name)}</figcaption></figure>`).join('')
    + (kinds.length > 6 ? `<span class="d3-more">+${kinds.length - 6} more</span>` : '');
- let html = `<div class="d3-hero ${tone}${boss ? ' boss' : ''}">
- <div class="d3-top"><div class="d3-title">${I('zombies', 'd3-zico')}<div><small>${boss ? 'Boss wave' : 'Incoming'}</small><b>Wave ${d.wave}</b></div></div>
+ let html = `<div class="d3-hero ${tone}${boss ? ' boss' : ''}${raid ? ' raid' : ''}">
+ <div class="d3-top"><div class="d3-title">${I(raid ? 'skull' : 'zombies', 'd3-zico')}<div><small>${boss ? 'Boss wave' : raid ? 'Bandit raid' : 'Incoming'}</small><b>${raid ? 'Raid' : 'Wave'} ${d.wave}</b></div></div>
    <div class="d3-clock"><small>arrives in</small><b data-wave-clock>${U().fmtTime(Math.max(0, (d.nextWaveAt - Date.now()) / 1000))}</b></div>
    <div class="d3-threat t${threat[1]}"><small>Threat</small><b>${threat[0]}</b><span>${Array.from({ length: 5 }, (_, i) => `<i class="${i < threat[1] ? 'on' : ''}"></i>`).join('')}</span></div></div>
  <div class="d3-field"><div class="d3-gate">${DE.Icons.structure('wall', 'd3-gateico')}<span class="d3-gatehp"><i style="width:${(100 * d.wall.hp / maxHp).toFixed(1)}%"></i></span></div><div class="d3-horde">${horde}</div>${boss ? `<div class="d3-bossflag">${I('skull2', '')} BOSS</div>` : ''}</div>
- <div class="d3-math"><div class="d3-vs"><span>${I('shield', 'ico-inline')} Your firepower <b>${U().fmt(pw.total)}</b></span><span>Horde strength <b>${U().fmt(hp)}</b> ${I('zombies', 'ico-inline')}</span></div>
+ <div class="d3-math"><div class="d3-vs"><span>${I('shield', 'ico-inline')} Your firepower <b>${U().fmt(pw.total)}</b></span><span>${raid ? 'Raid' : 'Horde'} strength <b>${U().fmt(hp)}</b> ${I('zombies', 'ico-inline')}</span></div>
    <div class="d3-bar" title="Of the horde's ${U().fmt(hp)} strength: ${U().fmt(killed)} shot down, ${U().fmt(toWall)} against the wall, ${U().fmt(through)} breaking in"><i class="k" style="width:${pct(killed)}"></i><i class="w" style="width:${pct(toWall)}"></i><i class="b" style="width:${pct(through)}"></i></div>
    <div class="d3-legend"><span class="k"><i></i>Shot down <b>${U().fmt(killed)}</b></span>${toWall > 0 ? `<span class="w"><i></i>Hits the wall <b>${U().fmt(toWall)}</b></span>` : ''}${through > 0 ? `<span class="b"><i></i>Breaks in <b>${U().fmt(through)}</b></span>` : ''}<span class="t">${W}s of combat</span></div></div>
  <div class="d3-verdict">${I(tone === 'pos' ? 'check' : 'warning', 'd3-vico')}<div><b>${verdict[0]}</b><small>${verdict[1]}</small></div></div>
