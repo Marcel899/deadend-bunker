@@ -43,6 +43,7 @@ DE.UI.Anim = (function () {
       gun: d.hold === 'gun' || d.hold === 'pistol', H0: DE.Chars && DE.Chars.pose ? DE.Chars.pose('none') : H,
       T: +d.t || 1, la: +d.la || 20, aa: +d.aa || 14, bob: +d.bob || 5, leg: +d.leg || 50, h: +d.h || 48,
       seed, t: seed * 1.7, ta: 0, p: frac(seed * .37), anim: '', cls: null, visible: true, from: null, blend: 1, pose: null, last: {},
+      under: !!(el.closest && el.closest('#bunker-wrap')),   // a bunker character: rests while a drawer covers the view
     };
     if (io) io.observe(el);
     return st;
@@ -357,7 +358,8 @@ DE.UI.Anim = (function () {
     if (frameNo % (scrolling ? 8 : skip) !== 0) return;
     const dt = lastT ? min(.12, (now - lastT) / 1000) : 0; lastT = now;
     const frozen = document.body && document.body.classList.contains('no-anim');
-    rigs.forEach(st => update(st, frozen ? 0 : dt));
+    const covered = !!(DE.UI.ui && DE.UI.ui.drawer);
+    rigs.forEach(st => { if (covered && st.under && st.pose) return; update(st, frozen ? 0 : dt); });
   }
   /** Tell the animator how fast a character is moving over the ground (its own px per second);
    *  0 when it stops. Walk and run cycles are timed from this so the feet don't slide. */

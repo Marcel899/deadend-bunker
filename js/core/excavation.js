@@ -69,7 +69,7 @@ DE.Excavation = (function () {
     if (state.excavation) return { ok: false, reason: 'Already digging' };
     if (d > C().MAX_FLOORS) return { ok: false, reason: 'Bedrock reached' };
     const miss = requirements(state, d).filter(r => !r.ok);
-    if (miss.length) return { ok: false, reason: layer(d).name + ' needs ' + miss.map(r => r.text).join(' and ') };
+    if (miss.length) return { ok: false, reason: layer(d).name + ' needs ' + miss.map(r => r.text.replace(/^A /, 'a ')).join(' and ') };
     if (!U().canAfford(state.resources, cost(state, d))) return { ok: false, reason: 'Not enough resources' };
     return { ok: true };
   }

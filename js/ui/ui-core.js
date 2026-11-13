@@ -417,13 +417,13 @@ DE.UI = (function () {
  /* ---------- drawers ---------- */
  function openDrawer(name) {
  ui.drawer = name; ui.lastDrawerHtml = '';
- $('#drawer').classList.remove('hidden');
+ $('#drawer').classList.remove('hidden'); document.body.classList.add('drawer-open');
  document.querySelectorAll('#bottombar .nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === name));
  renderDrawer(); placeToasts();
  }
  function closeDrawer() {
  ui.drawer = null;
- $('#drawer').classList.add('hidden');
+ $('#drawer').classList.add('hidden'); document.body.classList.remove('drawer-open');
  document.querySelectorAll('#bottombar .nav-btn').forEach(b => b.classList.toggle('active', b.dataset.nav === 'bunker'));
  placeToasts();
  }

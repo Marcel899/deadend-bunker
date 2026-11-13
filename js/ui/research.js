@@ -270,5 +270,5 @@ DE.UI.RTree = (function () {
   }
   /** Play the entrance (a new branch was picked). */
   function replay() { intro = Date.now(); }
-  return { render, tick, replay, title: () => 'Research <small>tech tree</small>', unlocks, benefit };
+  return { render, tick, replay, title: (s) => { const n = Object.keys(DE.Data.RESEARCH).length, d = Object.keys(s.research.done).filter(id => DE.Data.RESEARCH[id]).length; return `Research <small>${d}/${n} projects done · tech tree</small>`; }, unlocks, benefit };
 })();
