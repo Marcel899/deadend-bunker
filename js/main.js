@@ -109,9 +109,16 @@ DE.Game = (function () {
  case 'cured': DE.UI.toast('<b>' + DE.UI.esc(e.name) + '</b> has recovered and is back on their feet.', 'ok', 4500, 'medkit'); log(e.name + ' recovered from the infection.'); DE.Audio.sfx('done'); DE.UI.refresh(); break;
  case 'turned': DE.UI.toast('<b>' + DE.UI.esc(e.name) + '</b> turned. The others had to put them down.', 'err', 7000, 'skull'); log(e.name + ' was lost to the infection.'); DE.Audio.sfx('bigdie'); DE.UI.refresh(); break;
  case 'infected': case 'spread': break;
+ case 'levelup': {
+   const a = document.querySelector(`.actor[data-sid="${e.id}"]`) || document.getElementById('actor-' + e.id);
+   if (a && !a.closest('.offscreen')) { DE.UI.floatAt(a, 'LEVEL UP!', 'lvl'); DE.UI.sparkle && DE.UI.sparkle(a); }
+   DE.Audio.sfx('levelup', 1500); DE.UI.toast('<b>' + esc(e.name) + '</b> reached level ' + e.level, 'ok', 2600, 'star', { key: 'lvl' });
+   break;
+ }
  case 'expanded': DE.UI.toast('B' + e.depth + ' widened: ' + DE.CONFIG.WING_CELLS + ' new cells', 'ok', 3400, 'dig'); log('Floor B' + e.depth + ' widened.'); DE.UI.refresh(); break;
       case 'research': {
         DE.UI.toast('Research complete: <b>' + esc(e.node.name) + '</b>', 'ok', 4500, 'research'); log('Researched ' + e.node.name + '.');
+        DE.Audio.sfx('complete'); const nb = document.querySelector('#bottombar [data-nav="research"]'); if (nb && DE.UI.sparkle) DE.UI.sparkle(nb, 18);
         // rooms this research opens up get a moment in the spotlight
         const keys = (e.node.effects || []).filter(f => f.type === 'unlockRoom').map(f => f.room);
         const rooms = Object.values(DE.Data.ROOMS).filter(d => keys.includes(d.id) || (d.unlock && keys.includes(d.unlock) && d.unlock.startsWith('blueprints'))).map(d => d.id);

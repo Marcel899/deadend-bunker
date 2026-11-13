@@ -133,7 +133,9 @@ DE.Survivors = (function () {
       if (s.assignment && s.assignment.kind !== 'expedition' && s.level < C().SURVIVOR_MAX_LEVEL) {
         s.xp += xpRate * (1 + traitSum(s, 'xp'));
         let need = xpNeeded(s.level);
+        const L0 = s.level;
         while (s.xp >= need && s.level < C().SURVIVOR_MAX_LEVEL) { s.xp -= need; s.level++; need = xpNeeded(s.level); state._levelUps = (state._levelUps || 0) + 1; }
+        if (s.level > L0 && !state._offline) { state._events = state._events || []; state._events.push({ type: 'levelup', id: s.id, name: s.name, level: s.level }); }
       }
       if (s.hp < 100) s.hp = Math.min(100, s.hp + heal);
     }

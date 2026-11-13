@@ -7,7 +7,7 @@ DE.UI.Bunker = (function () {
   const esc = (s) => DE.Util.escapeHtml(s);
   const $ = (sel) => document.querySelector(sel);
   const Ic = () => DE.Icons;
-  let fightUntil = 0, siteNoise = false;
+  let fightUntil = 0, siteNoise = false, prodAt = 0;
 
   function render() {
     const s = DE.UI.state(); const root = document.getElementById('bunker');
@@ -136,9 +136,30 @@ DE.UI.Bunker = (function () {
   function setText(el, txt) { if (el && el.textContent !== txt) el.textContent = txt; }
   function setHtml(el, html) { if (el && el.innerHTML !== html) el.innerHTML = html; }
 
+  /** Every few seconds a few rooms on screen show what they just made: "+12" with the resource
+   *  floating up out of the room (the idle game's heartbeat). */
+  function prodFloats(s, now) {
+    if (now - prodAt < 4200) return; prodAt = now;
+    if (!s.settings.animations || DE.UI.ui.drawer || document.hidden || document.body.classList.contains('perf') || (DE.UI.MG && DE.UI.MG.active())) return;
+    const rates = s._rates, wrap = document.getElementById('bunker-wrap'); if (!rates || !wrap) return; const W = wrap.getBoundingClientRect(), cand = [];
+    for (const id in s.rooms) { const info = rates.perRoom[id]; if (!info || !info.produces) continue; const ks = Object.keys(info.produces).filter(k => info.produces[k] > 0); if (!ks.length) continue;
+      const el = document.getElementById('room-' + id); if (!el || el.classList.contains('offscreen')) continue; const r = el.getBoundingClientRect(); if (r.top < W.top + 20 || r.top > W.bottom - 40) continue; cand.push([el, ks, info]); }
+    cand.sort(() => Math.random() - .5).slice(0, 3).forEach(([el, ks, info], i) => setTimeout(() => {
+      if (!el.isConnected) return; const k = ks[(Math.random() * ks.length) | 0], v = info.produces[k] * 4.2, r = el.getBoundingClientRect();
+      DE.UI.floatText(r.left + r.width * (.3 + Math.random() * .4), r.top + r.height * .35, '+' + U().fmt(v, v < 10 ? 1 : undefined), 'good prod', Ic().src('res.' + k)); }, i * 380));
+  }
+  /** A wave beaten: a banner over the surface once the field is clear. */
+  function waveBanner(result) {
+    const surface = $('#surface'); if (!surface || !result || result.breach || !DE.UI.state().settings.animations) return;
+    const b = document.createElement('div'); b.className = 'wave-banner' + (result.raid ? ' raid' : '') + (result.boss ? ' boss' : '');
+    b.innerHTML = `<small>${result.boss ? 'Boss wave' : result.raid ? 'Raid' : 'Wave'} ${result.wave}</small><b>${result.outcome === 'victory' ? (result.raid ? 'Driven off!' : 'Repelled!') : 'Held!'}</b>${result.streak > 1 ? `<em>${result.streak} in a row</em>` : ''}`;
+    surface.appendChild(b); setTimeout(() => b.classList.add('out'), 2600); setTimeout(() => b.remove(), 3200);
+    setTimeout(() => DE.UI.sparkle(b.querySelector('b'), 26), 250); DE.Audio.sfx('complete');
+  }
   function update() {
     const s = DE.UI.state(); if (!s) return;
     const rates = s._rates; const now = Date.now(); const sel = DE.UI.ui.selection;
+    prodFloats(s, now);
     for (const id in s.rooms) {
       const room = s.rooms[id]; const el = document.getElementById('room-' + id); if (!el) continue;
       const def = DE.Data.ROOMS[room.type];
@@ -332,5 +353,5 @@ DE.UI.Bunker = (function () {
     const el = document.querySelector(`.floor[data-depth="${depth}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
   }
 
-  return { render, update, playWave, scrollToFloor, flashRoom, surfaceBurst, previewFootprint, clearFootprint, revealFloor, collectAt };
+  return { waveBanner, render, update, playWave, scrollToFloor, flashRoom, surfaceBurst, previewFootprint, clearFootprint, revealFloor, collectAt };
 })();

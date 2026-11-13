@@ -125,7 +125,14 @@ DE.UI = (function () {
  document.querySelectorAll('#resbar .res').forEach(el => {
  const r = el.dataset.res;
  const amt = s.resources[r], net = rates.net[r], cap = DE.Economy.storageCap(s, r);
- el.querySelector('.res-amt').textContent = U().fmt(amt);
+ // a big change (a reward, a purchase) rolls the number and makes the counter glow; the steady trickle does not
+ const prev = el._val, jump = prev != null ? amt - prev : 0; el._val = amt;
+ if (prev != null && Math.abs(jump) > Math.max(8, Math.abs(net) * 4) && s.settings.animations) {
+   el.classList.remove('gain', 'spend'); void el.offsetWidth; el.classList.add(jump > 0 ? 'gain' : 'spend');
+   const amtEl = el.querySelector('.res-amt'), t0 = performance.now(), from = prev; el._rolling = true;
+   const roll = (t) => { const k = Math.min(1, (t - t0) / 520), e = 1 - Math.pow(1 - k, 3); amtEl.textContent = U().fmt(from + (el._val - from) * e); if (k < 1 && el.isConnected) requestAnimationFrame(roll); else el._rolling = false; };
+   requestAnimationFrame(roll);
+ } else if (!el._rolling) el.querySelector('.res-amt').textContent = U().fmt(amt);
  const rateEl = el.querySelector('.res-rate');
  rateEl.textContent = U().fmtRate(net);
  rateEl.className = 'res-rate ' + (net < -1e-6 ? 'neg' : net > 1e-6 ? 'pos' : '');
@@ -285,6 +292,14 @@ DE.UI = (function () {
  if (iconSrc) { const im = document.createElement('img'); im.src = iconSrc; im.className = 'ico ico-inline'; el.appendChild(im); }
  root.appendChild(el);
  setTimeout(() => el.remove(), 1300);
+ }
+ /** Golden sparks bursting from an element (screen space, on the floaters layer). */
+ function sparkle(el, n) {
+ if (!el || !state() || !state().settings.animations) return; const root = $('#floaters'); if (!root) return;
+ const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2, d = DE.UI.Settings ? DE.UI.Settings.density() : 1;
+ const k = Math.max(4, Math.round((n || 14) * (.4 + .6 * d)));
+ for (let i = 0; i < k; i++) { const p = document.createElement('i'), a = Math.random() * Math.PI * 2, sp = 30 + Math.random() * 60; p.className = 'spk' + (i % 3 ? '' : ' w');
+   p.style.cssText = `left:${x}px;top:${y}px;--dx:${(Math.cos(a) * sp).toFixed(0)}px;--dy:${(Math.sin(a) * sp - 20).toFixed(0)}px`; root.appendChild(p); setTimeout(() => p.remove(), 900); }
  }
  function floatAt(el, text, cls) {
  if (!el) return;
@@ -460,6 +475,6 @@ DE.UI = (function () {
  renderDrawer(force);
  }
 
- return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, flyCost, unlockBanner, floatText, floatAt, modal, eventModal, eventPicked, eventQuiet, closeModal, confirmModal,
+ return { ui, $, esc, init, showScreen, renderResbar, updateResbar, toast, purchased, flyCost, unlockBanner, floatText, floatAt, sparkle, modal, eventModal, eventPicked, eventQuiet, closeModal, confirmModal,
  openDrawer, closeDrawer, renderDrawer, refresh, state, scrollBusy  };
 })();

@@ -606,6 +606,7 @@ DE.UI.Battlefield = (function () {
   }
   function endFight() {
     const breach = st.result && st.result.breach;
+    if (st.fighting && st.result && DE.UI.Bunker.waveBanner) DE.UI.Bunker.waveBanner(st.result);
     st.fighting = false; st.resolved = false; st.wallShotAt = 0;
     // raid over: the wrecks burn for a while; after a breach the trucks drive off with the loot
     (st.cars || []).forEach(c => { if (breach && !c.wreck) { c.mode = 'leave'; c.v = 0; c.el.classList.add('moving'); face(c.el, false); c.el.classList.add('leaving'); DE.Audio.sfxAt('engine', sx(c.x), 300); } else if (!c.wreck) { c.wreck = true; c.el.classList.add('wreck'); } });
