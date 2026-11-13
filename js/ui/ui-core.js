@@ -39,6 +39,8 @@ DE.UI = (function () {
  document.addEventListener('click', onClick);
  // <select data-change="action"> and <input data-input="action">: the action gets the value
  document.addEventListener('change', e => { const el = e.target.closest && e.target.closest('[data-change]'); if (!el) return; const fn = DE.Actions[el.dataset.change]; if (fn) fn(Object.assign({}, el.dataset, { value: el.value }), el, e); });
+ // game-style sliders fill as they are dragged
+ document.addEventListener('input', e => { const t = e.target; if (t && t.classList && t.classList.contains('g-range')) t.style.setProperty('--v', ((t.value - t.min) / ((t.max - t.min) || 1) * 100).toFixed(0) + '%'); }, true);
  document.addEventListener('input', e => { const el = e.target.closest && e.target.closest('[data-input]'); if (!el) return; const fn = DE.Actions[el.dataset.input]; if (fn) fn(Object.assign({}, el.dataset, { value: el.value }), el, e); });
  // subtle hover tick on interactive elements (mouse only; touch has no hover)
  let hoverEl = null;

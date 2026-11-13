@@ -685,52 +685,59 @@ DE.UI.Drawers = (function () {
  };
 
  /* ================= SETTINGS / MENU ================= */
- const SET_TABS = [['graphics', 'Graphics', 'star'], ['effects', 'Effects', 'events'], ['audio', 'Audio', 'event'], ['interface', 'Interface', 'info'], ['game', 'Game & saves', 'save']];
- const sw = (key, on, label, hint, disabled) => `<div class="set-row${disabled ? ' off' : ''}"><div class="set-l"><b>${label}</b>${hint ? `<small>${hint}</small>` : ''}</div><button class="switch ${on ? 'on' : ''}" data-action="togglePref" data-key="${key}" role="switch" aria-checked="${!!on}" ${disabled ? 'disabled' : ''}><i></i></button></div>`;
- const seg = (key, opts, cur, label, hint) => `<div class="set-row"><div class="set-l"><b>${label}</b>${hint ? `<small>${hint}</small>` : ''}</div><div class="seg">${opts.map(([v, l, ro]) => `<button class="seg-b ${cur === v ? 'on' : ''}" ${ro ? 'disabled' : `data-action="setPref" data-key="${key}" data-val="${v}"`}>${l}</button>`).join('')}</div></div>`;
- const vol = (k, onKey, act, label, hint) => { const a = DE.Audio.prefs(); return `<div class="set-row"><div class="set-l"><b>${label}</b>${hint ? `<small>${hint}</small>` : ''}</div><div class="set-vol"><input type="range" min="0" max="1" step="0.05" value="${a[k]}" data-audio="${k}" class="vol"${a[onKey] ? '' : ' disabled'}><button class="switch ${a[onKey] ? 'on' : ''}" data-action="${act}" role="switch" aria-checked="${!!a[onKey]}"><i></i></button></div></div>`; };
+ const SET_TABS = [['graphics', 'Graphics', 'eye'], ['effects', 'Weather & FX', 'snow'], ['audio', 'Audio', 'mg:speaker'], ['interface', 'Interface', 'info'], ['game', 'Game & saves', 'save']];
+ /* settings controls, drawn with the game's own parts: an icon slot, skinned buttons, a chunky switch */
+ const sIco = (k) => k.startsWith('mg:') ? `<img class="ico set-ic" src="assets/mg/${k.slice(3)}.png" alt="" draggable="false">` : DE.Icons.img(k, 'set-ic');
+ const sRow = (icon, label, hint, ctrl, cls) => `<div class="set-row${cls ? ' ' + cls : ''}"><span class="set-slot">${sIco(icon)}</span><div class="set-l"><b>${label}</b>${hint ? `<small>${hint}</small>` : ''}</div><div class="set-c">${ctrl}</div></div>`;
+ const swBtn = (on, attrs, disabled) => `<button class="switch g ${on ? 'on' : ''}" ${attrs} role="switch" aria-checked="${!!on}" ${disabled ? 'disabled' : ''}><em>${on ? 'ON' : 'OFF'}</em><i></i></button>`;
+ const sw = (key, on, label, hint, disabled, icon) => sRow(icon || 'gear', label, hint, swBtn(on, `data-action="togglePref" data-key="${key}"`, disabled), disabled ? 'off' : '');
+ const seg = (key, opts, cur, label, hint, icon) => sRow(icon || 'gear', label, hint, `<div class="seg g">${opts.map(([v, l, ro]) => `<button class="btn small seg-b ${cur === v ? 'active' : ''}" ${ro ? 'disabled' : `data-action="setPref" data-key="${key}" data-val="${v}"`}>${l}</button>`).join('')}</div>`);
+ const rng = (attrs, v) => `<input type="range" class="g-range" min="0" max="1" step="0.05" value="${v}" style="--v:${(v * 100).toFixed(0)}%" ${attrs}>`;
+ const vol = (k, onKey, act, label, hint, icon) => { const a = DE.Audio.prefs(); return sRow(icon, label, hint, `<div class="set-vol">${rng(`data-audio="${k}"${a[onKey] ? '' : ' disabled'}`, a[k])}${swBtn(a[onKey], `data-action="${act}"`)}</div>`, a[onKey] ? '' : 'muted-row'); };
+ const sCard = (icon, title, sub, rows) => `<div class="card set-card"><div class="set-head">${sIco(icon)}<div><b>${title}</b>${sub ? `<small>${sub}</small>` : ''}</div></div>${rows}</div>`;
+ const QUALITY = [['low', 'Low', 'bolt', 'Smooth on older iPads'], ['medium', 'Medium', 'star', 'The balanced default'], ['high', 'High', 'diamond', 'Sunbeams, fog, rich effects']];
  const settings = {
  live: false,
  title: () => ' Settings & Saves',
  render(s) {
  const tab = ui().settingsTab || 'graphics', S = DE.UI.Settings, P = S.all();
  let body = '';
- if (tab === 'graphics') body = `<div class="card set-card"><h4>Graphics</h4>
-   ${seg('quality', [['low', 'Low'], ['medium', 'Medium'], ['high', 'High'], ['custom', 'Custom', true]], P.quality, 'Quality preset', 'Sets the options below. High turns on High Quality Mode.')}
-   ${sw('hq', P.hq, 'High Quality Mode', 'Sunbeams, fog and depth haze, softer shadows and room lighting, richer particles and weather.' + (P.perf ? ' Off while performance mode is on.' : ''), P.perf)}
-   <div class="set-row"><div class="set-l"><b>Particle density</b><small>Rain, snow, leaves, dust, sparks and blood. ${Math.round(P.particles * 100)}%</small></div><input type="range" min="0" max="1" step="0.05" value="${P.particles}" data-change="setPrefNum" data-key="particles" class="vol"></div>
-   ${seg('anim', [['full', 'Full'], ['reduced', 'Reduced'], ['off', 'Off']], P.anim, 'Animation quality', 'Reduced runs characters at a lower frame rate; Off freezes motion.')}
-   ${sw('ambient', P.ambient, 'Ambient animations', 'Drifting clouds, birds, flickering lamps, smoke and idle machinery.' + (P.perf ? ' Off while performance mode is on.' : ''), P.perf)}
-   ${sw('perf', P.perf, 'Performance mode', 'For older iPads and laptops: lighter shadows and effects, fewer particles, characters off screen rest.')}</div>`;
- else if (tab === 'effects') body = `<div class="card set-card"><h4>Weather & effects</h4>
-   ${sw('weather', P.weather, 'Weather effects', 'Rain, snow and leaves falling, and the sound of rain.')}
-   ${sw('rain', P.rain, 'Rain', 'Rain streaks and splashes on the grass.', !P.weather)}
-   ${sw('seasonal', P.seasonal, 'Seasonal particles', 'Autumn leaves and winter snow.', !P.weather)}
-   ${seg('screenFx', [['off', 'Off'], ['soft', 'Soft'], ['full', 'Full']], P.screenFx, 'Screen effects', 'Camera shake and flashes in fights, blasts and big moments.')}</div>`;
- else if (tab === 'audio') body = `<div class="card set-card"><h4>Audio</h4>
-   ${vol('music', 'musicOn', 'toggleMusic', 'Music', 'The soundtrack (darker at night).')}
-   ${vol('sfx', 'sfxOn', 'toggleSfx', 'Sound effects', 'Fights, building, digging, weather and the bunker.')}
-   ${vol('mg', 'mgOn', 'toggleMg', 'Minigames', 'Sounds in the forge, radio, power grid and other room games.')}</div>`;
- else if (tab === 'interface') body = `<div class="card set-card"><h4>Interface</h4>
-   ${sw('speech', P.speech, 'Speech bubbles', 'Survivors talk about what they are doing, how they feel and what happens.')}
-   ${sw('autoEvents', P.autoEvents, 'Open decisions by themselves', 'Off: decisions only wait in the pill on the surface until you open them.')}
-   <div class="set-row"><div class="set-l"><b>Intro</b><small>The arrival at the bunker.</small></div><button class="btn small" data-action="replayIntro">${DE.Icons.img('play', 'ico-btn')} Watch it again</button></div></div>`;
+ if (tab === 'graphics') body = `<div class="set-q">${QUALITY.map(([v, l, ic, d]) => `<button class="set-qb ${P.quality === v ? 'on' : ''}" data-action="setPref" data-key="quality" data-val="${v}">${sIco(ic)}<b>${l}</b><small>${d}</small>${P.quality === v ? '<i class="set-qok">' + DE.Icons.img('check', '') + '</i>' : ''}</button>`).join('')}</div>${P.quality === 'custom' ? '<p class="set-custom">' + DE.Icons.img('gear', 'ico-inline') + ' Custom: you changed options below the preset.</p>' : ''}
+   ${sCard('eye', 'Graphics', 'What the bunker and the surface look like', `
+   ${sw('hq', P.hq, 'High Quality Mode', 'Sunbeams, fog and depth haze, softer shadows and room lighting, richer particles and weather.' + (P.perf ? ' Off while performance mode is on.' : ''), P.perf, 'diamond')}
+   ${sRow('snow', 'Particle density', 'Rain, snow, leaves, dust, sparks and blood. <b class="set-val">' + Math.round(P.particles * 100) + '%</b>', rng('data-change="setPrefNum" data-key="particles"', P.particles))}
+   ${seg('anim', [['full', 'Full'], ['reduced', 'Reduced'], ['off', 'Off']], P.anim, 'Animation quality', 'Reduced runs characters at a lower frame rate; Off freezes motion.', 'play')}
+   ${sw('ambient', P.ambient, 'Ambient animations', 'Drifting clouds, birds, flickering lamps, smoke and idle machinery.' + (P.perf ? ' Off while performance mode is on.' : ''), P.perf, 'eye')}
+   ${sw('perf', P.perf, 'Performance mode', 'For older iPads and laptops: lighter shadows and effects, fewer particles, characters off screen rest.', false, 'bolt')}`)}`;
+ else if (tab === 'effects') body = sCard('snow', 'Weather & effects', 'Rain, snow and the punch of the fights', `
+   ${sw('weather', P.weather, 'Weather effects', 'Rain, snow and leaves falling, and the sound of rain.', false, 'snow')}
+   ${sw('rain', P.rain, 'Rain', 'Rain streaks and splashes on the grass.', !P.weather, 'drop')}
+   ${sw('seasonal', P.seasonal, 'Seasonal particles', 'Autumn leaves and winter snow.', !P.weather, 'calendar')}
+   ${seg('screenFx', [['off', 'Off'], ['soft', 'Soft'], ['full', 'Full']], P.screenFx, 'Screen effects', 'Camera shake and flashes in fights, blasts and big moments.', 'fire')}`);
+ else if (tab === 'audio') body = sCard('mg:speaker', 'Audio', 'Turn each part up, down or off', `
+   ${vol('music', 'musicOn', 'toggleMusic', 'Music', 'The soundtrack (darker at night).', 'mg:radio_speaker')}
+   ${vol('sfx', 'sfxOn', 'toggleSfx', 'Sound effects', 'Fights, building, digging, weather and the bunker.', 'mg:speaker')}
+   ${vol('mg', 'mgOn', 'toggleMg', 'Minigames', 'Sounds in the forge, radio, power grid and other room games.', 'mg:trophy')}`);
+ else if (tab === 'interface') body = sCard('info', 'Interface', 'How the bunker talks to you', `
+   ${sw('speech', P.speech, 'Speech bubbles', 'Survivors talk about what they are doing, how they feel and what happens.', false, 'mail')}
+   ${sw('autoEvents', P.autoEvents, 'Open decisions by themselves', 'Off: decisions only wait in the pill on the surface until you open them.', false, 'scroll')}
+   ${sRow('play', 'Intro', 'The arrival at the bunker.', `<button class="btn small" data-action="replayIntro">${DE.Icons.img('play', 'ico-btn')} Watch it again</button>`)}`);
  else {
  const st = s.stats;
- body = `<div class="card"><h4>Save</h4><p class="muted">Autosaves every ${DE.CONFIG.AUTOSAVE_SEC}s and when you leave. Last saved: ${s.lastSave ? U().fmtTime((Date.now() - s.lastSave) / 1000) + ' ago' : 'never'}. Offline progress is kept for up to ${DE.Effects.get(s).offlineCapHours}h.</p>
+ body = `<div class="card set-card"><div class="set-head">${sIco('save')}<div><b>Save</b></div></div><p class="muted">Autosaves every ${DE.CONFIG.AUTOSAVE_SEC}s and when you leave. Last saved: ${s.lastSave ? U().fmtTime((Date.now() - s.lastSave) / 1000) + ' ago' : 'never'}. Offline progress is kept for up to ${DE.Effects.get(s).offlineCapHours}h.</p>
  <div class="btn-row"><button class="btn primary" data-action="saveNow">Save now</button><button class="btn" data-action="exportSave">Export to text</button><button class="btn" data-action="copyExport">Copy export</button></div>
  <textarea id="export-area" class="save-area" placeholder="Export string appears here" readonly></textarea></div>
- <div class="card"><h4>Import</h4><p class="muted">Paste an exported save. It is validated and never executed.</p><textarea id="import-area" class="save-area" placeholder="Paste export string here"></textarea><button class="btn" data-action="importSave">Import</button></div>
- <div class="card"><h4>Statistics</h4><div class="stats-grid">
+ <div class="card set-card"><div class="set-head">${sIco('scroll')}<div><b>Import</b></div></div><p class="muted">Paste an exported save. It is validated and never executed.</p><textarea id="import-area" class="save-area" placeholder="Paste export string here"></textarea><button class="btn" data-action="importSave">Import</button></div>
+ <div class="card set-card"><div class="set-head">${sIco('chart')}<div><b>Statistics</b></div></div><div class="stats-grid">
  <div><small>Playtime</small><b>${U().fmtTime(s.playtime)}</b></div><div><small>Zombies killed</small><b>${U().fmt(st.zombiesKilled)}</b></div>
  <div><small>Waves survived</small><b>${st.wavesSurvived}</b></div><div><small>Breaches</small><b>${st.breaches}</b></div>
  <div><small>Recruited</small><b>${st.recruited}</b></div><div><small>Expeditions</small><b>${st.expeditions}</b></div>
  <div><small>Deepest floor</small><b>B${st.maxDepth}</b></div><div><small>Lifetime LP</small><b>${U().fmt(s.prestige.lifetime)}</b></div></div>
  <h4>Lifetime production</h4><div class="row wrap">${DE.Data.RESOURCE_ORDER.map(r => `<span>${DE.Icons.res(r, 'ico-inline')} ${U().fmt(st.produced[r])}</span>`).join('')}</div></div>
- <div class="card"><h4>Event log</h4><ul class="log">${s.log.slice(-15).reverse().map(l => `<li>${esc(l.msg)}</li>`).join('')}</ul></div>
- <div class="card danger-zone"><h4>Danger zone</h4><div class="btn-row"><button class="btn" data-action="toMenu">← Main menu</button><button class="btn danger" data-action="hardReset"> Delete save & restart</button></div></div>`;
+ <div class="card set-card"><div class="set-head">${sIco('mail')}<div><b>Event log</b></div></div><ul class="log">${s.log.slice(-15).reverse().map(l => `<li>${esc(l.msg)}</li>`).join('')}</ul></div>
+ <div class="card set-card danger-zone"><div class="set-head">${sIco('warning')}<div><b>Danger zone</b></div></div><div class="btn-row"><button class="btn" data-action="toMenu">← Main menu</button><button class="btn danger" data-action="hardReset"> Delete save & restart</button></div></div>`;
  }
- return `<div class="set-tabs">${SET_TABS.map(([id, label, ic]) => `<button class="set-tab ${tab === id ? 'on' : ''}" data-action="setTab" data-tab="${id}">${DE.Icons.img(ic, 'ico-inline')}<span>${label}</span></button>`).join('')}</div>
+ return `<div class="set-tabs">${SET_TABS.map(([id, label, ic]) => `<button class="btn set-tab ${tab === id ? 'active' : ''}" data-action="setTab" data-tab="${id}">${sIco(ic)}<span>${label}</span></button>`).join('')}</div>
    <div class="set-body">${body}</div><p class="muted center">Settings are kept on this device. DEAD END: Underground · vanilla JS · no servers, no accounts.</p>`;
  },
  };
