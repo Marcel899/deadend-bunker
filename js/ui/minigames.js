@@ -203,7 +203,7 @@ DE.UI.MG = (function () {
   function radioGame(stage, env) {
     const T = env.tier, s = S(), sig = DE.Minigames.pickSignal(s);
     const limit = (30 - T * 2) * (1 + env.skill), bw = (5.2 - T * .7) * (1 + env.skill * 1.5), drift = [0, .25, .5, .8][T - 1];
-    let fT = rnd(89, 107), gT = rnd(.35, .9), f = rnd(88, 108), g = .5, lock = 0, t = 0, best = 0, burst = 0, over = false;
+    let fT = rnd(89, 107), gT = rnd(.35, .9), f = rnd(88, 108), g = .5, lock = 0, t = 0, best = 0, noiseT = 0, over = false;
     stage.innerHTML = `<div class="rd-wrap"><div class="rd-top">${SP('dish', 'rd-dish')}<div class="rd-screen"><canvas class="rd-scope" width="640" height="200"></canvas>${SP('static', 'rd-static')}</div>${SP('antenna', 'rd-ant')}</div>
       <div class="rd-row"><button class="rd-knob" type="button" aria-label="Tuning knob">${SP('knob')}</button><div class="rd-dial"><div class="rd-band"></div><div class="rd-needle"></div><span class="rd-mhz">${f.toFixed(1)} MHz</span></div>
       <label class="rd-gain">Gain<input type="range" min="0" max="1" step="0.01" value="${g}"></label></div>
@@ -233,21 +233,21 @@ DE.UI.MG = (function () {
     loop((dt) => {
       if (over) return false; t += dt;
       fT = Math.max(88.5, Math.min(107.5, fT + Math.sin(t * .7) * drift * dt));
-      if (T >= 3 && burst <= 0 && Math.random() < dt * .25) burst = .9; burst = Math.max(0, burst - dt);
-      const mf = Math.exp(-Math.pow((f - fT) / bw * 2.2, 2)), mg = Math.max(0, 1 - Math.abs(g - gT) * 2.4), match = mf * mg * (burst > 0 ? .55 : 1);
+      if (T >= 3 && noiseT <= 0 && Math.random() < dt * .25) noiseT = .9; noiseT = Math.max(0, noiseT - dt);
+      const mf = Math.exp(-Math.pow((f - fT) / bw * 2.2, 2)), mg = Math.max(0, 1 - Math.abs(g - gT) * 2.4), match = mf * mg * (noiseT > 0 ? .55 : 1);
       best = Math.max(best, match);
       lock = match > .8 ? lock + dt / (1.6 - env.skill) : Math.max(0, lock - dt * .8);
       meter.style.width = Math.round(Math.min(1, lock) * 100) + '%'; meter.parentElement.classList.toggle('hot', match > .8);
-      const nl = Math.round(match * 10); if (nl !== litN) { litN = nl; leds.forEach((l, i) => l.classList.toggle('on', i < nl)); tower.classList.toggle('ok', match > .55 && burst <= 0); }
-      stat.style.opacity = Math.min(.75, (1 - match) * .45 + (burst > 0 ? .4 : 0)).toFixed(2);
+      const nl = Math.round(match * 10); if (nl !== litN) { litN = nl; leds.forEach((l, i) => l.classList.toggle('on', i < nl)); tower.classList.toggle('ok', match > .55 && noiseT <= 0); }
+      stat.style.opacity = Math.min(.75, (1 - match) * .45 + (noiseT > 0 ? .4 : 0)).toFixed(2);
       if (match > .8 && Math.random() < dt * 6) note(1400 + match * 400, .03, 'sine', .025);
       // the scope: static, with the station's wave coming through as it is tuned in
       const W = cv.width, H = cv.height; cx.fillStyle = '#0c1a12'; cx.fillRect(0, 0, W, H);
       cx.strokeStyle = 'rgba(80,255,140,.14)'; cx.lineWidth = 1; for (let x = 0; x < W; x += 40) { cx.beginPath(); cx.moveTo(x, 0); cx.lineTo(x, H); cx.stroke(); } for (let y = 0; y < H; y += 40) { cx.beginPath(); cx.moveTo(0, y); cx.lineTo(W, y); cx.stroke(); }
       cx.strokeStyle = 'rgba(255,255,255,.18)'; cx.setLineDash([6, 6]); cx.beginPath(); for (let x = 0; x <= W; x += 4) { const y = H / 2 + Math.sin(x * .045 + t * 3) * gT * 70 * (.7 + .3 * Math.sin(x * .011)); x ? cx.lineTo(x, y) : cx.moveTo(x, y); } cx.stroke(); cx.setLineDash([]);
       cx.strokeStyle = match > .8 ? '#7fff9a' : '#3fe070'; cx.lineWidth = 2.5; cx.beginPath();
-      for (let x = 0; x <= W; x += 3) { const clean = Math.sin(x * .045 + t * 3) * g * 70 * (.7 + .3 * Math.sin(x * .011)); const y = H / 2 + clean * mf + (Math.random() - .5) * 80 * (1 - match) * (burst > 0 ? 1.8 : 1); x ? cx.lineTo(x, y) : cx.moveTo(x, y); } cx.stroke();
-      hudSet(env, `${clock(limit - t, limit)}<span>${ic('signal')} Signal ${Math.round(match * 100)}%</span>${burst > 0 ? '<span class="neg">Interference!</span>' : ''}`);
+      for (let x = 0; x <= W; x += 3) { const clean = Math.sin(x * .045 + t * 3) * g * 70 * (.7 + .3 * Math.sin(x * .011)); const y = H / 2 + clean * mf + (Math.random() - .5) * 80 * (1 - match) * (noiseT > 0 ? 1.8 : 1); x ? cx.lineTo(x, y) : cx.moveTo(x, y); } cx.stroke();
+      hudSet(env, `${clock(limit - t, limit)}<span>${ic('signal')} Signal ${Math.round(match * 100)}%</span>${noiseT > 0 ? '<span class="neg">Interference!</span>' : ''}`);
       if (lock >= 1) finish(true); else if (t >= limit) finish(false);
     });
   }
