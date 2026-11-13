@@ -19,9 +19,9 @@ DE.UI.MG = (function () {
   const SP = (n, c) => `<img class="sp ${c || ''}" src="assets/mg/${n}.png" alt="" draggable="false">`;
   const preloaded = new Set();
   function preload(names) { names.forEach(n => { if (preloaded.has(n)) return; preloaded.add(n); const im = new Image(); im.src = 'assets/mg/' + n + '.png'; }); }
-  const ART = { grid: ['generator', 'led_glow', 'rocker_on', 'bolt'], radio: ['radio_set', 'mic', 'dish'], sort: ['crate_open', 'can_tomato', 'rad_barrel', 'bullets'],
+  const ART = { grid: ['p_core', 'p_lamp', 'p_sw_on', 'p_spark'], radio: ['radio_set', 'mic', 'dish'], sort: ['crate_open', 'can_tomato', 'rad_barrel', 'bullets'],
     triage: ['medkit', 'syringe', 'pills', 'bandage'], range: ['crosshair', 'pistol', 'bullets'] };
-  const USES = { grid: ['generator', 'led_off', 'led_glow', 'rocker_off', 'rocker_on', 'bolt'], radio: ['knob', 'led_green', 'led_yellow', 'led_red', 'led_off', 'tower_ok', 'tower_lost', 'lock', 'static', 'dish', 'antenna'],
+  const USES = { grid: ['p_core', 'p_lamp', 'p_sw_off', 'p_sw_on', 'p_spark', 'p_broken', 'p_straight', 'p_half', 'p_elbow', 'p_hub', 'p_ok'], radio: ['knob', 'led_green', 'led_yellow', 'led_red', 'led_off', 'tower_ok', 'tower_lost', 'lock', 'static', 'dish', 'antenna'],
     sort: ['bin_green', 'bin_blue', 'crate_open', 'crate_hazard', 'box_grey', 'crate_mil', 'drum', 'box_blue'], triage: ['face0', 'face1', 'face2', 'face3', 'bandage', 'gauze', 'bottle', 'syringe', 'pills', 'ok', 'no', 'ico_heart', 'stethoscope'],
     range: ['cartridge', 'ico_heart', 'bullets', 'burst', 'crate', 'crate2', 'crate_mil'], common: ['star_gold', 'star_grey', 'trophy', 'ok', 'no', 'stopwatch'] };
   let root = null, shellFx = [], gameFx = [], current = null;
@@ -131,9 +131,15 @@ DE.UI.MG = (function () {
     for (const c of cells) { if (!c.m) c.m = pick([5, 10, 3, 6, 12, 9]); c.dead = !path.includes(c) && c !== src && !cons.has(c); c.r = c.sw ? 0 : irnd(0, 3); c.cur = rot(c.m, -c.r); }
     // the generator turns too, so it is never a giveaway; the board is never solved from the start
     const S2 = 64, pad = 6, W = n * S2;
-    stage.innerHTML = `<svg class="gr-board" viewBox="${-pad} ${-pad} ${W + 2 * pad} ${W + 2 * pad}">${cells.map((c, i) => `<g class="gc${c === src ? ' src' : ''}${cons.has(c) ? ' cons' : ''}${c.broken ? ' broken' : ''}${c.sw ? ' sw' : ''}" data-i="${i}" transform="translate(${c.x * S2} ${c.y * S2})"><rect class="gbg" x="2" y="2" width="${S2 - 4}" height="${S2 - 4}" rx="9"/><g class="gp" style="transform:rotate(${c.r * 90}deg)">${pipes(c.m, S2)}</g>${c === src ? img('generator', 8, 6, 48, 52, 'gsrc') : ''}${cons.has(c) ? `<circle cx="${S2 / 2}" cy="${S2 / 2}" r="19" class="gglow"/>${img('led_off', 17, 17, 30, 30, 'goff')}${img('led_glow', 13, 13, 38, 38, 'gon')}` : ''}${c.sw ? img('rocker_off', 19, 16, 26, 32, 'goff') + img('rocker_on', 19, 16, 26, 32, 'gon') : ''}${c.broken ? img('bolt', 20, 14, 24, 34, 'gspark') : ''}</g>`).join('')}</svg><div class="gr-legend"><span>${SP('generator', 'lg')}Generator</span><span>${SP('led_glow', 'lg')}Lamp</span>${nBroken ? `<span>${SP('bolt', 'lg')}Sparking: tap to patch</span>` : ''}${nSwitch ? `<span>${SP('rocker_off', 'lg')}Switch: tap to flip</span>` : ''}</div>`;
+    stage.innerHTML = `<svg class="gr-board" viewBox="${-pad} ${-pad} ${W + 2 * pad} ${W + 2 * pad}">${cells.map((c, i) => `<g class="gc${c === src ? ' src' : ''}${cons.has(c) ? ' cons' : ''}${c.broken ? ' broken' : ''}${c.sw ? ' sw' : ''}" data-i="${i}" transform="translate(${c.x * S2} ${c.y * S2})"><rect class="gbg" x="2" y="2" width="${S2 - 4}" height="${S2 - 4}" rx="9"/><g class="gp" style="transform:rotate(${c.r * 90}deg)">${pipes(c.m, S2)}</g>${c === src ? img('p_core', 5, 5, 54, 54, 'gsrc') : ''}${cons.has(c) ? img('p_lamp', 14, 14, 36, 36, 'glamp') : ''}${c.sw ? img('p_sw_off', 13, 13, 38, 38, 'goff') + img('p_sw_on', 13, 13, 38, 38, 'gon') : ''}${c.broken ? img('p_broken', 10, 16, 44, 32, 'gbrk') + img('p_spark', 14, 10, 36, 36, 'gspark') : ''}</g>`).join('')}</svg><div class="gr-legend"><span>${SP('p_core', 'lg')}Power core</span><span>${SP('p_lamp', 'lg')}Lamp</span>${nBroken ? `<span>${SP('p_spark', 'lg')}Broken: tap to patch</span>` : ''}${nSwitch ? `<span>${SP('p_sw_off', 'lg')}Switch: tap to flip</span>` : ''}</div>`;
     function img(n, x, y, w, h, cls) { return `<image href="assets/mg/${n}.png" x="${x}" y="${y}" width="${w}" height="${h}" class="${cls}" preserveAspectRatio="xMidYMid meet"/>`; }
-    function pipes(m, s) { let o = ''; const h = s / 2; [[h, 0], [s, h], [h, s], [0, h]].forEach(([x, y], d) => { if (m & (1 << d)) o += `<path d="M${h} ${h} L${x} ${y}" class="gw"/><path d="M${h} ${h} L${x} ${y}" class="gw-in"/>`; }); return o + `<circle cx="${h}" cy="${h}" r="7" class="gn"/>`; }
+    /* cables from the power sheet: a straight run, an elbow, or half-runs meeting at a joint (all 128 px tiles, rotated) */
+    function pipes(m, s) {
+      const I = (n, rot) => `<image href="assets/mg/${n}.png" x="0" y="0" width="${s}" height="${s}" class="pc"${rot ? ` transform="rotate(${rot} ${s / 2} ${s / 2})"` : ''}/>`;
+      if (m === 10) return I('p_straight', 0); if (m === 5) return I('p_straight', 90);
+      const EL = { 6: 0, 12: 90, 9: 180, 3: 270 }; if (EL[m] != null) return I('p_elbow', EL[m]);
+      return [0, 1, 2, 3].filter(d => m & (1 << d)).map(d => I('p_half', [-90, 0, 90, 180][d])).join('') + I('p_hub', 0);
+    }
     const els = Array.from(stage.querySelectorAll('.gc'));
     // par: the fewest moves to the intended solution (straight runs solve at two turns, a cross at any)
     const minRot = (c) => { const a = (4 - (((c.r % 4) + 4) % 4)) % 4; return c.sw || c.m === 15 ? 0 : c.m === 5 || c.m === 10 ? a % 2 : a; };
@@ -148,7 +154,7 @@ DE.UI.MG = (function () {
     function finish(win) {
       if (over) return; over = true; const lit = flood();
       const score = win ? Math.min(1, .55 + .45 * Math.max(0, 1 - t / limit) - Math.max(0, moves - cells.length * 1.2) * .004) : .3 * lit / nCons;
-      if (win) { snd('upgrade'); stage.classList.add('won'); }
+      if (win) { snd('upgrade'); stage.classList.add('won'); stage.insertAdjacentHTML('beforeend', SP('p_ok', 'gr-ok')); }
       const chal = win && (env.chal.id === 'par' ? moves <= par + 3 : t <= limit / 2);
       later(() => env.done(score, { challenge: chal, headline: win ? 'Every lamp is lit. The generators hum along.' : lit + ' of ' + nCons + ' lamps powered when the shift ended.' }), win ? 1100 : 300);
     }

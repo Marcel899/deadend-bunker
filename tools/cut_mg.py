@@ -91,12 +91,13 @@ NAMES = {
   'mg_radio': {0: 'radio_set', 7: 'radio_speaker', 8: 'mast', 10: 'rocker_off', 11: 'rocker_on', 16: 'knob', 18: 'knob2', 31: 'dish', 32: 'antenna',
                33: 'vu', 36: 'ledbar', 39: 'screen', 44: 'led_green', 46: 'led_yellow', 47: 'led_red', 54: 'static', 55: 'wave_green', 56: 'wave_orange',
                61: 'fader', 63: 'fader_orange', 74: 'led_off', 77: 'speaker', 78: 'led_glow', 98: 'mic', 99: 'tower_ok', 102: 'lock', 105: 'tower_lost'},
+  'mg_power': {1: 'p_panel', 7: 'p_core', 34: 'p_sw_off', 35: 'p_sw_on', 37: 'p_zap', 47: 'p_broken', 49: 'p_spark', 58: 'p_gauge', 65: 'p_lamp', 82: 'p_ok'},
 }
 # cut from a box (x0, y0, x1, y1) because they touch something else on the sheet
 BOXES = {'mg_forge': {'furnace': (0, 512, 345, 853)}}
 # the ten patient portraits: two rows of five that touch each other
 FACES = ('mg_medical', (628, 0, 1280, 335), 5, 2)
-MAX = {'default': 160, 'furnace': 300, 'gun_cabinet': 256, 'rifle_rack': 256, 'ammo_cabinet': 256, 'scanner': 256, 'clipboard': 256, 'monitor': 256, 'radio_set': 256,
+MAX = {'default': 160, 'p_straight': 128, 'p_half': 128, 'p_elbow': 128, 'p_hub': 128, 'p_core': 128, 'furnace': 300, 'gun_cabinet': 256, 'rifle_rack': 256, 'ammo_cabinet': 256, 'scanner': 256, 'clipboard': 256, 'monitor': 256, 'radio_set': 256,
        'anvil_base': 256, 'hearth': 256, 'generator': 200, 'screen': 256, 'vu': 200, 'fader': 256, 'fader_orange': 256, 'ledbar': 256, 'plank': 300, 'scroll_sword': 220}
 
 def save(img, name):
@@ -133,5 +134,15 @@ if __name__ == '__main__':
     sheet, (x0, y0, x1, y1), cols, rows = FACES
     a = load(sheet); reg = a[y0:y1, x0:x1]; ys, xs = np.where(reg[..., 3] > 0); reg = reg[ys.min():ys.max() + 1, xs.min():xs.max() + 1]
     for k, cell in enumerate(grid(reg, cols, rows)): save(trim(cell), 'face%d' % k); n += 1
+    # power grid tiles (128 px, the cable runs through the middle): composed from the sheet's cable pieces
+    pw = blobs(load('mg_power')); T, t = 128, 22
+    cable = trim(pw[8]).resize((T, t), Image.LANCZOS)
+    tile = lambda: Image.new('RGBA', (T, T), (0, 0, 0, 0))
+    st = tile(); st.alpha_composite(cable, (0, (T - t) // 2)); save(st, 'p_straight'); n += 1
+    hf = tile(); hf.alpha_composite(cable.crop((T // 2, 0, T, t)), (T // 2, (T - t) // 2)); save(hf, 'p_half'); n += 1
+    el = trim(pw[14]); e = int(T / 2 + t * .62); el = el.resize((e, e), Image.LANCZOS)
+    eb = tile(); eb.alpha_composite(el, (T - e, T - e)); save(eb, 'p_elbow'); n += 1   # joins east and south
+    cr = trim(pw[20]); w, h = cr.size; hub = cr.crop((int(w * .34), int(h * .3), int(w * .66), int(h * .7))).resize((38, 38), Image.LANCZOS)
+    hb = tile(); hb.alpha_composite(hub, ((T - 38) // 2, (T - 38) // 2)); save(hb, 'p_hub'); n += 1
     cur = Image.open(os.path.join(OUT, 'crosshair.png')).convert('RGBA'); cur.thumbnail((36, 36), Image.LANCZOS); cur.save(os.path.join(OUT, 'cursor.png'), optimize=True); n += 1   # the range's mouse cursor
     print(n, 'sprites written to assets/mg')
