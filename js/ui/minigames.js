@@ -28,9 +28,28 @@ DE.UI.MG = (function () {
   const snd = (n, gap) => { try { DE.Audio.mg(n, gap); } catch (e) { /* no audio */ } };
   const note = (f, d, type, vol, glide) => { try { DE.Audio.mgTone(f, d, type, vol, glide); } catch (e) { /* no audio */ } };
   function later(fn, ms) { const id = setTimeout(() => { if (root) fn(); }, ms); gameFx.push(() => clearTimeout(id)); return id; }
-  function loop(fn) { let id = 0, last = 0; const f = (t) => { const dt = last ? Math.min(.05, (t - last) / 1000) : 0; last = t; if (!root) return; if (fn(dt, t) !== false) id = requestAnimationFrame(f); }; id = requestAnimationFrame(f); gameFx.push(() => cancelAnimationFrame(id)); }
+  let paused = false;
+  function loop(fn) { let id = 0, last = 0; const f = (t) => { if (!root) return; if (paused) { last = t; id = requestAnimationFrame(f); return; } const dt = last ? Math.min(.05, (t - last) / 1000) : 0; last = t; if (fn(dt, t) !== false) id = requestAnimationFrame(f); }; id = requestAnimationFrame(f); gameFx.push(() => cancelAnimationFrame(id)); }
+  /* ---------- juice: particles, floating text, shake and flash (all respect the settings) ---------- */
+  function fxLayer() { const pnl = root && root.querySelector('.mg-panel'); if (!pnl) return null; let l = pnl.querySelector(':scope > .mg-fx'); if (!l) { l = document.createElement('div'); l.className = 'mg-fx'; pnl.appendChild(l); } return l; }
+  function at(el) { const pr = root.querySelector('.mg-panel').getBoundingClientRect(), r = el.getBoundingClientRect(); return [r.left - pr.left + r.width / 2, r.top - pr.top + r.height / 2]; }
+  /** A burst of particles from an element (or [x, y] in panel px). opt: n, colors, speed, size, up, fall, shape */
+  function burst(el, opt) {
+    opt = opt || {}; const L = fxLayer(); if (!L || !el || document.body.classList.contains('no-anim')) return;
+    const [x, y] = Array.isArray(el) ? el : at(el), dens = DE.UI.Settings ? DE.UI.Settings.density() : 1, n = Math.max(3, Math.round((opt.n || 12) * (.35 + .65 * dens))), cols = opt.colors || ['#ffd34a', '#fff4a8', '#ffb02a'];
+    for (let i = 0; i < n; i++) {
+      const d = document.createElement('i'), a = opt.up ? -Math.PI / 2 + (Math.random() - .5) * 1.7 : Math.random() * Math.PI * 2, sp = (opt.speed || 70) * (.45 + Math.random());
+      d.className = 'mg-p' + (opt.shape ? ' ' + opt.shape : '');
+      d.style.cssText = `left:${x.toFixed(0)}px;top:${y.toFixed(0)}px;--dx:${(Math.cos(a) * sp).toFixed(0)}px;--dy:${(Math.sin(a) * sp).toFixed(0)}px;--fall:${opt.fall ? 60 : 0}px;--s:${((opt.size || 7) * (.6 + Math.random() * .8)).toFixed(1)}px;--r:${(Math.random() * 720 - 360).toFixed(0)}deg;background:${cols[i % cols.length]}`;
+      L.appendChild(d); setTimeout(() => d.remove(), opt.fall ? 1300 : 800);
+    }
+  }
+  function popAt(el, text, cls) { const L = fxLayer(); if (!L || !el) return; const [x, y] = Array.isArray(el) ? el : at(el); const d = document.createElement('b'); d.className = 'mg-pop ' + (cls || ''); d.textContent = text; d.style.left = x.toFixed(0) + 'px'; d.style.top = y.toFixed(0) + 'px'; L.appendChild(d); setTimeout(() => d.remove(), 1100); }
+  function shake(k) { const fxk = DE.UI.Settings ? DE.UI.Settings.screenFx() : 1; const pnl = root && root.querySelector('.mg-panel'); if (!pnl || !fxk) return; pnl.classList.remove('shake', 'shake2'); void pnl.offsetWidth; pnl.classList.add(k > 1 && fxk > .5 ? 'shake2' : 'shake'); }
+  function flashScr(color) { const L = fxLayer(); if (!L || !(DE.UI.Settings ? DE.UI.Settings.screenFx() : 1)) return; const d = document.createElement('i'); d.className = 'mg-flash'; d.style.background = color; L.appendChild(d); setTimeout(() => d.remove(), 450); }
+  const GOLD = ['#ffd34a', '#fff4a8', '#ffb02a'], GREEN = ['#9be860', '#e8ffd0', '#4fbf2a'], RED = ['#ff5a4d', '#ff9a8a', '#a3202a'], CONFETTI = ['#ffd34a', '#ff5a4d', '#4fc3ff', '#9be860', '#d7a6ff', '#ffffff'];
   function on(el, ev, fn, opt) { el.addEventListener(ev, fn, opt); gameFx.push(() => el.removeEventListener(ev, fn, opt)); }
-  function stopGame() { gameFx.forEach(f => { try { f(); } catch (e) { /* gone */ } }); gameFx = []; }
+  function stopGame() { paused = false; gameFx.forEach(f => { try { f(); } catch (e) { /* gone */ } }); gameFx = []; }
   const rnd = (a, b) => a + Math.random() * (b - a), irnd = (a, b) => Math.floor(rnd(a, b + 1)), pick = (a) => a[Math.floor(Math.random() * a.length)];
 
   /* ---------- the overlay ---------- */
@@ -83,22 +102,28 @@ DE.UI.MG = (function () {
   function run(g, body, env) {
     body.innerHTML = `<div class="mg-hud"></div><div class="mg-stage mg-${g}"></div>`;
     env.hud = body.querySelector('.mg-hud'); env.done = (score, ctx) => { current = null; results(g, body, score, ctx || {}, env); }; current = env;
-    GAME[g](body.querySelector('.mg-stage'), env);
+    const stage = body.querySelector('.mg-stage'); GAME[g](stage, env);
+    // 3, 2, 1, GO! over the board (the game holds still until then)
+    if (document.body.classList.contains('no-anim')) return;
+    paused = true; const cd = document.createElement('div'); cd.className = 'mg-count'; stage.appendChild(cd);
+    const steps = ['3', '2', '1', 'GO!'];
+    steps.forEach((txt, i) => later(() => { cd.innerHTML = `<b class="${txt === 'GO!' ? 'go' : ''}">${txt}</b>`; note(txt === 'GO!' ? 1046 : 523, txt === 'GO!' ? .22 : .1, 'square', .06); if (txt === 'GO!') { paused = false; cd.classList.add('out'); later(() => cd.remove(), 420); } }, i * 520));
   }
   function stars(score) { return score >= .85 ? 3 : score >= .55 ? 2 : score >= .25 ? 1 : 0; }
   function results(g, body, score, ctx, env) {
     stopGame();
-    const s = S(), out = g === 'forge' ? ctx.out : DE.Minigames.finish(s, g, score, ctx);
+    const s = S(), prevBest = g === 'forge' ? (ctx.prevBest || 0) : (DE.Minigames.ensure(s).best[g] || 0), played = g === 'forge' ? ctx.played : (DE.Minigames.ensure(s).plays[g] || 0) > 0;
+    const out = g === 'forge' ? ctx.out : DE.Minigames.finish(s, g, score, ctx);
     const n = stars(score), nx = DE.Minigames.xpToNext(s, g);
     body.innerHTML = `<div class="mg-res">
       ${n === 3 ? SP('trophy', 'mg-trophy') : ''}<div class="mg-starrow">${[0, 1, 2].map(i => `<i class="${i < n ? 'on' : ''}" style="animation-delay:${(.15 + i * .2).toFixed(2)}s">${SP(i < n ? 'star_gold' : 'star_grey')}</i>`).join('')}</div>
-      <div class="mg-score"><b data-to="${Math.round(score * 100)}">0</b><small>%</small></div>
+      <div class="mg-score"><b data-to="${Math.round(score * 100)}">0</b><small>%</small>${played && score > prevBest + .005 ? '<em class="mg-best">NEW BEST!</em>' : ''}</div>
       ${ctx.headline ? `<p class="mg-headline">${ctx.headline}</p>` : ''}
       ${env.chal ? `<div class="mg-chalr ${ctx.challenge ? 'ok' : ''}">${SP(ctx.challenge ? 'ok' : 'no')}<span>Challenge: ${esc(env.chal.text)}</span>${ctx.challenge ? '<b>+25%</b>' : ''}</div>` : ''}
       ${ctx.card || ''}
       <div class="mg-rewards">${Object.keys(out.rewards || {}).map((r, i) => `<span class="mg-rw" style="animation-delay:${(.5 + i * .12).toFixed(2)}s">${DE.Icons.res(r, 'ico-inline')} +<b data-to="${out.rewards[r]}">0</b></span>`).join('')}</div>
       <ul class="mg-lines">${(out.lines || []).map((l, i) => `<li style="animation-delay:${(.7 + i * .15).toFixed(2)}s">${esc(l)}</li>`).join('')}</ul>
-      ${nx ? `<div class="mg-mast"><span>Mastery ${out.mastery}</span><i><b style="width:${Math.round(100 * nx.have / nx.need)}%"></b></i></div>` : out.mastery ? `<div class="mg-mast"><span>Mastery ${out.mastery} — max</span></div>` : ''}
+      ${nx ? `<div class="mg-mast"><span>Mastery ${out.mastery}</span><i><b style="--w:${Math.round(100 * nx.have / nx.need)}%"></b></i><small>${nx.have}/${nx.need} XP</small></div>` : out.mastery ? `<div class="mg-mast"><span>Mastery ${out.mastery} — max</span></div>` : ''}
       <div class="mg-btns">${g === 'forge' ? '<button class="btn mg-again" type="button">Forge another</button>' : ''}<button class="btn primary mg-done" type="button">Done</button></div></div>`;
     body.querySelector('.mg-done').addEventListener('click', () => close());
     const again = body.querySelector('.mg-again'); if (again) again.addEventListener('click', () => forgeMenu());
@@ -106,10 +131,13 @@ DE.UI.MG = (function () {
     body.querySelectorAll('[data-to]').forEach(el => { const to = +el.dataset.to, t0 = performance.now(); const f = (t) => { const k = Math.min(1, (t - t0) / 900); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1 && el.isConnected) requestAnimationFrame(f); }; requestAnimationFrame(f); });
     for (let i = 0; i < n; i++) setTimeout(() => note(660 * Math.pow(1.26, i), .25, 'triangle', .09), 180 + i * 200);
     if (n === 3 || ctx.challenge) setTimeout(() => snd('reveal'), 900);
+    const row = body.querySelector('.mg-starrow');
+    for (let i = 0; i < n; i++) setTimeout(() => { const st = row && row.children[i]; if (st && root) burst(st, { n: 10, colors: GOLD, speed: 60 }); }, 380 + i * 200);
+    if (n === 3) setTimeout(() => { if (root && row) { burst(row, { n: 46, colors: CONFETTI, speed: 230, size: 9, up: true, fall: true, shape: 'conf' }); shake(1); } }, 1000);
     if (DE.Game.afterAction) DE.Game.afterAction();
   }
   const hudSet = (env, html) => { if (env.hud.innerHTML !== html) env.hud.innerHTML = html; };
-  const clock = (sec) => `<span class="mg-clock ${sec < 6 ? 'low' : ''}">${SP('stopwatch')} ${Math.max(0, Math.ceil(sec))}s</span>`;
+  const clock = (sec, total) => `<span class="mg-clock ${sec < 6 ? 'low' : ''}">${SP('stopwatch')} ${Math.max(0, Math.ceil(sec))}s${total ? `<i class="mg-tbar"><b style="width:${Math.max(0, Math.min(100, sec / total * 100)).toFixed(1)}%"></b></i>` : ''}</span>`;
 
   /* ================= POWER GRID ================= */
   const DIRS = [[0, -1], [1, 0], [0, 1], [-1, 0]];   // N E S W as bits 1 2 4 8
@@ -149,25 +177,26 @@ DE.UI.MG = (function () {
       const lit = new Set([src]), q = [src]; const conducts = (c) => !c.broken && !(c.sw && !c.on);
       while (q.length) { const c = q.shift(); if (!conducts(c)) continue; const m = rot(c.m, c.r); for (let d = 0; d < 4; d++) { if (!(m & (1 << d))) continue; const o = at(c.x + DIRS[d][0], c.y + DIRS[d][1]); if (!o || lit.has(o)) continue; if (rot(o.m, o.r) & (1 << ((d + 2) % 4))) { lit.add(o); q.push(o); } } }
       els.forEach((e, i) => e.classList.toggle('lit', lit.has(cells[i])));
-      return [...cons].filter(c => lit.has(c)).length;
+      const litC = [...cons].filter(c => lit.has(c)); litC.forEach(c => { if (!c._lit && root) { const el = els[cells.indexOf(c)]; burst(el, { n: 10, colors: GREEN, speed: 55 }); popAt(el, 'ON', 'g'); note(1320, .08, 'triangle', .05); } }); cons.forEach(c => { c._lit = lit.has(c); });
+      return litC.length;
     }
     function finish(win) {
       if (over) return; over = true; const lit = flood();
       const score = win ? Math.min(1, .55 + .45 * Math.max(0, 1 - t / limit) - Math.max(0, moves - cells.length * 1.2) * .004) : .3 * lit / nCons;
-      if (win) { snd('upgrade'); stage.classList.add('won'); stage.insertAdjacentHTML('beforeend', SP('p_ok', 'gr-ok')); }
+      if (win) { snd('upgrade'); stage.classList.add('won'); flashScr('rgba(160, 255, 120, .35)'); burst(stage.querySelector('.gr-board'), { n: 30, colors: GREEN, speed: 160 }); stage.insertAdjacentHTML('beforeend', SP('p_ok', 'gr-ok')); }
       const chal = win && (env.chal.id === 'par' ? moves <= par + 3 : t <= limit / 2);
       later(() => env.done(score, { challenge: chal, headline: win ? 'Every lamp is lit. The generators hum along.' : lit + ' of ' + nCons + ' lamps powered when the shift ended.' }), win ? 1100 : 300);
     }
     els.forEach((e, i) => on(e, 'pointerdown', (ev) => {
       ev.preventDefault(); if (over) return; const c = cells[i];
-      if (c.broken) { c.broken = false; e.classList.remove('broken'); e.classList.add('patched'); snd('ratchet'); }
+      if (c.broken) { c.broken = false; e.classList.remove('broken'); e.classList.add('patched'); snd('ratchet'); burst(e, { n: 8, colors: GOLD, speed: 45, size: 5 }); }
       else if (c.sw) { c.on = !c.on; e.classList.toggle('on', c.on); note(c.on ? 880 : 520, .06, 'square', .05); }
       else { c.r = (c.r + 1) % 4; e.querySelector('.gp').style.transform = `rotate(${c.r * 90}deg)`; note(1200 + Math.random() * 120, .03, 'triangle', .04); }
       moves++;
       if (flood() === nCons) finish(true);
     }));
     flood();
-    loop((dt) => { if (over) return false; t += dt; hudSet(env, `${clock(limit - t)}<span>${ic('power')} ${[...cons].filter((c) => els[cells.indexOf(c)].classList.contains('lit')).length}/${nCons} lamps</span><span>Moves ${moves}${env.chal.id === 'par' ? ' · par ' + (par + 3) : ''}</span>`); if (t >= limit) finish(false); });
+    loop((dt) => { if (over) return false; t += dt; hudSet(env, `${clock(limit - t, limit)}<span>${ic('power')} ${[...cons].filter((c) => els[cells.indexOf(c)].classList.contains('lit')).length}/${nCons} lamps</span><span>Moves ${moves}${env.chal.id === 'par' ? ' · par ' + (par + 3) : ''}</span>`); if (t >= limit) finish(false); });
   }
 
   /* ================= RADIO ================= */
@@ -197,7 +226,7 @@ DE.UI.MG = (function () {
     const lines = { survivor: '…anyone… we\'re hiding in the old school… three of us… please…', location: '…grid reference seven-four-two… fuel inside, the dead are thin there…', research: '…the experiment logs, part twelve… the samples respond to cold…', blueprint: '…the pump schematics are in the control room, second cabinet…', trader: '…caravan heading east, trading fuel for food, friendly…', rare: '…%#& …encrypted packet… cache… coordinates… &%#…' };
     function finish(locked) { if (over) return; over = true;
       const score = locked ? Math.min(1, .6 + .4 * Math.max(0, 1 - t / limit)) : .35 * best;
-      if (locked) { snd('reveal'); tower.classList.add('locked'); tower.insertAdjacentHTML('beforeend', SP('lock', 'lk')); tx.textContent = ''; const L = lines[sig.id]; let i = 0; const st = () => { if (!root) return; i++; tx.textContent = '“' + L.slice(0, i); if (i < L.length) later(st, 26); }; st(); }
+      if (locked) { snd('reveal'); flashScr('rgba(120, 255, 160, .3)'); burst(tower, { n: 18, colors: GREEN, speed: 90 }); popAt(stage.querySelector('.rd-screen'), 'LOCKED', 'g big'); tower.classList.add('locked'); tower.insertAdjacentHTML('beforeend', SP('lock', 'lk')); tx.textContent = ''; const L = lines[sig.id]; let i = 0; const st = () => { if (!root) return; i++; tx.textContent = '“' + L.slice(0, i); if (i < L.length) later(st, 26); }; st(); }
       const chal = locked && (env.chal.id === 'fast' ? t <= limit / 2 : best >= .95);
       later(() => env.done(score, { signal: sig.id, challenge: chal, headline: locked ? 'Locked on: ' + esc(sig.name) + '.' : 'The signal faded into static.' }), locked ? 2600 : 300);
     }
@@ -218,7 +247,7 @@ DE.UI.MG = (function () {
       cx.strokeStyle = 'rgba(255,255,255,.18)'; cx.setLineDash([6, 6]); cx.beginPath(); for (let x = 0; x <= W; x += 4) { const y = H / 2 + Math.sin(x * .045 + t * 3) * gT * 70 * (.7 + .3 * Math.sin(x * .011)); x ? cx.lineTo(x, y) : cx.moveTo(x, y); } cx.stroke(); cx.setLineDash([]);
       cx.strokeStyle = match > .8 ? '#7fff9a' : '#3fe070'; cx.lineWidth = 2.5; cx.beginPath();
       for (let x = 0; x <= W; x += 3) { const clean = Math.sin(x * .045 + t * 3) * g * 70 * (.7 + .3 * Math.sin(x * .011)); const y = H / 2 + clean * mf + (Math.random() - .5) * 80 * (1 - match) * (burst > 0 ? 1.8 : 1); x ? cx.lineTo(x, y) : cx.moveTo(x, y); } cx.stroke();
-      hudSet(env, `${clock(limit - t)}<span>${ic('signal')} Signal ${Math.round(match * 100)}%</span>${burst > 0 ? '<span class="neg">Interference!</span>' : ''}`);
+      hudSet(env, `${clock(limit - t, limit)}<span>${ic('signal')} Signal ${Math.round(match * 100)}%</span>${burst > 0 ? '<span class="neg">Interference!</span>' : ''}`);
       if (lock >= 1) finish(true); else if (t >= limit) finish(false);
     });
   }
@@ -258,8 +287,8 @@ DE.UI.MG = (function () {
     function drop(it, bin) {
       if (it.dead || over) return; it.dead = true; it.el.remove(); sel = null; const ok = bin.dataset.bin === it.kind;
       bin.classList.remove('good', 'bad'); void bin.offsetWidth; bin.classList.add(ok ? 'good' : 'bad');
-      if (ok) { combo++; good++; best = Math.max(best, combo); const pts = 10 * Math.min(5, 1 + Math.floor(combo / 3)); score += pts; sorted[it.kind] = (sorted[it.kind] || 0) + 1; note(700 + Math.min(combo, 12) * 45, .07, 'triangle', .07); flyText(bin, '+' + pts + (combo >= 3 ? ' ×' + Math.min(5, 1 + Math.floor(combo / 3)) : '')); showCombo(false); }
-      else { combo = 0; wrong++; score -= it.kind === 'hazard' || bin.dataset.bin === 'hazard' ? 15 : 5; snd('error'); flyText(bin, it.kind === 'hazard' ? 'Spill!' : 'Wrong bin'); showCombo(true); }
+      if (ok) { combo++; good++; best = Math.max(best, combo); burst(bin, { n: combo >= 3 ? 14 : 8, colors: combo >= 6 ? CONFETTI : combo >= 3 ? GOLD : GREEN, speed: 60, up: true }); const pts = 10 * Math.min(5, 1 + Math.floor(combo / 3)); score += pts; sorted[it.kind] = (sorted[it.kind] || 0) + 1; note(700 + Math.min(combo, 12) * 45, .07, 'triangle', .07); flyText(bin, '+' + pts + (combo >= 3 ? ' ×' + Math.min(5, 1 + Math.floor(combo / 3)) : '')); showCombo(false); }
+      else { burst(bin, { n: 10, colors: it.kind === 'hazard' ? ['#9be860', '#5a8a2a', '#c8ff6a'] : RED, speed: 60 }); shake(it.kind === 'hazard' ? 2 : 1); combo = 0; wrong++; score -= it.kind === 'hazard' || bin.dataset.bin === 'hazard' ? 15 : 5; snd('error'); flyText(bin, it.kind === 'hazard' ? 'Spill!' : 'Wrong bin'); showCombo(true); }
     }
     function flyText(bin, txt) { const r = bin.getBoundingClientRect(), s2 = stage.getBoundingClientRect(); const d = document.createElement('b'); d.textContent = txt; d.style.left = (r.left - s2.left + r.width / 2) + 'px'; d.style.top = (r.top - s2.top) + 'px'; pop.appendChild(d); later(() => d.remove(), 900); }
     stage.querySelectorAll('.so-bin').forEach(b => on(b, 'click', () => { if (sel) drop(sel, b); }));
@@ -270,7 +299,7 @@ DE.UI.MG = (function () {
       if (over) return false; t += dt; next -= dt; if (next <= 0 && t < limit - 2) { spawn(); next = every * rnd(.8, 1.2); }
       for (const it of items) { if (it.dead) continue; if (!it.drag) it.x += 112 / beltT * dt; it.el.style.left = it.x + '%'; it.el.style.top = it.y + '%'; if (it.x > 100) { it.dead = true; it.el.classList.add('fall'); later(() => it.el.remove(), 400); combo = 0; showCombo(true); } }
       items = items.filter(i => !i.dead || i.el.isConnected);
-      hudSet(env, `${clock(limit - t)}<span>Score ${score}</span><span class="${combo >= 3 ? 'pos' : ''}">Combo ${combo}</span>`);
+      hudSet(env, `${clock(limit - t, limit)}<span>Score ${score}</span><span class="${combo >= 3 ? 'pos' : ''}">Combo ${combo}</span>`);
       if (t >= limit) finish();
     });
   }
@@ -305,8 +334,8 @@ DE.UI.MG = (function () {
         const p = pats[i]; if (!chosen || p.done || over) return;
         if (stock[chosen] <= 0) { snd('error'); return; }
         stock[chosen]--; stage.querySelector(`.tr-cure[data-c="${chosen}"] b`).textContent = stock[chosen];
-        if (chosen === p.ail.cure) { p.done = true; p.ok = true; row.classList.add('saved'); row.querySelector('.tr-sym').textContent = p.ail.name + ' — treated'; snd('done'); }
-        else { wrongs++; p.stab = Math.max(0, p.stab - .25); row.classList.remove('wrong'); void row.offsetWidth; row.classList.add('wrong'); snd('error'); }
+        if (chosen === p.ail.cure) { burst(row.querySelector('.tr-face'), { n: 12, colors: ['#ff6a8a', '#ffd0dc', '#9be860'], speed: 60, up: true }); popAt(row.querySelector('.tr-face'), 'Stable', 'g'); p.done = true; p.ok = true; row.classList.add('saved'); row.querySelector('.tr-sym').textContent = p.ail.name + ' — treated'; snd('done'); }
+        else { wrongs++; shake(1); popAt(row.querySelector('.tr-face'), 'Wrong!', 'r'); p.stab = Math.max(0, p.stab - .25); row.classList.remove('wrong'); void row.offsetWidth; row.classList.add('wrong'); snd('error'); }
         stage.querySelectorAll('.tr-cure').forEach(b => b.classList.remove('on')); chosen = null; stage.classList.remove('giving');
         if (pats.every(q => q.done)) finish();
       });
@@ -319,7 +348,7 @@ DE.UI.MG = (function () {
     loop((dt) => {
       if (over) return false; t += dt;
       pats.forEach((p, i) => { if (p.done) return; p.stab -= dt * .022 * p.ail.rate * (1 + .15 * (T - 1)) * (1 - env.skill); const row = rows[i]; row.querySelector('.tr-stab b').style.width = Math.max(0, p.stab * 100) + '%'; row.classList.toggle('crit', p.stab < .3);
-        if (p.stab <= 0) { p.done = true; row.classList.add('lost'); row.querySelector('.tr-sym').textContent = p.id ? 'Needs more time than you have — back to bed' : 'Didn\'t make it'; snd('error'); if (pats.every(q => q.done)) finish(); } });
+        if (p.stab <= 0) { p.done = true; shake(1); row.classList.add('lost'); row.querySelector('.tr-sym').textContent = p.id ? 'Needs more time than you have — back to bed' : 'Didn\'t make it'; snd('error'); if (pats.every(q => q.done)) finish(); } });
       hudSet(env, `<span>${ic('medkit')} ${pats.filter(p => p.ok).length}/${pats.length} treated</span><span>${chosen ? 'Giving: ' + CURES.find(c => c[0] === chosen)[1] : 'Pick a treatment'}</span>`);
     });
   }
@@ -329,7 +358,7 @@ DE.UI.MG = (function () {
     const T = env.tier, limit = 30, mag = 6, reloadT = 1.1 * (1 - env.skill), life = [3.2, 2.7, 2.2, 1.8][T - 1] * (1 + env.skill), every = [1, .85, .72, .6][T - 1], civ = [.1, .15, .2, .25][T - 1];
     stage.innerHTML = `<div class="rg-field">${[0, 1, 2].map(r => `<div class="rg-lane l${r}"><i class="rg-bags"></i>${SP(pick(['crate', 'crate2', 'crate_mil']), 'rg-crate c' + r)}</div>`).join('')}</div><div class="rg-bar"><div class="rg-ammo"></div><button class="btn small rg-reload" type="button">${SP('bullets')}Reload (R)</button><span class="rg-hearts"></span></div>`;
     const field = stage.querySelector('.rg-field'), lanes = Array.from(stage.querySelectorAll('.rg-lane')), ammoEl = stage.querySelector('.rg-ammo'), hearts = stage.querySelector('.rg-hearts');
-    let t = 0, next = .6, ammo = mag, reloading = 0, hits = 0, misses = 0, escaped = 0, civHit = 0, lives = 3, over = false, targets = [];
+    let t = 0, next = .6, ammo = mag, reloading = 0, hits = 0, misses = 0, escaped = 0, civHit = 0, lives = 3, over = false, targets = [], streak = 0;
     const drawAmmo = () => { ammoEl.innerHTML = Array.from({ length: mag }, (_, i) => SP('cartridge', i < ammo ? 'on' : 'off')).join('') + (reloading > 0 ? '<b>Reloading…</b>' : ''); hearts.innerHTML = [0, 1, 2].map(i => SP('ico_heart', i < lives ? 'on' : 'off')).join(''); };
     drawAmmo();
     const reload = () => { if (reloading > 0 || ammo === mag || over) return; reloading = reloadT; snd('ratchet'); drawAmmo(); };
@@ -347,8 +376,9 @@ DE.UI.MG = (function () {
       if (over) return; if (reloading > 0) return; if (ammo <= 0) { note(180, .05, 'square', .05); return; }
       ammo--; mark(e, tg && !tg.dead && !tg.civ); snd('shot', 40); stage.classList.remove('kick'); void stage.offsetWidth; stage.classList.add('kick');
       if (tg && !tg.dead) { tg.dead = true; tg.el.classList.add('hit'); later(() => tg.el.remove(), 350);
-        if (tg.civ) { civHit++; lives = Math.max(0, lives - 1); snd('error'); } else { hits++; note(300, .08, 'square', .05, 120); } }
-      else misses++;
+        if (tg.civ) { civHit++; streak = 0; lives = Math.max(0, lives - 1); snd('error'); flashScr('rgba(255, 60, 40, .3)'); shake(2); popAt(tg.el, 'Civilian!', 'r'); }
+        else { hits++; streak++; note(300 + Math.min(streak, 8) * 40, .08, 'square', .05, 120); burst(tg.el, { n: 8, colors: RED, speed: 50 }); if (streak >= 3) popAt(tg.el, 'Streak ×' + streak, streak >= 6 ? 'gold big' : 'gold'); } }
+      else { misses++; streak = 0; }
       if (ammo === 0) later(reload, 150); drawAmmo();
       if (lives <= 0) finish();
     }
@@ -361,9 +391,9 @@ DE.UI.MG = (function () {
       if (over) return false; t += dt; next -= dt; if (reloading > 0) { reloading -= dt; if (reloading <= 0) { ammo = mag; drawAmmo(); note(900, .05, 'triangle', .05); } }
       if (next <= 0 && t < limit - 1) { spawn(); next = every * rnd(.7, 1.3); }
       for (const tg of targets) { if (tg.dead) continue; tg.age += dt; const k = tg.age / tg.life; tg.el.style.transform = `translateY(${(1 - Math.min(1, k * 3)) * 70}%) scale(${(.75 + .5 * k).toFixed(3)})`;
-        if (k >= 1) { tg.dead = true; tg.el.classList.add('gone'); later(() => tg.el.remove(), 300); if (!tg.civ) { escaped++; lives = Math.max(0, lives - 1); snd('thud'); drawAmmo(); if (lives <= 0) finish(); } } }
+        if (k >= 1) { tg.dead = true; tg.el.classList.add('gone'); later(() => tg.el.remove(), 300); if (!tg.civ) { escaped++; streak = 0; shake(1); lives = Math.max(0, lives - 1); snd('thud'); drawAmmo(); if (lives <= 0) finish(); } } }
       targets = targets.filter(x => !x.dead || x.el.isConnected);
-      hudSet(env, `${clock(limit - t)}<span>Hits ${hits}</span><span>Through ${escaped}</span>`);
+      hudSet(env, `${clock(limit - t, limit)}<span>Hits ${hits}</span><span>Through ${escaped}</span>`);
       if (t >= limit) finish();
     });
   }
@@ -422,7 +452,7 @@ DE.UI.MG = (function () {
       const width = () => Math.max(.06, (.26 - .03 * tier - .02 * n) * (1 + skill));
       const strike = () => { if (n >= strikes) return; const w = width(), acc = Math.max(0, 1 - Math.abs(x - .5) / (w / 2) * .5 - Math.max(0, Math.abs(x - .5) - w / 2) * 3); sum += Math.min(1, acc); n++; if (acc > .8) perfect++;
         hammer.classList.remove('hit'); void hammer.offsetWidth; hammer.classList.add('hit'); snd('clank', 0); note(acc > .8 ? 1760 : acc > .5 ? 1320 : 880, .12, 'triangle', .07);
-        sparks.classList.remove('go'); void sparks.offsetWidth; sparks.classList.add('go'); bar.style.setProperty('--shape', (n / strikes).toFixed(2));
+        sparks.classList.remove('go'); void sparks.offsetWidth; sparks.classList.add('go'); burst(bar, { n: acc > .8 ? 22 : acc > .5 ? 12 : 5, colors: GOLD, speed: acc > .8 ? 120 : 70, size: 5, up: true }); if (acc > .8) { popAt(bar, 'PERFECT!', 'gold big'); shake(1); } else if (acc > .5) popAt(bar, 'Good', 'g'); bar.style.setProperty('--shape', (n / strikes).toFixed(2));
         blows.innerHTML += `<i class="${acc > .8 ? 'great' : acc > .5 ? 'ok' : 'meh'}">${acc > .8 ? 'Perfect' : acc > .5 ? 'Good' : 'Off'}</i>`;
         if (n >= strikes) { score.hammer = sum / strikes; later(() => { stopGame(); quench(); }, 500); } };
       on(ui.querySelector('.fg-strike'), 'pointerdown', (e) => { e.preventDefault(); strike(); }); press(strike);
@@ -434,7 +464,7 @@ DE.UI.MG = (function () {
       ui.innerHTML = `<div class="fg-heatbar"><i class="fg-cherry"></i><b class="fg-now"></b></div><button class="btn primary fg-dip" type="button">Quench (Space)</button>`;
       const now = ui.querySelector('.fg-now'); let k = 0, done = false; const span = (.14 - .02 * tier) * (1 + skill), center = rnd(.45, .65);
       ui.querySelector('.fg-cherry').style.cssText = `left:${(center - span / 2) * 100}%;width:${span * 100}%`;
-      const dip = () => { if (done) return; done = true; score.quench = Math.max(0, 1 - Math.abs(k - center) / (span / 2) * .5 - Math.max(0, Math.abs(k - center) - span / 2) * 4); snd('splat'); note(2400, .5, 'sine', .02, 300); bar.classList.add('quenched'); later(() => { stopGame(); doneForge(); }, 500); };
+      const dip = () => { if (done) return; done = true; burst(bar, { n: 22, colors: ['#ffffff', '#e8eef4', '#c8d4e0'], speed: 70, size: 12, up: true, shape: 'steam' }); score.quench = Math.max(0, 1 - Math.abs(k - center) / (span / 2) * .5 - Math.max(0, Math.abs(k - center) - span / 2) * 4); snd('splat'); note(2400, .5, 'sine', .02, 300); bar.classList.add('quenched'); later(() => { stopGame(); doneForge(); }, 500); };
       on(ui.querySelector('.fg-dip'), 'pointerdown', (e) => { e.preventDefault(); dip(); }); press(dip);
       loop((dt) => { if (done) return false; k += dt * (.28 + .05 * tier); now.style.left = (Math.min(1, k) * 100) + '%'; bar.style.setProperty('--glow', (1 - k).toFixed(2)); if (k >= 1.05) dip(); });
     };
@@ -443,10 +473,10 @@ DE.UI.MG = (function () {
       const sc = Math.max(0, Math.min(1, .3 * score.heat + .5 * score.hammer + .2 * score.quench + (met ? .08 : 0)));
       const res = DE.Gear.craft(S(), id, sc); if (!res.ok) { DE.UI.toast(res.reason, 'err'); return close(); }
       const outSlot = body.querySelector('.fg-slot.out'); if (outSlot) outSlot.classList.add('made');
-      const mg = DE.Minigames.ensure(S()); mg.plays.forge = (mg.plays.forge || 0) + 1; mg.best.forge = Math.max(mg.best.forge || 0, sc); mg.xp.forge = (mg.xp.forge || 0) + Math.round(10 + 25 * sc + (met ? 15 : 0));
+      const mg = DE.Minigames.ensure(S()), prevBest = mg.best.forge || 0, played = (mg.plays.forge || 0) > 0; mg.plays.forge = (mg.plays.forge || 0) + 1; mg.best.forge = Math.max(mg.best.forge || 0, sc); mg.xp.forge = (mg.xp.forge || 0) + Math.round(10 + 25 * sc + (met ? 15 : 0));
       const q = res.quality, out = { rewards: {}, lines: res.kind === 'ammo' ? ['+' + res.amount + ' rounds for the armory'] : [q.name + ' ' + r.name + ' — ' + res.item.max + ' durability', 'Waiting in the Armory'], mastery: DE.Minigames.level(S(), 'forge') };
       const card = res.item ? `<div class="fg-made" style="--qc:${q.color}"><div class="fg-ico">${itemIcon(r)}</div><b>${esc(q.name)} ${esc(r.name)}</b><small>Heat ${Math.round(score.heat * 100)}% · Hammer ${Math.round(score.hammer * 100)}% · Quench ${Math.round(score.quench * 100)}%</small></div>` : '';
-      results('forge', body, sc, { out, card, challenge: met, headline: res.item ? 'The ' + esc(r.name.toLowerCase()) + ' is done.' : 'A crate of fresh rounds.' }, { chal: Object.assign({}, chal, { text: chal.text + ' (finer work)' }) });
+      results('forge', body, sc, { out, card, challenge: met, prevBest, played, headline: res.item ? 'The ' + esc(r.name.toLowerCase()) + ' is done.' : 'A crate of fresh rounds.' }, { chal: Object.assign({}, chal, { text: chal.text + ' (finer work)' }) });
     };
     heat();
   }
