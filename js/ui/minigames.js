@@ -48,17 +48,27 @@ DE.UI.MG = (function () {
     triage: 'Patients are coming in. <b>Examine</b> each one to see what is wrong, pick a treatment from the tray and <b>give it</b> to them. The worst cases slip fastest — treat them first. Supplies are limited.',
     range: 'Drill on the range. <b>Tap the dead</b> as they come over the sandbags before they reach you — <b>not the civilians</b> in blue. Six rounds a magazine: <b>reload</b> (tap the button or press R) in time.',
   };
+  /* a challenge per run: an optional goal, different each time, worth +25% rewards and extra mastery */
+  const CHAL = {
+    grid: () => pick([{ id: 'par', text: 'Light every lamp within par moves' }, { id: 'fast', text: 'Finish with half the time left' }]),
+    radio: () => pick([{ id: 'fast', text: 'Lock on in the first half of the time' }, { id: 'clean', text: 'Lock on with the signal at 95% or better' }]),
+    sort: (T) => pick([{ id: 'clean', text: 'Not one item in the wrong bin' }, { id: 'combo', text: 'Build a ×3 combo' }, { id: 'count', n: 12 + 3 * T, text: 'Sort ' + (12 + 3 * T) + ' items' }]),
+    triage: () => pick([{ id: 'nolost', text: 'Nobody slips away' }, { id: 'nowrong', text: 'Not a single wrong treatment' }]),
+    range: (T) => pick([{ id: 'nociv', text: 'Don\'t hit a single civilian' }, { id: 'wall', text: 'Nobody gets through' }, { id: 'hits', n: 10 + 2 * T, text: 'Hit ' + (10 + 2 * T) + ' of the dead' }]),
+    forge: () => pick([{ id: 'perfect', text: 'Two perfect hammer blows' }, { id: 'cherry', text: 'Quench right at cherry red' }, { id: 'heat', text: 'Keep the metal in the band nearly all the time' }]),
+  };
   const PAYS = { grid: 'power now, hotter generators for a while', radio: 'survivors, places mapped, research, blueprint leads, materials', sort: 'supplies into stores — more after an expedition came home', triage: 'heals the bunker\'s injured and infected', range: 'guard training and a fresh-drill damage bonus' };
 
   function open(g) {
     const s = S(); if (!s) return;
     if (g === 'forge') return forgeMenu();
     const c = DE.Minigames.canPlay(s, g); if (!c.ok) { DE.UI.toast(c.reason, 'err'); DE.Audio.sfx('error'); return; }
-    const G = DE.Minigames.GAMES[g], room = c.room, tier = DE.Minigames.tier(s, g, room), skill = DE.Minigames.skill(s, g, room), lv = DE.Minigames.level(s, g);
+    const G = DE.Minigames.GAMES[g], room = c.room, tier = DE.Minigames.tier(s, g, room), skill = DE.Minigames.skill(s, g, room), lv = DE.Minigames.level(s, g), chal = CHAL[g](tier);
     const body = shell(G.name, DE.Icons.room(room.type, 'mg-room'), `${esc(DE.Data.ROOMS[room.type].name)} · <span class="mg-stars-sm">${'★'.repeat(tier)}${'☆'.repeat(4 - tier)}</span> · Mastery ${lv}`);
     body.innerHTML = `<div class="mg-intro"><p class="mg-how">${HOW[g]}</p><div class="mg-perks"><span>${ic('star')} Difficulty ${tier}/4</span><span>${ic('pop')} Staff bonus +${Math.round(skill * 100)}%</span><span>${ic('chest')} ${esc(PAYS[g])}</span></div>
+      <div class="mg-chal">${ic('trophy')}<span><small>Challenge</small>${esc(chal.text)}</span><b>+25%</b></div>
       <button class="btn primary mg-go" type="button">Start</button></div>`;
-    body.querySelector('.mg-go').addEventListener('click', () => { snd('click'); run(g, body, { tier, skill, level: lv, room }); });
+    body.querySelector('.mg-go').addEventListener('click', () => { snd('click'); run(g, body, { tier, skill, level: lv, room, chal }); });
   }
   function run(g, body, env) {
     body.innerHTML = `<div class="mg-hud"></div><div class="mg-stage mg-${g}"></div>`;
@@ -74,6 +84,7 @@ DE.UI.MG = (function () {
       <div class="mg-starrow">${[0, 1, 2].map(i => `<i class="${i < n ? 'on' : ''}" style="animation-delay:${(.15 + i * .2).toFixed(2)}s">★</i>`).join('')}</div>
       <div class="mg-score"><b data-to="${Math.round(score * 100)}">0</b><small>%</small></div>
       ${ctx.headline ? `<p class="mg-headline">${ctx.headline}</p>` : ''}
+      ${env.chal ? `<div class="mg-chalr ${ctx.challenge ? 'ok' : ''}">${ic(ctx.challenge ? 'check' : 'cross')}<span>Challenge: ${esc(env.chal.text)}</span>${ctx.challenge ? '<b>+25%</b>' : ''}</div>` : ''}
       ${ctx.card || ''}
       <div class="mg-rewards">${Object.keys(out.rewards || {}).map((r, i) => `<span class="mg-rw" style="animation-delay:${(.5 + i * .12).toFixed(2)}s">${DE.Icons.res(r, 'ico-inline')} +<b data-to="${out.rewards[r]}">0</b></span>`).join('')}</div>
       <ul class="mg-lines">${(out.lines || []).map((l, i) => `<li style="animation-delay:${(.7 + i * .15).toFixed(2)}s">${esc(l)}</li>`).join('')}</ul>
@@ -84,7 +95,7 @@ DE.UI.MG = (function () {
     // count the numbers up, chime per star
     body.querySelectorAll('[data-to]').forEach(el => { const to = +el.dataset.to, t0 = performance.now(); const f = (t) => { const k = Math.min(1, (t - t0) / 900); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1 && el.isConnected) requestAnimationFrame(f); }; requestAnimationFrame(f); });
     for (let i = 0; i < n; i++) setTimeout(() => note(660 * Math.pow(1.26, i), .25, 'triangle', .09), 180 + i * 200);
-    if (n === 3) setTimeout(() => snd('reveal'), 900);
+    if (n === 3 || ctx.challenge) setTimeout(() => snd('reveal'), 900);
     if (DE.Game.afterAction) DE.Game.afterAction();
   }
   const hudSet = (env, html) => { if (env.hud.innerHTML !== html) env.hud.innerHTML = html; };
@@ -113,6 +124,9 @@ DE.UI.MG = (function () {
     stage.innerHTML = `<svg class="gr-board" viewBox="${-pad} ${-pad} ${W + 2 * pad} ${W + 2 * pad}">${cells.map((c, i) => `<g class="gc${c === src ? ' src' : ''}${cons.has(c) ? ' cons' : ''}${c.broken ? ' broken' : ''}${c.sw ? ' sw' : ''}" data-i="${i}" transform="translate(${c.x * S2} ${c.y * S2})"><rect class="gbg" x="2" y="2" width="${S2 - 4}" height="${S2 - 4}" rx="9"/><g class="gp" style="transform:rotate(${c.r * 90}deg)">${pipes(c.m, S2)}${c === src ? `<circle cx="${S2 / 2}" cy="${S2 / 2}" r="15" class="gsrc"/><path d="M${S2 / 2 - 4} ${S2 / 2 - 9} l-5 10 h7 l-4 9 l10 -12 h-7 l4 -7 z" class="gbolt"/>` : ''}${cons.has(c) ? `<circle cx="${S2 / 2}" cy="${S2 / 2}" r="16" class="gglow"/><circle cx="${S2 / 2}" cy="${S2 / 2}" r="13" class="gbulb"/><path d="M${S2 / 2 - 6} ${S2 / 2 + 2} q3 -8 6 0 q3 8 6 0" class="gfil"/>` : ''}${c.sw ? `<rect x="${S2 / 2 - 9}" y="${S2 / 2 - 9}" width="18" height="18" rx="4" class="gswitch"/>` : ''}${c.broken ? `<path d="M${S2 / 2 - 10} ${S2 / 2 - 10} l20 20 M${S2 / 2 + 10} ${S2 / 2 - 10} l-20 20" class="gx"/>` : ''}</g></g>`).join('')}</svg><div class="gr-legend"><span><i class="lg lg-src"></i>Generator</span><span><i class="lg lg-lamp"></i>Lamp</span>${nBroken ? '<span><i class="lg lg-brk"></i>Broken: tap to patch</span>' : ''}${nSwitch ? '<span><i class="lg lg-sw"></i>Switch: tap to flip</span>' : ''}</div>`;
     function pipes(m, s) { let o = ''; const h = s / 2; [[h, 0], [s, h], [h, s], [0, h]].forEach(([x, y], d) => { if (m & (1 << d)) o += `<path d="M${h} ${h} L${x} ${y}" class="gw"/><path d="M${h} ${h} L${x} ${y}" class="gw-in"/>`; }); return o + `<circle cx="${h}" cy="${h}" r="7" class="gn"/>`; }
     const els = Array.from(stage.querySelectorAll('.gc'));
+    // par: the fewest moves to the intended solution (straight runs solve at two turns, a cross at any)
+    const minRot = (c) => { const a = (4 - (((c.r % 4) + 4) % 4)) % 4; return c.sw || c.m === 15 ? 0 : c.m === 5 || c.m === 10 ? a % 2 : a; };
+    const par = cells.filter(c => !c.dead).reduce((n, c) => n + minRot(c) + (c.broken ? 1 : 0) + (c.sw ? 1 : 0), 0);
     let moves = 0, t = 0, over = false;
     function flood() {
       const lit = new Set([src]), q = [src]; const conducts = (c) => !c.broken && !(c.sw && !c.on);
@@ -124,7 +138,8 @@ DE.UI.MG = (function () {
       if (over) return; over = true; const lit = flood();
       const score = win ? Math.min(1, .55 + .45 * Math.max(0, 1 - t / limit) - Math.max(0, moves - cells.length * 1.2) * .004) : .3 * lit / nCons;
       if (win) { snd('upgrade'); stage.classList.add('won'); }
-      later(() => env.done(score, { headline: win ? 'Every lamp is lit. The generators hum along.' : lit + ' of ' + nCons + ' lamps powered when the shift ended.' }), win ? 1100 : 300);
+      const chal = win && (env.chal.id === 'par' ? moves <= par + 3 : t <= limit / 2);
+      later(() => env.done(score, { challenge: chal, headline: win ? 'Every lamp is lit. The generators hum along.' : lit + ' of ' + nCons + ' lamps powered when the shift ended.' }), win ? 1100 : 300);
     }
     els.forEach((e, i) => on(e, 'pointerdown', (ev) => {
       ev.preventDefault(); if (over) return; const c = cells[i];
@@ -135,7 +150,7 @@ DE.UI.MG = (function () {
       if (flood() === nCons) finish(true);
     }));
     flood();
-    loop((dt) => { if (over) return false; t += dt; hudSet(env, `${clock(limit - t)}<span>${ic('power')} ${[...cons].filter((c) => els[cells.indexOf(c)].classList.contains('lit')).length}/${nCons} lamps</span><span>Moves ${moves}</span>`); if (t >= limit) finish(false); });
+    loop((dt) => { if (over) return false; t += dt; hudSet(env, `${clock(limit - t)}<span>${ic('power')} ${[...cons].filter((c) => els[cells.indexOf(c)].classList.contains('lit')).length}/${nCons} lamps</span><span>Moves ${moves}${env.chal.id === 'par' ? ' · par ' + (par + 3) : ''}</span>`); if (t >= limit) finish(false); });
   }
 
   /* ================= RADIO ================= */
@@ -160,7 +175,8 @@ DE.UI.MG = (function () {
     function finish(locked) { if (over) return; over = true;
       const score = locked ? Math.min(1, .6 + .4 * Math.max(0, 1 - t / limit)) : .35 * best;
       if (locked) { snd('reveal'); tx.textContent = ''; const L = lines[sig.id]; let i = 0; const st = () => { if (!root) return; i++; tx.textContent = '“' + L.slice(0, i); if (i < L.length) later(st, 26); }; st(); }
-      later(() => env.done(score, { signal: sig.id, headline: locked ? 'Locked on: ' + esc(sig.name) + '.' : 'The signal faded into static.' }), locked ? 2600 : 300);
+      const chal = locked && (env.chal.id === 'fast' ? t <= limit / 2 : best >= .95);
+      later(() => env.done(score, { signal: sig.id, challenge: chal, headline: locked ? 'Locked on: ' + esc(sig.name) + '.' : 'The signal faded into static.' }), locked ? 2600 : 300);
     }
     loop((dt) => {
       if (over) return false; t += dt;
@@ -199,7 +215,7 @@ DE.UI.MG = (function () {
     stage.innerHTML = `<div class="so-belt"><i class="so-rollers"></i></div><div class="so-items"></div><div class="so-bins">${bins.map(b => `<button class="so-bin b-${b.id}" data-bin="${b.id}" type="button">${b.icon()}<span>${b.name}</span></button>`).join('')}</div><div class="so-pop"></div><div class="so-combo"><b>×1</b><small>combo</small><em></em></div>`;
     const lane = stage.querySelector('.so-items'), pop = stage.querySelector('.so-pop'), comboEl = stage.querySelector('.so-combo');
     const showCombo = (bad) => { const m = Math.min(5, 1 + Math.floor(combo / 3)); comboEl.querySelector('b').textContent = '×' + m; comboEl.querySelector('em').textContent = good + ' sorted' + (total - good > 0 ? ' · ' + (total - good) + ' missed' : ''); comboEl.className = 'so-combo m' + m + (bad ? ' bad' : ''); void comboEl.offsetWidth; comboEl.classList.add(bad ? 'shake' : 'pulse'); };
-    let t = 0, next = .4, items = [], score = 0, combo = 0, good = 0, total = 0, sel = null, over = false; const sorted = {};
+    let t = 0, next = .4, items = [], score = 0, combo = 0, best = 0, wrong = 0, good = 0, total = 0, sel = null, over = false; const sorted = {};
     const binAt = (x, y) => { for (const b of stage.querySelectorAll('.so-bin')) { const r = b.getBoundingClientRect(); if (x >= r.left && x <= r.right && y >= r.top && y <= r.bottom) return b; } return null; };
     function spawn() {
       const b = pick(bins), name = pick(ITEMS[b.id]); const el = document.createElement('button'); el.type = 'button'; el.className = 'so-item' + (b.id === 'hazard' ? ' haz' : ''); el.innerHTML = `${b.icon()}<small>${esc(name)}</small>`;
@@ -211,13 +227,14 @@ DE.UI.MG = (function () {
     function drop(it, bin) {
       if (it.dead || over) return; it.dead = true; it.el.remove(); sel = null; const ok = bin.dataset.bin === it.kind;
       bin.classList.remove('good', 'bad'); void bin.offsetWidth; bin.classList.add(ok ? 'good' : 'bad');
-      if (ok) { combo++; good++; const pts = 10 * Math.min(5, 1 + Math.floor(combo / 3)); score += pts; sorted[it.kind] = (sorted[it.kind] || 0) + 1; note(700 + Math.min(combo, 12) * 45, .07, 'triangle', .07); flyText(bin, '+' + pts + (combo >= 3 ? ' ×' + Math.min(5, 1 + Math.floor(combo / 3)) : '')); showCombo(false); }
-      else { combo = 0; score -= it.kind === 'hazard' || bin.dataset.bin === 'hazard' ? 15 : 5; snd('error'); flyText(bin, it.kind === 'hazard' ? 'Spill!' : 'Wrong bin'); showCombo(true); }
+      if (ok) { combo++; good++; best = Math.max(best, combo); const pts = 10 * Math.min(5, 1 + Math.floor(combo / 3)); score += pts; sorted[it.kind] = (sorted[it.kind] || 0) + 1; note(700 + Math.min(combo, 12) * 45, .07, 'triangle', .07); flyText(bin, '+' + pts + (combo >= 3 ? ' ×' + Math.min(5, 1 + Math.floor(combo / 3)) : '')); showCombo(false); }
+      else { combo = 0; wrong++; score -= it.kind === 'hazard' || bin.dataset.bin === 'hazard' ? 15 : 5; snd('error'); flyText(bin, it.kind === 'hazard' ? 'Spill!' : 'Wrong bin'); showCombo(true); }
     }
     function flyText(bin, txt) { const r = bin.getBoundingClientRect(), s2 = stage.getBoundingClientRect(); const d = document.createElement('b'); d.textContent = txt; d.style.left = (r.left - s2.left + r.width / 2) + 'px'; d.style.top = (r.top - s2.top) + 'px'; pop.appendChild(d); later(() => d.remove(), 900); }
     stage.querySelectorAll('.so-bin').forEach(b => on(b, 'click', () => { if (sel) drop(sel, b); }));
     function finish() { if (over) return; over = true; const acc = total ? good / total : 0; const sc = Math.max(0, Math.min(1, acc * .8 + Math.min(.2, score / (total * 60 || 1)))); sorted.medicine && (sorted.medicine = sorted.medicine);
-      later(() => env.done(sc, { sorted, headline: good + ' of ' + total + ' items sorted' + (total - good ? '' : ' — not one in the wrong bin') + '.' }), 400); }
+      const C = env.chal, chal = C.id === 'clean' ? wrong === 0 && good >= 8 : C.id === 'combo' ? best >= 6 : good >= C.n;
+      later(() => env.done(sc, { sorted, challenge: chal, headline: good + ' of ' + total + ' items sorted' + (total - good ? '' : ' — not one in the wrong bin') + '.' }), 400); }
     loop((dt) => {
       if (over) return false; t += dt; next -= dt; if (next <= 0 && t < limit - 2) { spawn(); next = every * rnd(.8, 1.2); }
       for (const it of items) { if (it.dead) continue; if (!it.drag) it.x += 112 / beltT * dt; it.el.style.left = it.x + '%'; it.el.style.top = it.y + '%'; if (it.x > 100) { it.dead = true; it.el.classList.add('fall'); later(() => it.el.remove(), 400); combo = 0; showCombo(true); } }
@@ -247,7 +264,7 @@ DE.UI.MG = (function () {
     const stock = {}; CURES.forEach(([id]) => stock[id] = 0); pats.forEach(p => stock[p.ail.cure]++); for (let i = 0; i < Math.max(1, 3 - T); i++) stock[pick(CURES)[0]]++;
     stage.innerHTML = `<div class="tr-pats">${pats.map((p, i) => `<div class="tr-pat" data-i="${i}"><div class="tr-top"><div class="tr-face">${DE.Chars.portrait(p.prof)}</div><div class="tr-info"><b>${esc(p.name)}</b><small class="tr-sym">Not examined</small></div></div><svg class="tr-ecg" viewBox="0 0 120 24" preserveAspectRatio="none"><path class="tr-wave" d="${ECG}"/><path class="tr-flat" d="M0 12 H120"/></svg><i class="tr-stab"><b></b></i><button class="btn small tr-ex" type="button">Examine</button></div>`).join('')}</div>
       <div class="tr-tray">${CURES.map(([id, nm]) => `<button class="tr-cure" data-c="${id}" type="button"><span>${esc(nm)}</span><b>${stock[id]}</b></button>`).join('')}</div>`;
-    let chosen = null, t = 0, over = false;
+    let chosen = null, t = 0, over = false, wrongs = 0;
     const rows = Array.from(stage.querySelectorAll('.tr-pat'));
     rows.forEach((row, i) => {
       on(row.querySelector('.tr-ex'), 'click', (e) => { e.stopPropagation(); const p = pats[i]; if (p.known || p.done) return; row.classList.add('exam'); note(440, .08, 'sine', .05); later(() => { p.known = true; row.classList.remove('exam'); row.querySelector('.tr-sym').textContent = p.ail.sym; row.querySelector('.tr-ex').disabled = true; note(660, .1, 'sine', .05); }, 600 * (1 - env.skill)); });
@@ -256,7 +273,7 @@ DE.UI.MG = (function () {
         if (stock[chosen] <= 0) { snd('error'); return; }
         stock[chosen]--; stage.querySelector(`.tr-cure[data-c="${chosen}"] b`).textContent = stock[chosen];
         if (chosen === p.ail.cure) { p.done = true; p.ok = true; row.classList.add('saved'); row.querySelector('.tr-sym').textContent = p.ail.name + ' — treated'; snd('done'); }
-        else { p.stab = Math.max(0, p.stab - .25); row.classList.remove('wrong'); void row.offsetWidth; row.classList.add('wrong'); snd('error'); }
+        else { wrongs++; p.stab = Math.max(0, p.stab - .25); row.classList.remove('wrong'); void row.offsetWidth; row.classList.add('wrong'); snd('error'); }
         stage.querySelectorAll('.tr-cure').forEach(b => b.classList.remove('on')); chosen = null; stage.classList.remove('giving');
         if (pats.every(q => q.done)) finish();
       });
@@ -264,7 +281,8 @@ DE.UI.MG = (function () {
     stage.querySelectorAll('.tr-cure').forEach(b => on(b, 'click', () => { chosen = chosen === b.dataset.c ? null : b.dataset.c; stage.querySelectorAll('.tr-cure').forEach(x => x.classList.toggle('on', x.dataset.c === chosen)); stage.classList.toggle('giving', !!chosen); note(900, .04, 'triangle', .04); }));
     function finish() { if (over) return; over = true;
       const ok = pats.filter(p => p.ok).length, sc = Math.min(1, ok / pats.length * .85 + (ok === pats.length ? .15 * Math.max(0, 1 - t / 60) : 0));
-      later(() => env.done(sc, { treated: pats.filter(p => p.id).map(p => ({ id: p.id, ok: p.ok, cure: p.ok && p.ail.id === 'bite' })), visitorSaved: pats.some(p => !p.id && p.ok), headline: ok + ' of ' + pats.length + ' patients stabilised.' }), 600); }
+      const chal = env.chal.id === 'nolost' ? ok === pats.length : wrongs === 0 && ok > 0;
+      later(() => env.done(sc, { challenge: chal, treated: pats.filter(p => p.id).map(p => ({ id: p.id, ok: p.ok, cure: p.ok && p.ail.id === 'bite' })), visitorSaved: pats.some(p => !p.id && p.ok), headline: ok + ' of ' + pats.length + ' patients stabilised.' }), 600); }
     loop((dt) => {
       if (over) return false; t += dt;
       pats.forEach((p, i) => { if (p.done) return; p.stab -= dt * .022 * p.ail.rate * (1 + .15 * (T - 1)) * (1 - env.skill); const row = rows[i]; row.querySelector('.tr-stab b').style.width = Math.max(0, p.stab * 100) + '%'; row.classList.toggle('crit', p.stab < .3);
@@ -304,7 +322,8 @@ DE.UI.MG = (function () {
     on(field, 'pointerdown', (e) => { if (e.target === field || e.target.classList.contains('rg-lane') || e.target.classList.contains('rg-bags')) shoot(null, e); });
     function finish() { if (over) return; over = true;
       const shotAt = hits + misses + escaped, sc = Math.max(0, Math.min(1, (shotAt ? hits / shotAt : 0) * (1 - .2 * civHit) * (lives > 0 ? 1 : .6)));
-      later(() => env.done(sc, { headline: hits + ' hits, ' + escaped + ' got through' + (civHit ? ', ' + civHit + ' civilian' + (civHit > 1 ? 's' : '') + ' hit' : '') + '.' }), 400); }
+      const C = env.chal, chal = lives > 0 && (C.id === 'nociv' ? civHit === 0 && hits >= 5 : C.id === 'wall' ? escaped === 0 && hits >= 5 : hits >= C.n);
+      later(() => env.done(sc, { challenge: chal, headline: hits + ' hits, ' + escaped + ' got through' + (civHit ? ', ' + civHit + ' civilian' + (civHit > 1 ? 's' : '') + ' hit' : '') + '.' }), 400); }
     loop((dt) => {
       if (over) return false; t += dt; next -= dt; if (reloading > 0) { reloading -= dt; if (reloading <= 0) { ammo = mag; drawAmmo(); note(900, .05, 'triangle', .05); } }
       if (next <= 0 && t < limit - 1) { spawn(); next = every * rnd(.7, 1.3); }
@@ -339,11 +358,12 @@ DE.UI.MG = (function () {
     const room = DE.Minigames.bestRoom(s, 'forge'), skill = DE.Minigames.skill(s, 'forge', room), tier = r.tier || 1;
     body.innerHTML = `<div class="mg-hud"></div><div class="mg-stage mg-forge"><div class="fg-scene"><div class="fg-furnace"><i class="fg-fire"></i></div><div class="fg-anvil"><i class="fg-bar"></i><i class="fg-hammer"></i><span class="fg-sparks"></span></div></div><div class="fg-ui"></div></div>`;
     const hud = body.querySelector('.mg-hud'), ui = body.querySelector('.fg-ui'), bar = body.querySelector('.fg-bar'), fire = body.querySelector('.fg-fire'), hammer = body.querySelector('.fg-hammer'), sparks = body.querySelector('.fg-sparks');
-    const score = { heat: 0, hammer: 0, quench: 0 };
+    const score = { heat: 0, hammer: 0, quench: 0 }, chal = CHAL.forge(); let perfect = 0;
+    const chalTag = `<span class="mg-hchal">${ic('trophy')} ${esc(chal.text)}</span>`;
     const press = (cb) => { const h = (e) => { if (e.type === 'keydown' && e.key !== ' ' && e.key !== 'Enter') return; if (e.type === 'keydown') e.preventDefault(); cb(e); }; on(document, 'keydown', h); return h; };
     // 1 · heat: hold the bellows to keep the metal in the glowing band
     const heat = () => {
-      hud.innerHTML = '<b>1 · Heat</b><span>Hold the bellows to keep the metal in the band</span>';
+      hud.innerHTML = '<b>1 · Heat</b><span>Hold the bellows to keep the metal in the band</span>' + chalTag;
       ui.innerHTML = `<div class="fg-gauge"><i class="fg-band"></i><b class="fg-temp"></b></div><button class="btn primary fg-bellows" type="button">Hold: bellows</button>`;
       const temp = ui.querySelector('.fg-temp'), band = ui.querySelector('.fg-band'), btn = ui.querySelector('.fg-bellows');
       let blowing = false, T0 = 0, v = .15, inBand = 0, t = 0; const dur = 5, bw = (.2 - .025 * tier) * (1 + skill);
@@ -359,11 +379,11 @@ DE.UI.MG = (function () {
     // 2 · hammer: strike when the marker crosses the sweet spot; it narrows and speeds up
     const hammerPhase = () => {
       const strikes = 3 + tier; let n = 0, sum = 0, x = 0, dir = 1;
-      hud.innerHTML = `<b>2 · Hammer</b><span>Strike when the marker is in the green — ${strikes} blows</span>`;
+      hud.innerHTML = `<b>2 · Hammer</b><span>Strike when the marker is in the green — ${strikes} blows</span>` + chalTag;
       ui.innerHTML = `<div class="fg-track"><i class="fg-sweet"></i><b class="fg-mark"></b></div><button class="btn primary fg-strike" type="button">Strike (Space)</button><div class="fg-blows"></div>`;
       const mark = ui.querySelector('.fg-mark'), sweet = ui.querySelector('.fg-sweet'), blows = ui.querySelector('.fg-blows');
       const width = () => Math.max(.06, (.26 - .03 * tier - .02 * n) * (1 + skill));
-      const strike = () => { if (n >= strikes) return; const w = width(), acc = Math.max(0, 1 - Math.abs(x - .5) / (w / 2) * .5 - Math.max(0, Math.abs(x - .5) - w / 2) * 3); sum += Math.min(1, acc); n++;
+      const strike = () => { if (n >= strikes) return; const w = width(), acc = Math.max(0, 1 - Math.abs(x - .5) / (w / 2) * .5 - Math.max(0, Math.abs(x - .5) - w / 2) * 3); sum += Math.min(1, acc); n++; if (acc > .8) perfect++;
         hammer.classList.remove('hit'); void hammer.offsetWidth; hammer.classList.add('hit'); snd('clank', 0); note(acc > .8 ? 1760 : acc > .5 ? 1320 : 880, .12, 'triangle', .07);
         sparks.classList.remove('go'); void sparks.offsetWidth; sparks.classList.add('go'); bar.style.setProperty('--shape', (n / strikes).toFixed(2));
         blows.innerHTML += `<i class="${acc > .8 ? 'great' : acc > .5 ? 'ok' : 'meh'}">${acc > .8 ? 'Perfect' : acc > .5 ? 'Good' : 'Off'}</i>`;
@@ -373,7 +393,7 @@ DE.UI.MG = (function () {
     };
     // 3 · quench: dip it when the steel shows cherry red
     const quench = () => {
-      hud.innerHTML = '<b>3 · Quench</b><span>Dip it in the water when it glows cherry red</span>';
+      hud.innerHTML = '<b>3 · Quench</b><span>Dip it in the water when it glows cherry red</span>' + chalTag;
       ui.innerHTML = `<div class="fg-heatbar"><i class="fg-cherry"></i><b class="fg-now"></b></div><button class="btn primary fg-dip" type="button">Quench (Space)</button>`;
       const now = ui.querySelector('.fg-now'); let k = 0, done = false; const span = (.14 - .02 * tier) * (1 + skill), center = rnd(.45, .65);
       ui.querySelector('.fg-cherry').style.cssText = `left:${(center - span / 2) * 100}%;width:${span * 100}%`;
@@ -382,12 +402,13 @@ DE.UI.MG = (function () {
       loop((dt) => { if (done) return false; k += dt * (.28 + .05 * tier); now.style.left = (Math.min(1, k) * 100) + '%'; bar.style.setProperty('--glow', (1 - k).toFixed(2)); if (k >= 1.05) dip(); });
     };
     const doneForge = () => {
-      const sc = Math.max(0, Math.min(1, .3 * score.heat + .5 * score.hammer + .2 * score.quench));
+      const met = chal.id === 'perfect' ? perfect >= 2 : chal.id === 'cherry' ? score.quench >= .75 : score.heat >= .9;
+      const sc = Math.max(0, Math.min(1, .3 * score.heat + .5 * score.hammer + .2 * score.quench + (met ? .08 : 0)));
       const res = DE.Gear.craft(S(), id, sc); if (!res.ok) { DE.UI.toast(res.reason, 'err'); return close(); }
-      const mg = DE.Minigames.ensure(S()); mg.plays.forge = (mg.plays.forge || 0) + 1; mg.best.forge = Math.max(mg.best.forge || 0, sc); mg.xp.forge = (mg.xp.forge || 0) + Math.round(10 + 25 * sc);
+      const mg = DE.Minigames.ensure(S()); mg.plays.forge = (mg.plays.forge || 0) + 1; mg.best.forge = Math.max(mg.best.forge || 0, sc); mg.xp.forge = (mg.xp.forge || 0) + Math.round(10 + 25 * sc + (met ? 15 : 0));
       const q = res.quality, out = { rewards: {}, lines: res.kind === 'ammo' ? ['+' + res.amount + ' rounds for the armory'] : [q.name + ' ' + r.name + ' — ' + res.item.max + ' durability', 'Waiting in the Armory'], mastery: DE.Minigames.level(S(), 'forge') };
       const card = res.item ? `<div class="fg-made" style="--qc:${q.color}"><div class="fg-ico">${itemIcon(r)}</div><b>${esc(q.name)} ${esc(r.name)}</b><small>Heat ${Math.round(score.heat * 100)}% · Hammer ${Math.round(score.hammer * 100)}% · Quench ${Math.round(score.quench * 100)}%</small></div>` : '';
-      results('forge', body, sc, { out, card, headline: res.item ? 'The ' + esc(r.name.toLowerCase()) + ' is done.' : 'A crate of fresh rounds.' }, {});
+      results('forge', body, sc, { out, card, challenge: met, headline: res.item ? 'The ' + esc(r.name.toLowerCase()) + ' is done.' : 'A crate of fresh rounds.' }, { chal: Object.assign({}, chal, { text: chal.text + ' (finer work)' }) });
     };
     heat();
   }

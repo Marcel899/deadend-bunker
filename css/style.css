@@ -1803,6 +1803,12 @@ body.perf .room .room-scene { will-change: auto; }
 .mg-how { font-size: 15px; line-height: 1.55; margin: 0; } .mg-how b { color: #ffd98a; }
 .mg-perks { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; } .mg-perks span { display: inline-flex; align-items: center; gap: 4px; padding: 3px 9px; border-radius: 9px; background: rgba(0, 0, 0, .3); font-size: 12px; font-weight: 800; }
 .mg-go { font-size: 18px; padding: 10px 34px; }
+.mg-chal { display: flex; align-items: center; gap: 10px; padding: 8px 14px; border-radius: 12px; border: 2px dashed rgba(255, 197, 49, .55); background: rgba(255, 197, 49, .08); text-align: left; }
+.mg-chal .ico-inline { width: 26px; height: 26px; } .mg-chal span { display: flex; flex-direction: column; font-weight: 800; font-size: 13.5px; color: #ffe9b0; }
+.mg-chal small { font-size: 10px; letter-spacing: 1.2px; text-transform: uppercase; color: #ffc531; } .mg-chal b { font-family: var(--display); font-weight: 400; font-size: 16px; color: #ffc531; margin-left: 4px; }
+.mg-hchal { margin-left: auto; display: inline-flex; align-items: center; gap: 4px; font-size: 12px; color: #ffe9b0; opacity: .9; }
+.mg-chalr { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 12px; background: rgba(0, 0, 0, .3); font-size: 13px; font-weight: 800; color: #a9a3b6; animation: outIn .35s ease-out .4s backwards; }
+.mg-chalr.ok { background: rgba(255, 197, 49, .16); border: 2px solid rgba(255, 197, 49, .6); color: #ffe9b0; } .mg-chalr b { font-family: var(--display); font-weight: 400; color: #ffc531; }
 .mg-hud { flex: none; display: flex; flex-wrap: wrap; align-items: center; gap: 14px; padding: 8px 14px; background: rgba(0, 0, 0, .28); border-bottom: 2px solid rgba(0, 0, 0, .35); font-weight: 800; font-size: 13px; min-height: 38px; }
 .mg-hud b { font-family: var(--display); font-weight: 400; font-size: 16px; color: #ffd98a; }
 .mg-clock { display: inline-flex; align-items: center; gap: 4px; } .mg-clock.low { color: #ff8a7a; animation: pillPulse 1s infinite; }

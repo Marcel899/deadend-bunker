@@ -619,6 +619,16 @@ t('minigames: triage heals the real injured and treats infection; radio can brin
   DE.Bunker.placeRoom(E, 'radio', 1, 8, 1, now); DE.Minigames.finish(E, 'radio', .9, { signal: 'survivor' });
   assert(Object.keys(E.survivors).length === n + 1, 'a survivor followed the directions');
 });
+t('minigames: a met challenge pays more and teaches more; the radio brings traders to the fence', () => {
+  const run = (ch) => { const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E); E.resources.electricity = 0; const r = DE.Minigames.finish(E, 'grid', .8, { challenge: ch }); return { e: r.rewards.electricity, xp: E.mg.xp.grid }; };
+  const a = run(false), b = run(true);
+  assert(b.e > a.e * 1.2 && b.xp === a.xp + 15, 'challenge bonus ' + a.e + '/' + b.e + ' xp ' + a.xp + '/' + b.xp);
+  const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E); DE.Bunker.placeRoom(E, 'radio', 1, 8, 1, now); E._fx = null;
+  DE.Minigames.finish(E, 'radio', .9, { signal: 'trader' });
+  const c = E.eventChains.find(x => x.def === 'trader'); assert(c && c.at > E.playtime, 'the caravan is on its way');
+  E.playtime = c.at + 1; E.nextEventAt = 1e9; DE.Events.tick(E, 1, now);
+  assert(E.events.some(ev => ev.def === 'trader' || /Traders/.test(ev.title || '')), 'it turns up: ' + JSON.stringify(E.events.map(e => e.title)));
+});
 
 console.log('Prestige');
 t('reset requires depth and gain', () => {

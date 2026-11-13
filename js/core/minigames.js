@@ -13,7 +13,8 @@
  *   range   Training room      guards drilled: training points and a fresh-drill damage bonus
  * Difficulty tier: mastery, the room's level and research raise it; higher tiers pay more. The room's
  * staff (the right profession) make the game a little more forgiving. Cooldowns keep it from being a
- * grind: it is something to do, not something to farm. */
+ * grind: it is something to do, not something to farm. Each run also offers a challenge (an optional
+ * goal set by the game: ctx.challenge when met) worth +25% rewards and extra mastery. */
 var DE = globalThis.DE = globalThis.DE || {};
 
 DE.Minigames = (function () {
@@ -59,8 +60,8 @@ DE.Minigames = (function () {
   function finish(state, g, score, ctx) {
     const mg = ensure(state), room = bestRoom(state, g), t = tier(state, g, room), lv = level(state, g); ctx = ctx || {};
     score = U().clamp(score || 0, 0, 1);
-    const k = (1 + .2 * (t - 1)) * (1 + .05 * (lv - 1)) * (room ? 1 + .04 * Math.min(25, room.level - 1) : 1);
-    const out = { lines: [], rewards: {}, tier: t, score };
+    const k = (1 + .2 * (t - 1)) * (1 + .05 * (lv - 1)) * (room ? 1 + .04 * Math.min(25, room.level - 1) : 1) * (ctx.challenge ? 1.25 : 1);
+    const out = { lines: [], rewards: {}, tier: t, score, challenge: !!ctx.challenge };
     const give = (r, n) => { n = Math.round(n); if (n <= 0) return; const cap = DE.Economy.storageCap(state, r); const add = Math.max(0, Math.min(n, cap - state.resources[r])); state.resources[r] += add; state.stats.produced[r] += add; out.rewards[r] = (out.rewards[r] || 0) + add; };
     const buff = (type, mult, sec) => { state.buffs.push({ room: type, mult, until: state.playtime + sec }); state._fx = null; out.lines.push(DE.Data.ROOMS[type].name + 's +' + Math.round(mult * 100) + '% for ' + Math.round(sec / 60) + ' min'); };
     switch (g) {
@@ -105,7 +106,7 @@ DE.Minigames = (function () {
       default: break;
     }
     mg.plays[g] = (mg.plays[g] || 0) + 1; mg.best[g] = Math.max(mg.best[g] || 0, score);
-    const before = level(state, g); mg.xp[g] = (mg.xp[g] || 0) + Math.round(10 + 25 * score); const after = level(state, g);
+    const before = level(state, g); mg.xp[g] = (mg.xp[g] || 0) + Math.round(10 + 25 * score + (ctx.challenge ? 15 : 0)); const after = level(state, g);
     if (after > before) out.lines.push('Mastery ' + after + ': ' + GAMES[g].name + ' is a little easier and pays more');
     if (GAMES[g].cd) mg.cd[g] = state.playtime + GAMES[g].cd * (1 - .03 * (after - 1));
     out.mastery = after;
@@ -142,8 +143,12 @@ DE.Minigames = (function () {
         else give('research', 50 * k);
         break;
       }
-      case 'trader': give('scrap', 70 * k); give('food', 40 * k); out.lines.push('They traded you a few crates for directions'); break;
-      case 'rare': { const m = U().pick(DE.Data.MATERIAL_ORDER); const n = score >= .8 ? 2 : 1; state.materials[m] = (state.materials[m] || 0) + n; out.lines.push('Decoded: a cache of ' + DE.Data.MATERIALS[m].name.toLowerCase() + ' (+' + n + ')'); break; }
+      case 'trader': give('scrap', 70 * k); give('food', 40 * k); out.lines.push('They traded you a few crates for directions');
+        if (DE.Events && DE.Data.BUNKER_EVENTS.some(e => e.id === 'trader')) { DE.Events.ensure(state); state.eventChains.push({ def: 'trader', at: state.playtime + 45 + Math.random() * 60, ctx: {} }); out.lines.push('Their caravan will stop at the fence soon'); }
+        break;
+      case 'rare': { const m = U().pick(DE.Data.MATERIAL_ORDER); const n = score >= .8 ? 2 : 1; state.materials[m] = (state.materials[m] || 0) + n; out.lines.push('Decoded: a cache of ' + DE.Data.MATERIALS[m].name.toLowerCase() + ' (+' + n + ')');
+        if (DE.Events && U().chance(.5)) { DE.Events.ensure(state); state.eventChains.push({ def: 'smuggler', at: state.playtime + 60 + Math.random() * 90, ctx: {} }); out.lines.push('Someone else was listening in…'); }
+        break; }
     }
   }
 
