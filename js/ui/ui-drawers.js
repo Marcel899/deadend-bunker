@@ -354,6 +354,8 @@ DE.UI.Drawers = (function () {
  tick(s) {
    const t = U().fmtTime(Math.max(0, (s.defense.nextWaveAt - Date.now()) / 1000));
    document.querySelectorAll('[data-wave-clock]').forEach(el => { if (el.textContent !== t) el.textContent = t; });
+   // the horde creeps up the road as the clock runs down
+   const f = document.querySelector('#drawer-body .d3-field'); if (f) f.style.setProperty('--appr', Math.max(0, Math.min(1, 1 - (s.defense.nextWaveAt - Date.now()) / 1000 / DE.Defense.waveInterval(s))).toFixed(3));
  },
  render(s) {
  const d = s.defense, fx = s._fx, ui = DE.UI.ui; ui.defOpen = ui.defOpen || {};
@@ -373,6 +375,12 @@ DE.UI.Drawers = (function () {
    : ['Breach likely', 'They will get inside: supplies are lost and survivors get hurt. Reinforce now.'];
  if (raid) { verdict[0] = tone === 'pos' ? 'The raid is driven off' : tone === 'warn' ? 'They shoot up the wall' : 'They will loot the stores'; verdict[1] = (tone === 'neg' ? 'Raiders take a fifth of your food, water, scrap and fuel. ' : '') + 'Bandits shoot from cover: guards can be wounded even if you win. Armour from the Armory helps.'; }
  const reward = DE.Defense.waveReward(d.wave, 'victory');
+ // quick fixes right where the problem is shown
+ const qGuards = DE.Survivors.guards(s).length < fx.guardCap && DE.Survivors.idle(s).some(sv => sv.hp >= 50), qRep = DE.Defense.repairCost(s);
+ const quick = [qGuards ? `<button class="btn small primary" data-action="fillGuards">${I('guards', 'ico-btn')} Post guards</button>` : '',
+   qRep.scrap > 0 ? `<button class="btn small" data-action="wallRepair">${I('repair2', 'ico-btn')} Repair <span class="cost">${U().costText(qRep)}</span></button>` : '',
+   fx.trapsUnlocked && d.traps < DE.CONFIG.TRAPS_PER_WAVE ? `<button class="btn small" data-action="buyTraps" data-n="${DE.CONFIG.TRAPS_PER_WAVE - d.traps}">${I('spikes', 'ico-btn')} Stock traps</button>` : '',
+   `<button class="btn small" data-action="wallUpgrade">${I('up', 'ico-btn')} Reinforce</button>`].filter(Boolean).slice(0, 3).join('');
  const m = DE.Events.mutation(s), lvl = DE.Events.noiseLevel(DE.Events.noise(s));
  const chip = (icon, text, cls) => `<span class="d3-chip ${cls || ''}">${I(icon, 'ico-inline')}${text}</span>`;
  const regroup = d.breachStreak ? Math.round((1 - Math.max(0.6, Math.pow(0.85, d.breachStreak))) * 100) : 0;
@@ -388,17 +396,35 @@ DE.UI.Drawers = (function () {
    chip('noise', 'Noise: ' + lvl, 'noise ' + lvl),
  ].join('');
  const kinds = (raid ? DE.Data.BANDITS : DE.Data.ZOMBIES).filter(z => comp.counts[z.id]).sort((a, b) => (b.boss ? 1e9 : 0) + b.hp * comp.counts[b.id] - ((a.boss ? 1e9 : 0) + a.hp * comp.counts[a.id]));
- const horde = kinds.slice(0, 6).map((z, i) => `<figure class="d3-z${z.boss ? ' boss' : ''}${z.hp >= 60 ? ' big' : ''}" style="--i:${i}" title="${esc(z.name)} ×${comp.counts[z.id]}${z.boss ? '' : ' · ' + z.hp + ' HP each'}">${DE.Chars.portrait(z.prof || z.id, { cls: 'flip' + (z.bandit || z.prof ? ' bandit' : '') })}<b>×${comp.counts[z.id]}</b><figcaption>${esc(z.name)}</figcaption></figure>`).join('')
+ // the horde on the road: faster kinds further ahead, a few copies for big counts, depth by row
+ const SPEED = { runner: .9, leaper: .8, crawler: .3, brute: .25, mutant: .2, boss: .1, armored: .3, gunner: .6, raider: .7, shotgunner: .75, marksman: .2, warlord: .15 };
+ const nKinds = Math.min(6, kinds.length);
+ const horde = kinds.slice(0, 6).map((z, i) => {
+   const n = comp.counts[z.id], copies = Math.min(3, n), pos = Math.max(4, Math.min(80, 100 - (SPEED[z.id] != null ? SPEED[z.id] : .5) * 70 - i * 6 - (nKinds > 3 ? 0 : 10)));
+   const fig = (k) => `<span class="d3-zc" style="--k:${k}">${DE.Chars.portrait(z.prof || z.id, { cls: 'flip' + (z.prof ? ' bandit' : '') })}</span>`;
+   return `<figure class="d3-z${z.boss ? ' boss' : ''}${z.hp >= 60 ? ' big' : ''}" style="--i:${i};left:${pos}%;--row:${i % 2}" title="${esc(z.name)} ×${n}${z.boss ? '' : ' · ' + z.hp + ' HP each'}">${Array.from({ length: copies }, (_, k) => fig(copies - 1 - k)).join('')}<b>×${n}</b><figcaption>${esc(z.name)}</figcaption></figure>`; }).join('')
    + (kinds.length > 6 ? `<span class="d3-more">+${kinds.length - 6} more</span>` : '');
+ const zTotal = Object.values(comp.counts).reduce((a, b) => a + b, 0);
+ // our side: guards on the wall, turrets, traps in front
+ const gsH = DE.Survivors.guards(s), wPct = 100 * d.wall.hp / maxHp;
+ const defs = gsH.slice(0, 5).map((g, i) => `<span class="d3-def" style="--i:${i}" title="${esc(g.name)}">${DE.Chars.portrait(g.profession)}</span>`).join('') + (gsH.length > 5 ? `<em class="d3-defmore">+${gsH.length - 5}</em>` : '');
+ const ourSide = `<div class="d3-ours"><div class="d3-defs">${defs || `<span class="d3-nodef">${I('warning', 'ico-inline')} No guards</span>`}</div>
+   <div class="d3-gate">${DE.Icons.structure('wall', 'd3-gateico')}${d.turrets ? `<span class="d3-turs">${I('turret', 'ico-inline')}×${d.turrets}</span>` : ''}</div>
+   <div class="d3-wallhp ${wPct < 30 ? 'neg' : wPct < 70 ? 'warn' : 'pos'}"><span><i style="width:${wPct.toFixed(1)}%"></i></span><b>${U().fmt(d.wall.hp)}<small>/${U().fmt(maxHp)}</small></b></div></div>
+   ${d.traps ? `<div class="d3-traps" title="${d.traps} traps on the approach">${Array.from({ length: Math.min(5, d.traps) }, () => I('spikes', '')).join('')}</div>` : ''}`;
+ const shots = pw.total > 0 ? Array.from({ length: Math.min(4, 1 + gsH.length + d.turrets) }, (_, i) => `<i class="d3-shot" style="--i:${i};--y:${(30 + i * 9) % 46}px"></i>`).join('') : '';
+
  let html = `<div class="d3-hero ${tone}${boss ? ' boss' : ''}${raid ? ' raid' : ''}">
  <div class="d3-top"><div class="d3-title">${I(raid ? 'skull' : 'zombies', 'd3-zico')}<div><small>${boss ? 'Boss wave' : raid ? 'Bandit raid' : 'Incoming'}</small><b>${raid ? 'Raid' : 'Wave'} ${d.wave}</b></div></div>
    <div class="d3-clock"><small>arrives in</small><b data-wave-clock>${U().fmtTime(Math.max(0, (d.nextWaveAt - Date.now()) / 1000))}</b></div>
    <div class="d3-threat t${threat[1]}"><small>Threat</small><b>${threat[0]}</b><span>${Array.from({ length: 5 }, (_, i) => `<i class="${i < threat[1] ? 'on' : ''}"></i>`).join('')}</span></div></div>
- <div class="d3-field"><div class="d3-gate">${DE.Icons.structure('wall', 'd3-gateico')}<span class="d3-gatehp"><i style="width:${(100 * d.wall.hp / maxHp).toFixed(1)}%"></i></span></div><div class="d3-horde">${horde}</div>${boss ? `<div class="d3-bossflag">${I('skull2', '')} BOSS</div>` : ''}</div>
- <div class="d3-math"><div class="d3-vs"><span>${I('shield', 'ico-inline')} Your firepower <b>${U().fmt(pw.total)}</b></span><span>${raid ? 'Raid' : 'Horde'} strength <b>${U().fmt(hp)}</b> ${I('zombies', 'ico-inline')}</span></div>
+ <div class="d3-field${raid ? ' raid' : ''}"><div class="d3-road"></div>${ourSide}<div class="d3-shots">${shots}</div>${raid && DE.UI.Battlefield.carSvg ? `<div class="d3-cars">${comp.cars.slice(0, 3).map(v => DE.UI.Battlefield.carSvg(v.id)).join('')}</div>` : ''}<div class="d3-horde">${horde}</div>${boss ? `<div class="d3-bossflag">${I('skull2', '')} BOSS</div>` : ''}${raid ? `<div class="d3-bossflag raid">${I('truck', '')} RAID</div>` : ''}</div>
+ <div class="d3-math"><div class="d3-vs2"><div class="d3-side us"><small>${I('shield', 'ico-inline')} Your firepower</small><b class="${pw.total ? '' : 'zero'}">${U().fmt(pw.total)}</b><span>${I('guards', 'ico-inline')}${gsH.length} · ${I('turret', 'ico-inline')}${d.turrets} · ${I('spikes', 'ico-inline')}${pw.trapsUsed}</span></div>
+   <div class="d3-vsb ${tone}">VS</div>
+   <div class="d3-side them"><small>${raid ? 'Raid' : 'Horde'} strength ${I(raid ? 'skull' : 'zombies', 'ico-inline')}</small><b>${U().fmt(hp)}</b><span>${zTotal} ${raid ? 'bandits' : 'zombies'}${comp.cars.length ? ' · ' + comp.cars.length + ' vehicles' : ''}</span></div></div>
    <div class="d3-bar" title="Of the horde's ${U().fmt(hp)} strength: ${U().fmt(killed)} shot down, ${U().fmt(toWall)} against the wall, ${U().fmt(through)} breaking in"><i class="k" style="width:${pct(killed)}"></i><i class="w" style="width:${pct(toWall)}"></i><i class="b" style="width:${pct(through)}"></i></div>
    <div class="d3-legend"><span class="k"><i></i>Shot down <b>${U().fmt(killed)}</b></span>${toWall > 0 ? `<span class="w"><i></i>Hits the wall <b>${U().fmt(toWall)}</b></span>` : ''}${through > 0 ? `<span class="b"><i></i>Breaks in <b>${U().fmt(through)}</b></span>` : ''}<span class="t">${W}s of combat</span></div></div>
- <div class="d3-verdict">${I(tone === 'pos' ? 'check' : 'warning', 'd3-vico')}<div><b>${verdict[0]}</b><small>${verdict[1]}</small></div></div>
+ <div class="d3-verdict">${I(tone === 'pos' ? 'check' : 'warning', 'd3-vico')}<div><b>${verdict[0]}</b><small>${verdict[1]}</small></div>${tone === 'pos' ? '' : `<div class="d3-fix">${quick}</div>`}</div>
  <div class="d3-chips">${chips}</div></div>`;
  // ---- the four levers ----
  const wc = DE.Defense.wallUpgradeCost(s), rc = DE.Defense.repairCost(s), wpct = 100 * d.wall.hp / maxHp, canW = U().canAfford(s.resources, wc);

@@ -588,5 +588,5 @@ DE.UI.Battlefield = (function () {
   }
   function status() { return { cars: (st.cars || []).map(c => c.type + ':' + c.mode + ':' + Math.round(c.x)), bandits: st.zombies.filter(z => z.bandit && !z.dead).length, zombies: st.zombies.filter(z => !z.dead).length, turrets: st.turrets.map(t => ({ x: t.px, y: t.py, a: +t.a.toFixed(1), target: t.target ? t.target.x : null })), launcher: st.launcher ? { a: st.launcher.a, cd: st.launcher.cd } : null, missiles: st.missiles.length, guards: Object.values(st.guards).map(g => ({ x: +g.x.toFixed(1), y: g.y })), fighting: st.fighting, incoming: st.incoming, front: st.front, kills: st.kills, budget: st.killBudget, zs: st.zombies.filter(z => !z.dead).map(z => ({ id: z.id, x: Math.round(z.x), lane: z.lane, mode: z.mode, d: +z.delay.toFixed(1), t: z.through, r: z.retreat })) }; }
 
-  return { sync, fight, status };
+  return { sync, fight, status, carSvg };
 })();
