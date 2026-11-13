@@ -156,30 +156,30 @@ DE.UI.Overworld = (function () {
   function win(list, w = 10, h = 12) { return list.map(([x, y]) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="1"/>`).join(''); }
   function skyline() {
     const far = `<g class="ow-ruins-far" fill="url(#ow-ruinfar)" stroke="${INK}" stroke-width="4" stroke-linejoin="round">
-      <path d="M0 340 V300 H40 V250 H90 V300 H120 V270 H160 V340 Z"/><path d="M480 340 V268 H520 V236 H570 V288 H600 V250 H640 V340 Z"/><path d="M690 340 V282 H735 V246 H790 V300 H820 V340 Z"/>
-      <path d="M1040 340 V262 H1080 V228 H1150 V290 H1190 V340 Z"/><path d="M1500 340 V286 H1540 V250 H1600 V300 H1664 V340 Z"/><path d="M1220 340 V300 H1250 V270 H1290 V310 H1320 V340 Z"/></g>
+      <path d="M0 396 V300 H40 V250 H90 V300 H120 V270 H160 V396 Z"/><path d="M480 396 V268 H520 V236 H570 V288 H600 V250 H640 V396 Z"/><path d="M690 396 V282 H735 V246 H790 V300 H820 V396 Z"/>
+      <path d="M1040 396 V262 H1080 V228 H1150 V290 H1190 V396 Z"/><path d="M1500 396 V286 H1540 V250 H1600 V300 H1664 V396 Z"/><path d="M1220 396 V300 H1250 V270 H1290 V310 H1320 V396 Z"/></g>
     <g fill="#2d1536" opacity=".55">${win([[52, 262], [70, 262], [52, 285], [532, 248], [550, 248], [532, 270], [750, 258], [770, 258], [1095, 240], [1120, 240], [1095, 262], [1552, 262], [1572, 262], [1262, 282]])}</g>`;
     const near = `<g class="ow-ruins-near" fill="url(#ow-ruinnear)" stroke="${INK}" stroke-width="5" stroke-linejoin="round">
-      <path d="M150 360 V290 L178 282 V232 H224 L238 250 V300 H270 V360 Z"/><path d="M440 360 V272 H470 L478 250 H530 L536 262 V300 H552 V360 Z"/><path d="M600 360 V300 H660 V262 L700 248 V300 H730 V360 Z"/>
-      <path d="M960 360 V292 H1000 L1016 246 H1060 V290 H1095 V326 H1120 V360 Z"/><path d="M1180 360 V312 L1220 300 V236 H1262 V284 H1300 V360 Z"/><path d="M1400 360 V300 L1440 288 V260 H1480 V320 H1500 V360 Z"/>
-      <path d="M1330 360 V320 H1350 V300 L1372 296 V360 Z"/></g>
+      <path d="M150 396 V290 L178 282 V232 H224 L238 250 V300 H270 V396 Z"/><path d="M440 396 V272 H470 L478 250 H530 L536 262 V300 H552 V396 Z"/><path d="M600 396 V300 H660 V262 L700 248 V300 H730 V396 Z"/>
+      <path d="M960 396 V292 H1000 L1016 246 H1060 V290 H1095 V326 H1120 V396 Z"/><path d="M1180 396 V312 L1220 300 V236 H1262 V284 H1300 V396 Z"/><path d="M1400 396 V300 L1440 288 V260 H1480 V320 H1500 V396 Z"/>
+      <path d="M1330 396 V320 H1350 V300 L1372 296 V396 Z"/></g>
     <g fill="#1a0e22">${win([[190, 248], [210, 248], [190, 270], [210, 270], [490, 266], [508, 266], [670, 270], [690, 270], [1026, 262], [1044, 262], [1026, 286], [1232, 250], [1232, 274], [1452, 276], [1452, 298]], 12, 14)}</g>
     <g class="ow-ruins-glow" fill="#ffb347" opacity=".9">${win([[210, 270], [690, 270], [1044, 286], [1452, 298]], 12, 14)}</g>
-    <g class="ow-rubble-far" fill="#3a1e3f" stroke="${INK}" stroke-width="4"><path d="M270 360 L300 338 L340 350 L372 334 L400 360 Z"/><path d="M1300 360 L1322 342 L1358 352 L1382 340 L1400 360 Z"/><path d="M840 360 L860 346 L890 352 L910 360 Z"/></g>
-    <g class="ow-gasstation" stroke="${INK}" stroke-width="4" stroke-linejoin="round"><rect x="1080" y="318" width="110" height="42" fill="#5a2f5e"/><rect x="1060" y="306" width="150" height="14" rx="3" fill="#6e3a66"/><rect x="1070" y="320" width="6" height="40" fill="#4a2a4e"/><rect x="1196" y="320" width="6" height="40" fill="#4a2a4e"/><rect x="1100" y="330" width="22" height="30" fill="#2d1536"/><rect x="1150" y="330" width="22" height="30" fill="#2d1536"/><text x="1135" y="317" font-family="Lilita One, Impact, sans-serif" font-size="11" fill="#ffb347" text-anchor="middle" stroke="none">GAS</text></g>`;
+    <g class="ow-rubble-far" fill="#3a1e3f" stroke="${INK}" stroke-width="4"><path d="M270 396 V360 L300 338 L340 350 L372 334 L400 360 V396 Z"/><path d="M1300 396 V360 L1322 342 L1358 352 L1382 340 L1400 360 V396 Z"/><path d="M840 396 V360 L860 346 L890 352 L910 360 V396 Z"/></g>
+    <g class="ow-gasstation" stroke="${INK}" stroke-width="4" stroke-linejoin="round"><rect x="1080" y="318" width="110" height="78" fill="#5a2f5e"/><rect x="1060" y="306" width="150" height="14" rx="3" fill="#6e3a66"/><rect x="1070" y="320" width="6" height="76" fill="#4a2a4e"/><rect x="1196" y="320" width="6" height="76" fill="#4a2a4e"/><rect x="1100" y="330" width="22" height="30" fill="#2d1536"/><rect x="1150" y="330" width="22" height="30" fill="#2d1536"/><text x="1135" y="317" font-family="Lilita One, Impact, sans-serif" font-size="11" fill="#ffb347" text-anchor="middle" stroke="none">GAS</text></g>`;
     return far + near + `<rect x="0" y="200" width="${W}" height="170" fill="url(#ow-atmo)"/>`;
   }
   function farLandmarks() {
     const lattice = `<g class="ow-latticetower" transform="translate(1000 0)" stroke="${INK}" stroke-width="5" stroke-linejoin="round" stroke-linecap="round">
-      <path d="M78 172 L60 330 M130 172 L148 330" stroke-width="8"/><path d="M72 215 H136 M66 262 H142 M62 300 H146" stroke-width="5"/>
+      <path d="M78 172 L56 386 M130 172 L152 386" stroke-width="8"/><path d="M72 215 H136 M66 262 H142 M62 300 H146" stroke-width="5"/>
       <path d="M72 215 L136 262 M136 215 L72 262 M66 262 L142 300 M142 262 L66 300 M62 300 L148 330 M148 300 L60 330" stroke="#5d3a2a" stroke-width="3"/>
       <rect x="58" y="146" width="92" height="30" rx="4" fill="#5a3a2c"/><rect x="66" y="112" width="76" height="36" rx="3" fill="#7a4a60"/><rect x="54" y="100" width="100" height="16" rx="4" fill="#5a3a2c"/>
       <path d="M60 176 V192 H148 V176 M80 176 V192 M100 176 V192 M120 176 V192" fill="none"/><rect x="74" y="118" width="18" height="22" fill="#2a1830"/><rect x="116" y="118" width="18" height="22" fill="#2a1830"/></g>`;
     const spokes = Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return `<line x1="1570" y1="235" x2="${1570 + Math.cos(a) * 92}" y2="${235 + Math.sin(a) * 92}"/>`; }).join('');
     const cabins = Array.from({ length: 12 }, (_, i) => { const a = i * Math.PI / 6; return `<rect x="${1570 + Math.cos(a) * 92 - 9}" y="${235 + Math.sin(a) * 92 - 6}" width="18" height="14" rx="3" fill="${i % 3 ? '#6e3a5e' : '#b05a5a'}"/>`; }).join('');
-    const ferris = `<g class="ow-ferris" stroke="${INK}" stroke-width="5" stroke-linejoin="round"><path d="M1570 235 L1500 360 M1570 235 L1640 360 M1522 320 H1618" fill="none" stroke-width="8"/>
+    const ferris = `<g class="ow-ferris" stroke="${INK}" stroke-width="5" stroke-linejoin="round"><path d="M1570 235 L1490 392 M1570 235 L1650 392 M1522 320 H1618" fill="none" stroke-width="8"/>
       <g class="ow-ferris-wheel"><circle cx="1570" cy="235" r="92" fill="none" stroke-width="7"/><circle cx="1570" cy="235" r="62" fill="none" stroke-width="4" opacity=".8"/><g stroke-width="4" opacity=".9">${spokes}</g>${cabins}<circle cx="1570" cy="235" r="12" fill="#8a4a6a"/></g></g>`;
-    const pylons = `<g class="ow-pylons" stroke="${INK}" stroke-width="4" stroke-linecap="round"><path d="M1420 350 V250 M1410 262 h20 M1412 290 h16" /><path d="M1250 350 V262 M1240 274 h20 M1242 300 h16"/><path d="M1260 268 q80 30 160 -6" fill="none" stroke-width="2"/></g>`;
+    const pylons = `<g class="ow-pylons" stroke="${INK}" stroke-width="4" stroke-linecap="round"><path d="M1420 390 V250 M1410 262 h20 M1412 290 h16" /><path d="M1250 390 V262 M1240 274 h20 M1242 300 h16"/><path d="M1260 268 q80 30 160 -6" fill="none" stroke-width="2"/></g>`;
     return lattice + pylons + ferris;
   }
   /* Three mountain ranges with aerial perspective: further = paler, bluer, softer. */
