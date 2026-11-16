@@ -2153,7 +2153,7 @@ body.no-anim .mg-count, body.no-anim .mg-fx { display: none; }
 .bs-step b { font-family: var(--display); font-weight: 400; font-size: 20px; color: #ffd98a; text-shadow: 0 2px 0 var(--ink); } .bs-step span { font-size: 12px; font-weight: 800; color: #d6d2e2; line-height: 1.3; max-width: 420px; }
 .bs-pips { display: flex; gap: 5px; } .bs-pips i { font: 900 10px var(--body); font-style: normal; letter-spacing: .5px; text-transform: uppercase; padding: 2px 8px; border-radius: 8px; background: #1c1d24; color: #7d7f8e; border: 2px solid var(--ink); }
 .bs-pips i.on { background: var(--gold); color: #2b1600; } .bs-pips i.done { background: #3fae3a; color: #fff; }
-.bs-slots { display: flex; align-items: center; gap: 10px; } .bs-slots .fg-slot { width: 84px; height: 84px; } .bs-slots .fg-slot .ico, .bs-slots .fg-slot .fg-pic { width: 50px !important; height: 50px !important; } .bs-slots .fg-arr { width: 40px; }
+.bs-slots { display: flex; align-items: center; gap: 10px; } .bs-slots .fg-slot { position: relative; width: 84px; height: 84px; border-radius: 14px; border: 3px solid var(--ink); background: linear-gradient(180deg, #23252d, #2d3039); box-shadow: inset 0 0 0 3px #8a8ea0, inset 0 0 0 5px #3d404c, inset 0 8px 12px rgba(0, 0, 0, .45); } .bs-slots .fg-slot .ico, .bs-slots .fg-slot .fg-pic { width: 62px !important; height: 62px !important; } .bs-slots .fg-arr { width: 40px; }
 .bs-slots .fg-slot.out .fg-pic { filter: brightness(0) invert(.75); opacity: .5; } .bs-wrap.busy .fg-slot.out .fg-pic { animation: bsGhost 1.2s ease-in-out infinite alternate; } @keyframes bsGhost { to { opacity: .8; } }
 .bs-slots .fg-slot.out.made .fg-pic { filter: drop-shadow(0 0 8px #ffd34a); opacity: 1; animation: starIn .5s cubic-bezier(.2, 1.6, .4, 1); }
 .bs-info { min-height: 34px; display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 2px 12px; text-align: center; font-size: 12px; font-weight: 800; } .bs-info small { width: 100%; font-size: 11px; color: #c9c3d6; }
@@ -2175,9 +2175,18 @@ body.no-anim .mg-count, body.no-anim .mg-fx { display: none; }
 .bs-needle { position: absolute; top: -7px; bottom: -7px; width: 7px; margin-left: -3.5px; background: #fff; border: 2px solid var(--ink); border-radius: 4px; box-shadow: 0 0 6px rgba(0, 0, 0, .6); z-index: 2; } .bs-needle.ok { background: #8dff4a; box-shadow: 0 0 10px #8dff4a; }
 .bs-time { position: absolute; left: 0; bottom: -8px; height: 3px; border-radius: 2px; background: #ffd34a; } .bs-track:not(.heat) .bs-time { display: none; }
 .bs-go { outline: none; border: 0; background: none; padding: 0; cursor: pointer; display: flex; flex-direction: column; align-items: center; gap: 3px; -webkit-tap-highlight-color: transparent; touch-action: none; }
-.bs-go img { width: 250px; max-width: 100%; height: 62px; filter: drop-shadow(0 5px 0 rgba(0, 0, 0, .45)); transition: transform .06s, filter .1s; }
-.bs-go:hover img { filter: drop-shadow(0 5px 0 rgba(0, 0, 0, .45)) brightness(1.08); } .bs-go:active img, .bs-go.on img { transform: translateY(4px) scale(.98); filter: brightness(1.18); }
-.bs-go.hit img { animation: bsHit .16s ease-out; } @keyframes bsHit { 40% { transform: translateY(5px) scale(.96); } }
+.bs-go { width: min(100%, 270px); gap: 14px !important; }
+/* the hammer button: drawn here (not a stretched picture), the hammer keeps its shape at any width */
+.bs-btn { width: 100%; height: 60px; display: grid; place-items: center; border-radius: 16px; border: 3px solid var(--ink); background: linear-gradient(180deg, #ffbd3a 0%, #ffa41e 52%, #f08a10 100%);
+  box-shadow: inset 0 4px 0 rgba(255, 244, 190, .75), inset 0 -5px 0 rgba(170, 80, 0, .55), 0 6px 0 #7a3c06, 0 6px 0 3px var(--ink), 0 12px 14px rgba(0, 0, 0, .4); transition: transform .06s, box-shadow .06s, filter .1s; }
+.bs-btn img { width: auto !important; height: 46px; aspect-ratio: auto; object-fit: contain; filter: drop-shadow(0 3px 0 rgba(90, 40, 0, .5)); transform: rotate(-8deg); transition: transform .08s; }
+.bs-go:hover .bs-btn { filter: brightness(1.07); }
+.bs-go:active .bs-btn, .bs-go.on .bs-btn { transform: translateY(5px); box-shadow: inset 0 4px 0 rgba(255, 244, 190, .75), inset 0 -3px 0 rgba(170, 80, 0, .55), 0 1px 0 #7a3c06, 0 1px 0 3px var(--ink); filter: brightness(1.15); }
+.bs-go:active .bs-btn img, .bs-go.on .bs-btn img { transform: rotate(-34deg); }
+.bs-go.hit .bs-btn { animation: bsHit .2s cubic-bezier(.3, 1.8, .5, 1); } .bs-go.hit .bs-btn img { animation: bsSwing .22s ease-out; }
+@keyframes bsHit { 30% { transform: translateY(6px) scale(1.04, .9); } } @keyframes bsSwing { 30% { transform: rotate(-52deg) scale(1.15); } }
+.bs-wrap:not(.busy) .bs-go:not(.cant) .bs-btn { animation: bsReady 1.4s ease-in-out infinite; } @keyframes bsReady { 50% { filter: brightness(1.13); box-shadow: inset 0 4px 0 rgba(255, 244, 190, .75), inset 0 -5px 0 rgba(170, 80, 0, .55), 0 6px 0 #7a3c06, 0 6px 0 3px var(--ink), 0 0 22px rgba(255, 180, 60, .75); } }
+.bs-go.cant .bs-btn { filter: grayscale(1) brightness(.6); }
 .bs-go small { font: 900 12px var(--body); color: #e4e0f0; letter-spacing: .5px; } .bs-go.cant img { filter: grayscale(1) brightness(.6); } .bs-go.cant small { color: var(--gold); } .bs-go.nope { animation: mgShake .22s linear; }
 .bs-mid .fg-blows { min-height: 22px; }
 .bs-right { min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 12px; padding: 12px 8px; border-radius: 14px; border: 3px solid var(--ink); background: #2a2c35; box-shadow: inset 0 0 0 3px #50535f; scrollbar-width: thin; scrollbar-color: #ffb02a #17181d; }
@@ -2199,3 +2208,32 @@ body.no-anim .mg-count, body.no-anim .mg-fx { display: none; }
   .bs-mid { padding: 8px 10px; gap: 8px; } .bs-slots .fg-slot { width: 66px; height: 66px; } .bs-slots .fg-slot .ico, .bs-slots .fg-slot .fg-pic { width: 40px !important; height: 40px !important; }
   .mg-panel.bs .mg-titles b { font-size: 21px; } .mg-panel.bs .mg-titles { padding: 3px 22px 5px; margin-right: 40px; }
 }
+
+/* the piece taking shape in the slot: a chalk outline, and over it the real thing growing up from the bottom, glowing while hot */
+.bs-slots .fg-slot.out .fg-pic { position: absolute; left: 50%; top: 50%; margin: -31px 0 0 -31px; }
+.bs-slots .fg-slot.out .bs-form { position: absolute; inset: 0; clip-path: inset(calc(100% - var(--p, 0) * 100%) 0 0 0); transition: clip-path .25s cubic-bezier(.3, 1.5, .5, 1); }
+.bs-slots .fg-slot.out .bs-form .fg-pic { filter: none; opacity: 1; animation: none; }
+.bs-slots .fg-slot.out.hot .bs-form .fg-pic { filter: sepia(1) saturate(7) hue-rotate(-22deg) brightness(1.6) drop-shadow(0 0 7px #ff8a1e); }
+.bs-slots .fg-slot.out.hot { box-shadow: inset 0 0 0 3px #8a8ea0, inset 0 0 0 5px #3d404c, inset 0 0 22px rgba(255, 130, 30, calc(.25 + var(--p, 0) * .6)); }
+.bs-slots .fg-slot.out.cool .bs-form .fg-pic { animation: bsCool .6s ease-out; } @keyframes bsCool { 0% { filter: brightness(2.2) saturate(0); } }
+.bs-slots .fg-slot.out.made { border-color: var(--qc, #ffd34a); box-shadow: inset 0 0 0 3px #8a8ea0, inset 0 0 0 5px #3d404c, 0 0 0 3px var(--ink), 0 0 26px var(--qc, #ffd34a); }
+.bs-slots .fg-slot.out.made > .fg-pic { opacity: 0; animation: none; } .bs-slots .fg-slot.out.made .bs-form .fg-pic { filter: drop-shadow(0 0 8px var(--qc, #ffd34a)); }
+.bs-slots .fg-slot.out.made { overflow: hidden; } .bs-slots .fg-slot.out.made::before { content: ''; position: absolute; inset: -20px; opacity: .55; border-radius: 50%; background: repeating-conic-gradient(from 0deg, color-mix(in srgb, var(--qc, #ffd34a) 55%, transparent) 0 12deg, transparent 12deg 30deg); mask: radial-gradient(circle, #000 30%, transparent 70%); -webkit-mask: radial-gradient(circle, #000 30%, transparent 70%); animation: bsRays 6s linear infinite; }
+@keyframes bsRays { to { transform: rotate(360deg); } }
+.bs-slots { position: relative; z-index: 0; }
+.fg-slot.thump { animation: bsThump .28s cubic-bezier(.3, 1.9, .5, 1); } @keyframes bsThump { 30% { transform: scale(1.16) rotate(-3deg); } }
+.fg-slot.swap .fg-pic { animation: bsSwap .25s cubic-bezier(.3, 1.7, .5, 1); } @keyframes bsSwap { from { transform: scale(.4) rotate(-20deg); opacity: 0; } }
+.bs-bp.pick { animation: bsPick .25s cubic-bezier(.3, 1.9, .5, 1); } @keyframes bsPick { 35% { transform: scale(1.12) rotate(-2deg); } }
+/* the blow: the anvil takes it, the bar flares white, the needle sticks, a ring bursts out */
+.fg-anvil.slam { animation: bsSlam .22s cubic-bezier(.3, 1.8, .5, 1); transform-origin: 50% 100%; } @keyframes bsSlam { 25% { transform: scale(1.06, .9) translateY(3px); } }
+.fg-bar.struck { animation: bsStruck .3s ease-out; } @keyframes bsStruck { 0% { filter: brightness(3) drop-shadow(0 0 14px #fff4a8); } }
+.bs-needle.stuck { animation: bsStuck .2s ease-out; } @keyframes bsStuck { 0% { transform: scale(1.9, 1.25); background: #fff; box-shadow: 0 0 18px #fff; } }
+.bs-ring { position: absolute; width: 20px; height: 20px; margin: -10px 0 0 -10px; border-radius: 50%; border: 4px solid #fff; animation: bsRing .45s ease-out forwards; pointer-events: none; } @keyframes bsRing { to { transform: scale(7); opacity: 0; border-width: 1px; } }
+.fg-hammer.hit { animation: hammer .22s cubic-bezier(.5, 0, .9, .4); }
+/* the bellows: the fire swells and the furnace breathes */
+.bs-left .fg-furnace { transform-origin: 50% 100%; transition: transform .25s, filter .25s; } .bs-left.blow .fg-furnace { transform: scale(1.035, 1.02); filter: brightness(1.18) saturate(1.2); }
+.bs-left.blow .fg-fire { animation: bsRoar .12s linear infinite alternate; } @keyframes bsRoar { to { transform: scale(1.12, 1.2); } }
+.bs-track.glow .bs-bg { box-shadow: 0 0 0 2px #8dff4a, 0 0 16px rgba(141, 255, 74, .7); } .bs-track.glow .bs-zone { animation: bsZone .3s ease-in-out infinite alternate; } @keyframes bsZone { to { background: rgba(160, 255, 90, .8); } }
+.mg-pop.r { color: #ff7a6a; }
+body.no-anim .bs-btn, body.no-anim .fg-slot.out.made::before { animation: none !important; }
+@media (max-width: 720px) { .bs-slots .fg-slot.out .fg-pic { margin: -20px 0 0 -20px; } .bs-btn { height: 54px; } .bs-btn img { height: 40px; } }
