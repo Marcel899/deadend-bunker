@@ -267,7 +267,9 @@ DE.Chars = (function () {
       + `<g class="trowel" transform="translate(0 ${len})"><rect x="-2.6" y="-4" width="5.2" height="16" rx="2.4" fill="#8a5a32" ${sw3}/><path d="M-6.5 11 h13 l-2.5 15 q-4 6 -8 0 z" fill="#a9adb8" ${sw3}/><path d="M0 13 v10" ${thin('#e0e3ea', 1.6)}/></g>`
       + `<g class="clip" transform="translate(0 ${len}) rotate(118)"><rect x="-12" y="-17" width="24" height="31" rx="2.5" fill="#a87a48" ${sw3}/><rect x="-9" y="-12" width="18" height="23" fill="#f4efe2" stroke="${INK}" stroke-width="1.5"/><rect x="-5" y="-19" width="10" height="5" rx="1.5" fill="#8a8e98" ${sw3}/><path d="M-6 -6 h12 M-6 -1 h12 M-6 4 h8" ${thin('#8a8494', 1.4)}/></g>`
       + `<g class="ladle" transform="translate(0 ${len})"><rect x="-2" y="-6" width="4" height="34" rx="2" fill="#c9ccd4" ${sw3}/><path d="M-9 27 h18 q0 11 -9 11 q-9 0 -9 -11 z" fill="#b9bcc6" ${sw3}/></g>`
-      + `<g class="pick" transform="translate(0 ${len})"><rect x="-3.5" y="-10" width="7" height="60" rx="3" fill="#8a5a32" ${sw3}/><path d="M-1.5 -6 v50" ${thin('#b07a42', 1.8)}/><path d="M-32 52 q32 -24 64 0 l-4 6 q-28 -15 -56 0 z" fill="#8a8e98" ${sw3}/><path d="M-7 45 h14 v11 h-14 z" fill="#5a5f6a" ${sw3}/><path d="M-22 47 q22 -12 44 0" ${thin('#d0d3dc', 2)}/></g>`;
+      + `<g class="pick" transform="translate(0 ${len})"><path d="M-4.5 -14 h9 l1.5 62 h-12 z" fill="#9a6638" ${sw3}/><path d="M-1 -10 l-1 54" ${thin('#c98d52', 2.2)}/><path d="M-5 -4 h10 M-5.2 2 h10.4" ${thin('#5a3a20', 2.6)}/><rect x="-6" y="-17" width="12" height="6" rx="3" fill="#6b4526" ${sw3}/>`
+        + `<path d="M-46 66 Q-26 36 0 38 Q26 36 46 66 Q24 51 9 52 V60 H-9 V52 Q-24 51 -46 66 Z" fill="#7b8190" ${sw}/><path d="M-46 66 Q-36 50 -26 44 Q-32 54 -34 58 Z M46 66 Q36 50 26 44 Q32 54 34 58 Z" fill="#e4e7ee"/><path d="M-24 44 Q-12 40 0 41 Q12 40 24 44" ${thin('#c9cdd8', 2.6)}/>`
+        + `<rect x="-9" y="38" width="18" height="22" rx="3" fill="#4a4e5b" ${sw3}/><path d="M-5 42 v14" ${thin('#8d93a3', 2.2)}/><circle cx="3" cy="49" r="2.2" fill="#c9cdd8"/></g>`;
     return s;
   }
   // thigh: pivot at the hip, knee at (0,len)

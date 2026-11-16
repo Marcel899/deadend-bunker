@@ -44,8 +44,19 @@ body.no-anim .ow-svg * { animation: none !important; }
 .wall-hp { position: absolute; left: 10%; right: 10%; bottom: 3px; height: 9px; background: #120a06; border-radius: 5px; border: 2px solid var(--ink); }
 .wall-hp i { display: block; height: 100%; background: linear-gradient(180deg, #8ee07b, var(--green)); border-radius: 3px; transition: width .4s; } .wall-hp i.low { background: linear-gradient(180deg, #ff8a7a, var(--red)); }
 .entrance-sign { position: absolute; left: 27%; top: 88%; transform: translateX(-50%); font-family: var(--display); letter-spacing: 2px; color: var(--gold); background: linear-gradient(180deg, var(--plate2), var(--plate)); border: 3px solid var(--ink); padding: 1px 12px; border-radius: 8px; font-size: 13px; text-shadow: 0 2px 0 var(--ink); white-space: nowrap; box-shadow: 0 3px 0 var(--ink2); }
-.wave-info { position: absolute; right: 12px; bottom: 10px; padding: 5px 12px; border-radius: 10px; background: linear-gradient(180deg, var(--plate2), var(--plate)); border: 3px solid var(--ink); font-size: 12px; font-weight: 800; cursor: pointer; display: flex; align-items: center; gap: 6px; box-shadow: 0 3px 0 var(--ink2); }
-.wave-info.ok { border-color: var(--green2); } .wave-info.warn { border-color: var(--gold2); } .wave-info.danger { border-color: var(--red2); color: #ffb3b6; animation: blink 1.2s infinite; }
+.wave-info { position: absolute; right: 12px; top: 10px; z-index: 6; width: 290px; padding: 7px 10px 8px; border-radius: 12px; background: linear-gradient(180deg, var(--plate2), var(--plate)); border: 3px solid var(--ink); font-size: 12px; font-weight: 800; cursor: pointer; display: flex; flex-direction: column; gap: 5px; box-shadow: 0 3px 0 var(--ink2), inset 0 0 0 2px var(--abc, #3fae3a); transition: transform .12s; }
+.wave-info:hover { transform: translateY(-2px); }
+.ab-top { display: flex; align-items: center; gap: 7px; } .ab-ico { width: 22px; height: 22px; flex: none; } .ab-name { flex: 1; font-family: var(--display); font-weight: 400; font-size: 15px; letter-spacing: .3px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ab-time { font-family: var(--display); font-weight: 400; font-size: 16px; color: #fff; padding: 0 8px; border-radius: 8px; background: rgba(0, 0, 0, .4); font-variant-numeric: tabular-nums; }
+.ab-vs { position: relative; height: 22px; border-radius: 8px; border: 2px solid var(--ink); background: linear-gradient(180deg, #c8323c, #8a1c26); overflow: hidden; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; font-size: 12px; font-weight: 900; color: #fff; text-shadow: 0 1px 0 #000, 0 0 3px #000; }
+.ab-vs .ab-us { position: absolute; left: 0; top: 0; bottom: 0; background: linear-gradient(180deg, #5fd04a, #2f8a2a); border-right: 2px solid var(--ink); transition: width .5s; }
+.ab-vs span { position: relative; display: inline-flex; align-items: center; gap: 3px; } .ab-vs .ico { width: 15px; height: 15px; }
+.ab-vs u { position: absolute; left: 50%; top: -2px; bottom: -2px; width: 2px; margin-left: -1px; background: #fff; opacity: .85; }
+.ab-foot { display: flex; align-items: center; gap: 8px; font-size: 12px; } .ab-foot .wi-v { white-space: nowrap; text-transform: uppercase; letter-spacing: .4px; }
+.ab-clock { flex: 1; height: 5px; border-radius: 3px; background: rgba(0, 0, 0, .45); overflow: hidden; } .ab-clock i { display: block; height: 100%; background: var(--abc, #3fae3a); transition: width 1s linear; }
+.wave-info.ok { --abc: #3fae3a; } .wave-info.warn { --abc: #f3a71c; } .wave-info.danger { --abc: #e0404a; }
+.surface.incoming .wave-info .ab-time { background: #c8323c; animation: blink 1s infinite; }
+.wave-info.danger .wi-v { color: #ff8f96; }
 
 /* --- horde: walks along the grass line from the right --- */
 .surface.fight .ow-bunker { animation: wallshake .15s infinite; } @keyframes wallshake { 50% { transform: translateX(2px); } }
@@ -54,7 +65,7 @@ body.no-anim .ow-svg * { animation: none !important; }
 @keyframes flashgreen { 30% { filter: brightness(1.3) hue-rotate(30deg); } } @keyframes flashred { 50% { filter: brightness(1.2) hue-rotate(-40deg) saturate(2); } }
 
 @media (max-width: 980px) {
-  .wall-label { font-size: 10px; } .wave-info { font-size: 11px; padding: 4px 8px; } .entrance-sign { font-size: 11px; }
+  .wall-label { font-size: 11px; } .wave-info { width: 190px; padding: 5px 7px 6px; gap: 3px; right: 6px; top: 6px; } .ab-name { font-size: 12px; } .ab-time { font-size: 13px; } .ab-vs { height: 18px; font-size: 12px; } .ab-foot { display: none; } .entrance-sign { font-size: 12px; }
 }
 
 /* ---- upgradeable structures (generated rules): .lv parts are hidden unless #scene carries a
@@ -332,7 +343,7 @@ body.q-medium :is(.ow-sunrays, .ow-godrays, .ow-shadows, .ow-horizonhaze) { anim
 .bf-car .bf-wheel { transform-box: fill-box; transform-origin: center; }
 .bf-car.moving .bf-wheel { animation: bfWheel .35s linear infinite; } @keyframes bfWheel { to { transform: rotate(-360deg); } }
 .bf-car.moving svg { animation: bfBounce .18s ease-in-out infinite alternate; } @keyframes bfBounce { to { transform: translateY(-2px); } }
-.bf-car.leaving svg { transform: scaleX(-1); animation: none; } .bf-car.leaving.moving .bf-wheel { animation-direction: reverse; }
+.bf-car.leaving svg { transform: scaleX(-1); animation: none; } .bf-car.leaving.moving svg { animation: bfBounceL .18s ease-in-out infinite alternate; } @keyframes bfBounceL { from { transform: scaleX(-1); } to { transform: scaleX(-1) translateY(-2px); } } .bf-car.leaving.moving .bf-wheel { animation-direction: reverse; }
 .bf-car.wreck svg { filter: brightness(.45) saturate(.4) sepia(.3); transition: filter 1.2s; }
 .bf-smoke.dark { fill: #3a3236; opacity: .7; }
 .bf-bandit .rig { filter: drop-shadow(0 3px 2px rgba(0, 0, 0, .45)); }

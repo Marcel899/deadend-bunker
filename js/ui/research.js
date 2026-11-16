@@ -33,7 +33,7 @@ DE.UI.RTree = (function () {
     farming1: 'svg:sprout', purification: 'water', recycling: 'refresh', farming2: 'svg:sprout', purification2: 'barrel', automation: 'gear', logistics: 'chest', automation2: 'factory',
     construction: 'construction', metalwork: 'hammer', gunsmith: 'svg:gun', excavation1: 'shovel', electricity: 'power', machinery: 'wrench', construction2: 'brick', excavation2: 'pickaxe', fusion: 'radiation',
     blueprints2: 'scroll', blueprints3: 'scroll', blueprints4: 'scroll', blueprints5: 'scroll', excavation3: 'pickaxe', excavation4: 'fire',
-    medicine: 'medkit', housing: 'home', defense1: 'shield', efficiency: 'medal', defense2: 'turret', dampening: 'eyeoff', medicine2: 'hospital', offline: 'clock', housing2: 'bunker', efficiency2: 'badge',
+    medicine: 'medkit', housing: 'home', defense1: 'shield', efficiency: 'medal', defense2: 'turret', dampening: 'quiet', medicine2: 'hospital', offline: 'clock', housing2: 'bunker', efficiency2: 'badge',
   };
   const ROMAN = ['', 'I', 'II', 'III', 'IV', 'V'];
   const icon = (n) => { const k = ICON[n.id] || 'flask'; return k.startsWith('svg:') ? SVG[k.slice(4)] : img(k, 'rt-img'); };
@@ -43,7 +43,7 @@ DE.UI.RTree = (function () {
   /* ---------- what a project does ---------- */
   const pct = (v) => (v > 0 ? '+' : '') + Math.round(v * 100) + '%';
   const BI = { consumptionMult: 'refresh', unmannedBase: 'gear', storageMult: 'chest', globalMult: 'up', buildTimeMult: 'clock', buildCostMult: 'coins', maxFloor: 'shovel', powerUseMult: 'power',
-    excavationCostMult: 'pickaxe', unlockTurrets: 'turret', unlockTraps: 'spikes', fuelUseMult: 'jerrycan', noiseMult: 'eyeoff', healMult: 'medkit', housingPerLevel: 'home', wallHpMult: 'brick',
+    excavationCostMult: 'pickaxe', unlockTurrets: 'turret', unlockTraps: 'spikes', fuelUseMult: 'jerrycan', noiseMult: 'quiet', healMult: 'medkit', housingPerLevel: 'home', wallHpMult: 'brick',
     workerEff: 'wrench', guardDmgMult: 'shield', turretDmgMult: 'turret', moraleBonus: 'heart', survivorConsumptionMult: 'can', offlineCapHours: 'clock', xpMult: 'star', unlockRoom: 'scroll' };
   /** One effect as a line of text, an icon and the part of the game it touches. */
   function benefit(e) {

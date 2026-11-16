@@ -96,7 +96,7 @@ DE.UI.Battlefield = (function () {
     if (live.length) {
       // nearest zombie to the turret
       // nearest zombie in range (retarget when the old one died, broke through or walked off)
-      if (!t.target || t.target.dead || t.target.through || t.target.retreat || !live.includes(t.target)) t.target = live.filter(z => Math.abs(z.x - t.px) < 600).reduce((b, z) => (!b || Math.abs(z.x - t.px) < Math.abs(b.x - t.px) ? z : b), null);
+      if (!t.target || t.target.dead || t.target.through || t.target.retreat || !live.includes(t.target)) t.target = live.filter(z => Math.abs(z.x - t.px) < (z.bandit ? 900 : 600)).reduce((b, z) => (!b || Math.abs(z.x - t.px) < Math.abs(b.x - t.px) ? z : b), null);
       if (!t.target) { t.scan += dt; want = -6 + Math.sin(t.scan * .5) * 12; }
       else { const z = t.target; const aimY = z.y - z.h * .5; want = Math.atan2(aimY - t.py, z.x - t.px) * 180 / Math.PI; }
     } else { t.target = null; t.scan += dt; want = -6 + Math.sin(t.scan * .5) * 12; }
@@ -202,13 +202,14 @@ DE.UI.Battlefield = (function () {
     for (const id in st.guards) { const g = st.guards[id]; if (g.combat && g.x > L.wallR) f = Math.max(f, g.x + 26); }
     return f;
   }
-  function spawnHorde(s) {
-    st.zombies.forEach(z => z.el.remove()); st.zombies = []; clearCars();
-    const raid = DE.Defense.isRaid(s, s.defense.wave);
-    const all = DE.Defense.waveComposition(DE.Defense.waveHp(s), s.defense.wave, raid);
-    if (raid) return spawnRaid(s, all);
+  function spawnHorde(s, done) {
+    st.zombies.forEach(z => z.el.remove()); st.zombies = []; clearCars(); st.raid = false;
+    // done: the result of a wave that already resolved (the state has moved on to the next wave)
+    const n = done ? done.wave : s.defense.wave, raid = done ? !!done.raid : DE.Defense.isRaid(s, n), hp = done ? done.hp : DE.Defense.waveHp(s);
+    const all = DE.Defense.waveComposition(hp, n, raid);
+    const pw = done ? { total: done.dealt } : DE.Defense.defensePower(s);
+    if (raid) return spawnRaid(s, all, hp, pw);
     const comp = all.slice(0, 24);
-    const pw = DE.Defense.defensePower(s), hp = DE.Defense.waveHp(s);
     st.ratio = hp > 0 ? pw.total / hp : 1; st.kills = 0; st.resolved = false; st.result = null;
     // arrivals spread over the warning window: a steady trickle instead of one big clump
     const secs = Math.max(20, (s.defense.nextWaveAt - Date.now()) / 1000);
@@ -235,7 +236,7 @@ DE.UI.Battlefield = (function () {
    * is beaten the wrecks burn; after a breach the survivors run for the gate and the trucks leave. */
   const CAR = { buggy: { w: 124, h: 66, wheels: [[26, 52, 14], [98, 52, 14]] }, pickup: { w: 176, h: 84, wheels: [[38, 68, 16], [140, 68, 16]] }, truck: { w: 216, h: 112, wheels: [[42, 94, 18], [112, 94, 18], [176, 94, 18]] } };
   function carSvg(type) {
-    const I = '#1c1020', c = CAR[type], wheels = c.wheels.map(([x, y, r]) => `<g class="bf-wheel" style="transform-origin:${x}px ${y}px"><circle cx="${x}" cy="${y}" r="${r}" fill="#26232c" stroke="${I}" stroke-width="4"/><circle cx="${x}" cy="${y}" r="${r * .45}" fill="#8a8e98" stroke="${I}" stroke-width="2.5"/><path d="M${x - r * .45} ${y} H${x + r * .45} M${x} ${y - r * .45} V${y + r * .45}" stroke="${I}" stroke-width="2"/></g>`).join('');
+    const I = '#1c1020', c = CAR[type], wheels = c.wheels.map(([x, y, r]) => `<g class="bf-wheel"><circle cx="${x}" cy="${y}" r="${r}" fill="#26232c" stroke="${I}" stroke-width="4"/><circle cx="${x}" cy="${y}" r="${r * .45}" fill="#8a8e98" stroke="${I}" stroke-width="2.5"/><path d="M${x - r * .45} ${y} H${x + r * .45} M${x} ${y - r * .45} V${y + r * .45}" stroke="${I}" stroke-width="2"/></g>`).join('');
     let body = '';
     if (type === 'buggy') body = `<path d="M8 46 L18 30 H58 L70 18 H96 L112 34 L118 46 Z" fill="#c8662a" stroke="${I}" stroke-width="4" stroke-linejoin="round"/>
       <path d="M44 30 L54 6 H92 L100 30 M60 6 L56 30 M86 6 L88 30" fill="none" stroke="${I}" stroke-width="4" stroke-linecap="round"/><rect x="14" y="38" width="22" height="6" rx="2" fill="#7a3a1a"/>
@@ -254,31 +255,44 @@ DE.UI.Battlefield = (function () {
     return `<svg viewBox="-10 -30 ${c.w + 20} ${c.h + 30}" width="${c.w + 20}" height="${c.h + 30}" aria-hidden="true"><ellipse cx="${c.w / 2}" cy="${c.h - 2}" rx="${c.w * .52}" ry="7" fill="#000" opacity=".25"/>${body}${wheels}</svg>`;
   }
   function clearCars() { (st.cars || []).forEach(c => c.el.remove()); st.cars = []; }
-  function spawnRaid(s, all) {
+  function spawnRaid(s, all, hp, pw) {
     const comp = all.slice(0, 16), n = comp.length, W = OW().W;
-    const pw = DE.Defense.defensePower(s), hp = DE.Defense.waveHp(s);
-    st.ratio = hp > 0 ? pw.total / hp : 1; st.kills = 0; st.resolved = false; st.result = null; st.raid = true; st.demanded = false; st.retreatCalled = false;
+    st.ratio = hp > 0 ? pw.total / hp : 1; st.kills = 0; st.resolved = false; st.result = null; st.raid = true; st.demanded = false; st.retreatCalled = false; st.lootCalled = false;
     const used = [...new Set(comp.map(b => b.car))], secs = Math.max(20, (s.defense.nextWaveAt - Date.now()) / 1000);
+    // they park nose to tail along the road (never on top of each other) and roll up in the last
+    // stretch of the warning, so the shooting starts as the countdown runs out — not long before it
+    let park = 980; const first = Math.max(2, secs - 22);
     st.cars = used.map((ci, k) => {
       const v = all.cars[ci], C0 = CAR[v.id] || CAR.buggy;
       const el = unit(carSvg(v.id), 'bf-car car-' + v.id); el.style.zIndex = 30;
-      const car = { el, type: v.id, w: C0.w, h: C0.h, x: W + 80 + k * 40, stop: Math.min(W - C0.w - 30, 1000 + k * 192), speed: v.id === 'buggy' ? 300 : v.id === 'truck' ? 180 : 240,
-        delay: Math.min(secs - 12, 3 + k * Math.max(3, (secs - 16) / Math.max(1, used.length))), mode: 'wait', crew: [], gunCd: 1, smoke: 0, gun: el.querySelector('.bf-cargun'), flash: el.querySelector('.bf-carflash') };
+      const car = { el, type: v.id, w: C0.w, h: C0.h, x: W + 80 + k * 40, stop: Math.min(W - C0.w - 16, park), speed: v.id === 'buggy' ? 300 : v.id === 'truck' ? 180 : 240,
+        delay: first + k * 2.6, mode: 'wait', crew: [], gunCd: 1, smoke: 0, gun: el.querySelector('.bf-cargun'), flash: el.querySelector('.bf-carflash') };
+      park = car.stop + C0.w + 22;
       el.style.visibility = 'hidden'; placeCar(car); return car;
     });
+    const posts = [];   // posts of the ones who step out in front, so no two stand on the same spot
     comp.forEach((b, i) => {
       const car = st.cars[used.indexOf(b.car)], big = !!b.boss, h = big ? 78 : 62;
       const el = unit(DE.Chars.crew(b.prof, { anim: 'idle', h, flip: true, item: b.weapon, phase: Math.random() * 4, title: b.name }), 'bf-z bf-bandit');
       el.style.width = (h * 140 / 225) + 'px'; el.style.height = h + 'px'; el.style.visibility = 'hidden';
-      const k = car.crew.length, cover = b.id === 'marksman' || k % 3 === 2;
+      const k = car.crew.length, cover = !big && (b.id === 'marksman' || k % 3 === 2);
       const z = { el, rig: el.querySelector('.rig'), id: b.id, bandit: true, big, boss: big, h, speed: b.id === 'shotgunner' ? 90 : 70, lane: i % LANES, x: car.x, y: OW().GROUND + 2 + (i % LANES) * 3,
         hp: big ? 4 : b.id === 'shotgunner' ? 1.6 : 1.2, delay: 1e9, dead: false, through: false, retreat: false, mode: 'ride', atkCd: 1 + Math.random() * 2, groanAt: 1e9, car,
-        post: cover ? car.stop + car.w + 14 + k * 10 : car.stop - 40 - k * 34, rate: b.id === 'marksman' ? 2.6 : b.id === 'gunner' ? .9 : b.id === 'shotgunner' ? 1.6 : 1.3 };
-      // inside the defenders' reach (guards fire out to RANGE from the firing line), never on top of the wall
-      z.post = Math.min(1180, Math.max((st.front || 760) + 160, z.post)); el.style.zIndex = 31 + (i % LANES);
+        post: 0, cover, rate: b.id === 'marksman' ? 2.6 : b.id === 'gunner' ? .9 : b.id === 'shotgunner' ? 1.6 : 1.3 };
+      if (cover) {
+        // in cover: behind their own vehicle, firing over the bonnet or the bed (drawn behind it)
+        const c2 = car.crew.filter(q => q.cover).length; z.post = car.stop + car.w * (c2 % 2 ? .3 : .74) + Math.floor(c2 / 2) * 16; z.y = OW().GROUND - 2; el.style.zIndex = 29;
+      } else {
+        // out in front: the first free spot left of their vehicle, never closer than a stone's throw to the wall
+        let x = car.stop - 34; const lo = (st.front || 760) + 150;
+        while (posts.some(q => Math.abs(q - x) < 30) && x - 30 >= lo) x -= 30;
+        if (posts.some(q => Math.abs(q - x) < 30)) { x = car.stop + 20 + (k % 4) * 30; z.y += 3; }   // no room left: beside the wheels
+        z.post = Math.max(lo, x); posts.push(z.post); el.style.zIndex = 31 + (i % LANES);
+      }
       car.crew.push(z); place(z); st.zombies.push(z);
     });
-    st.spawned = n; st.killBudget = Math.round(n * Math.min(1, st.ratio) * .9);
+    // before the countdown ends it is a stand-off: only a few fall; the rest is decided by the fight
+    st.spawned = n; st.killBudget = Math.round(n * Math.min(1, st.ratio) * .35);
     DE.UI.toast('<b>Bandits on the road!</b> ' + st.cars.length + ' vehicle' + (st.cars.length > 1 ? 's' : '') + ' coming for the bunker', 'err', 5000, 'truck', { key: 'raid' });
   }
   /* ---------- the raiders talk ---------- */
@@ -322,10 +336,14 @@ DE.UI.Battlefield = (function () {
       }
       if (c.mode === 'park') {
         // the mounted gun keeps firing while its crew is alive
-        const crewUp = c.crew.some(z => !z.dead && !z.through);
+        const crewUp = c.crew.some(z => !z.dead && !z.through && !z.board);
         if (c.gun && crewUp && (st.incoming || st.fighting)) { c.gunCd -= dt; if (c.gunCd <= 0) { c.gunCd = .14; c.burst = (c.burst || 0) + 1; if (c.burst > 5) { c.burst = 0; c.gunCd = 1.6 + Math.random(); }
-          const tx = target(c.x); tracer(c.x + 86 - 10, OW().GROUND + 14 - c.h + 14 - 2, tx[0], tx[1], true); DE.Audio.sfxAt('heavy', sx(c.x), 70); c.flash.setAttribute('opacity', '1'); setTimeout(() => c.flash.setAttribute('opacity', '0'), 50); } }
-        if (!crewUp && !c.wreck && c.crew.every(z => z.dead)) { c.wreck = true; c.el.classList.add('wreck'); if (c.type !== 'buggy' || Math.random() < .5) explodeCar(c); }
+          const tx = target(c.x); tracer(c.x + 86, OW().GROUND + 30 - c.h, tx[0], tx[1], true); DE.Audio.sfxAt('heavy', sx(c.x), 70); c.flash.setAttribute('opacity', '1'); setTimeout(() => c.flash.setAttribute('opacity', '0'), 50); } }
+        if (!c.wreck && c.crew.every(z => z.dead)) {
+          // somebody made it back aboard (or out with the loot): it drives off; nobody left: it burns
+          if (c.crew.some(z => z.away)) { c.mode = 'leave'; c.v = 0; c.el.classList.add('moving', 'leaving'); DE.Audio.sfxAt('engine', sx(c.x), 300); }
+          else { c.wreck = true; c.el.classList.add('wreck'); if (c.type !== 'buggy' || Math.random() < .5) explodeCar(c); }
+        }
       }
       if (c.wreck) { c.smoke -= dt; if (c.smoke <= 0) { c.smoke = .35 + Math.random() * .3; puff(c.x + c.w * (.3 + Math.random() * .4), OW().GROUND - c.h * .7, 10 + Math.random() * 8, 'bf-smoke big dark'); } }
     });
@@ -349,6 +367,22 @@ DE.UI.Battlefield = (function () {
     const age = st.fighting ? (performance.now() - st.fightStart) / 1000 : 0;
     st.zombies.forEach(z => {
       if (!z.bandit || z.dead || z.delay > 0 || z.through || z.mode === 'ride') return;
+      // back to the vehicle: climb aboard and be gone
+      if (z.board) {
+        const bx = z.car.x + z.car.w * .5, d = Math.sign(bx - z.x);
+        if (z.car.wreck || z.car.gone) { z.board = z.retreat = false; kill(z); return; }
+        z.x += d * z.speed * 1.3 * dt; face(z.rig, d < 0); if (z.mode !== 'flee') { z.mode = 'flee'; anim(z.rig, 'run'); DE.UI.Anim.speed(z.rig, z.speed * 1.3); } place(z);
+        if (Math.sign(bx - z.x) !== d || Math.abs(bx - z.x) < 4) { z.dead = true; z.away = true; z.el.remove(); }
+        return;
+      }
+      const res = st.resolved && st.result;
+      // beaten: the last ones standing run for a vehicle that still drives
+      if (res && !res.breach && age > 4 && !z.boss && z.car.mode === 'park' && !z.car.wreck) {
+        const up = st.zombies.filter(q => q.bandit && !q.dead && !q.board).length;
+        if (up <= Math.max(1, Math.round(st.spawned * .25))) { if (!st.retreatCalled) { st.retreatCalled = true; shout(z, line('lose'), 'bandit', 170); } z.board = z.retreat = true; return; }
+      }
+      // after a breach the rest cover the looters, then mount up with what they took
+      if (res && res.breach && !z.survivor && age > 9) { z.board = z.retreat = true; return; }
       // after a breach the survivors rush the gate
       if (st.resolved && st.result && st.result.breach && z.survivor && age > 5) { if (!st.lootCalled) { st.lootCalled = true; shout(z, line('win'), 'bandit', 170); } z.through = true; anim(z.rig, 'run'); face(z.rig, true); DE.UI.Anim.speed(z.rig, z.speed * 1.6); return; }
       if (Math.abs(z.x - z.post) > 2) { const d = Math.sign(z.post - z.x); z.x += d * z.speed * dt; if (Math.sign(z.post - z.x) !== d) z.x = z.post; if (z._v !== z.speed) { z._v = z.speed; DE.UI.Anim.speed(z.rig, z.speed); } face(z.rig, d < 0); if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, 'run'); } place(z); return; }
@@ -374,7 +408,7 @@ DE.UI.Battlefield = (function () {
     z.hp -= .38 * k;
     const protectedNow = (!st.resolved && st.kills >= st.killBudget) || (st.resolved && z.survivor);
     if (protectedNow) z.hp = Math.max(.12, z.hp);
-    z.x += heavy ? 7 : 4; place(z);
+    if (!z.bandit) { z.x += heavy ? 7 : 4; place(z); }
     z.el.classList.remove('pinged'); void z.el.offsetWidth; z.el.classList.add('pinged');
     blood(z.x, z.y - z.h * (.45 + Math.random() * .25), heavy ? 6 : 4, z.toxic);
     DE.Audio.sfxAt('splat', sx(z.x));
@@ -451,8 +485,8 @@ DE.UI.Battlefield = (function () {
       if (z.bandit && z.delay > 0) return;
       if (z.delay > 0) { z.delay -= dt; if (z.delay <= 0) z.el.style.visibility = ''; return; }
       if (!z.bandit && (z.groanAt -= dt) <= 0) { z.groanAt = 5 + Math.random() * 9; if (z.x < OW().W) DE.Audio.sfxAt(z.big ? 'groanbig' : 'groan', sx(z.x), 700); }
-      if (z.through) { z.x -= z.speed * 1.6 * dt; place(z); if (z.x < OW().LAYOUT.doorX + 30) { z.dead = true; z.el.classList.add('gone'); setTimeout(() => z.el.remove(), 600); } }
-      else if (z.retreat) { z.x += z.speed * dt; face(z.rig, false); if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, 'walk'); } place(z); if (z.x > OW().W + 30) { z.dead = true; z.el.remove(); } }
+      if (z.through) { z.x -= z.speed * 1.6 * dt; place(z); if (z.x < OW().LAYOUT.doorX + 30) { z.dead = true; z.away = true; z.el.classList.add('gone'); setTimeout(() => z.el.remove(), 600); } }
+      else if (z.retreat && !z.board) { z.x += z.speed * dt; face(z.rig, false); if (z.mode !== 'walk') { z.mode = 'walk'; anim(z.rig, 'walk'); } place(z); if (z.x > OW().W + 30) { z.dead = true; z.el.remove(); } }
     });
   }
   function guardAt(x) { for (const id in st.guards) { const g = st.guards[id]; if (g.combat && Math.abs(g.x - x) < 30) return g; } return null; }
@@ -489,7 +523,7 @@ DE.UI.Battlefield = (function () {
       if (Math.abs(u.x - post) > 2) { const d = Math.sign(post - u.x); DE.UI.Anim.speed(u.rig, u.hold ? 30 : 70); u.x += d * (u.hold ? 30 : 70) * dt; if (Math.sign(post - u.x) !== d) u.x = post; face(u.rig, d < 0 && !u.hold); anim(u.rig, u.hold ? 'shoot' : 'run'); }
       else {
         face(u.rig, false); u.cd -= dt;
-        const z = live.filter(q => q.x - u.x < RANGE && q.x > u.x).reduce((b, q) => (!b || q.x < b.x ? q : b), null);
+        const z = live.filter(q => q.x - u.x < (q.bandit ? 760 : RANGE) && q.x > u.x).reduce((b, q) => (!b || q.x < b.x ? q : b), null);
         if (!z) anim(u.rig, 'guard');
         else if (u.cd <= 0) {
           u.cd = .45 + Math.random() * .45; anim(u.rig, 'shoot'); DE.Audio.sfxAt('shot', sx(u.x));
@@ -573,13 +607,13 @@ DE.UI.Battlefield = (function () {
     if (!ensure()) return;
     const s = DE.UI.state();
     // a horde only appears here if none was spawned for this wave (e.g. the page was opened mid-wave)
-    if (st.hordeWave !== result.wave && s) { spawnHorde(s); st.zombies.forEach((z, i) => { z.delay = i * .35; z.x = 1250 + Math.random() * 300; }); }
+    if (st.hordeWave !== result.wave && s) { st.wave = st.hordeWave = result.wave; spawnHorde(s, result); st.zombies.forEach((z, i) => { if (z.bandit) return; z.delay = i * .35; z.x = 1250 + Math.random() * 300; }); }
     st.resolved = true; st.result = result; st.fighting = true; st.fightStart = performance.now();
     // anyone still waiting off-screen comes in quickly now
     st.zombies.forEach(z => { if (!z.bandit && z.delay > 3) z.delay = 1 + Math.random() * 2; });
     (st.cars || []).forEach((c, k) => { if (c.mode === 'wait') c.delay = Math.min(c.delay, .4 + k * 1.2); });
     if (result.breach) { const live = st.zombies.filter(z => !z.dead); live.forEach((z, i) => { if (i % 5 < 2) z.survivor = true; }); }
-    if (!running) { st.zombies.forEach(z => z.survivor ? (z.el.remove(), z.dead = true) : kill(z)); endFight(); }
+    if (!running) { st.zombies.forEach(z => z.survivor ? (z.el.remove(), z.dead = true) : kill(z)); endFight(); if (result.breach) clearCars(); else (st.cars || []).forEach(c => { c.wreck = true; c.el.classList.add('wreck'); c.el.style.visibility = ''; }); }
   }
   /** The fight ends when the field is clear. Zombies never turn back: whatever the guards and turrets
    * leave standing at the wall is finished off by the crew from the wall top, one at a time
@@ -594,7 +628,7 @@ DE.UI.Battlefield = (function () {
       const z = live.filter(z => !(st.result && st.result.breach && z.survivor) && z.delay <= 0 && (z.x < (st.front || 700) + 140 || age > 26)).sort((a, b) => a.x - b.x)[0];
       if (z) { wallShot(z); st.wallShotAt = now + (age > 26 ? 120 : 420 + Math.random() * 300); }
     }
-    if (age > 34) { live.forEach(z => { if (!(st.result && st.result.breach && z.survivor)) kill(z); }); endFight(); }
+    if (age > 34) { live.forEach(z => { if (!(st.result && st.result.breach && z.survivor)) kill(z); else if (z.bandit) { z.dead = true; z.away = true; z.el.remove(); } }); endFight(); }
   }
   /** A survivor on the wall top fires down at a zombie. */
   function wallShot(z) {
@@ -608,11 +642,11 @@ DE.UI.Battlefield = (function () {
     const breach = st.result && st.result.breach;
     if (st.fighting && st.result && DE.UI.Bunker.waveBanner) DE.UI.Bunker.waveBanner(st.result);
     st.fighting = false; st.resolved = false; st.wallShotAt = 0;
-    // raid over: the wrecks burn for a while; after a breach the trucks drive off with the loot
-    (st.cars || []).forEach(c => { if (breach && !c.wreck) { c.mode = 'leave'; c.v = 0; c.el.classList.add('moving'); face(c.el, false); c.el.classList.add('leaving'); DE.Audio.sfxAt('engine', sx(c.x), 300); } else if (!c.wreck) { c.wreck = true; c.el.classList.add('wreck'); } });
-    st.carsClearAt = Date.now() + 14000; st.raid = false; st.lootCalled = false;
+    // raid over: the wrecks burn for a while; vehicles with a crew left wait for it and drive off (stepCars)
+    (st.cars || []).forEach(c => { if (c.mode === 'wait' || c.mode === 'drive') { c.el.remove(); c.gone = true; } });
+    st.carsClearAt = Date.now() + 16000; st.raid = false; st.lootCalled = false;
     // anything still out there (stragglers that never reached the wall) falls where it stands
-    st.zombies.forEach(z => { if (!z.dead && !z.through && !z.retreat) kill(z); });
+    st.zombies.forEach(z => { if (z.dead || z.through || z.retreat) return; if (z.mode === 'ride') { z.dead = true; z.el.remove(); } else kill(z); });
     st.wave = -1;
   }
   function status() { return { cars: (st.cars || []).map(c => c.type + ':' + c.mode + ':' + Math.round(c.x)), bandits: st.zombies.filter(z => z.bandit && !z.dead).length, zombies: st.zombies.filter(z => !z.dead).length, turrets: st.turrets.map(t => ({ x: t.px, y: t.py, a: +t.a.toFixed(1), target: t.target ? t.target.x : null })), launcher: st.launcher ? { a: st.launcher.a, cd: st.launcher.cd } : null, missiles: st.missiles.length, guards: Object.values(st.guards).map(g => ({ x: +g.x.toFixed(1), y: g.y })), fighting: st.fighting, incoming: st.incoming, front: st.front, kills: st.kills, budget: st.killBudget, zs: st.zombies.filter(z => !z.dead).map(z => ({ id: z.id, x: Math.round(z.x), lane: z.lane, mode: z.mode, d: +z.delay.toFixed(1), t: z.through, r: z.retreat })) }; }

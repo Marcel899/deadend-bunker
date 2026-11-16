@@ -169,7 +169,10 @@ DE.UI.Drawers = (function () {
    <div class="rc-card"><div class="rc-radio"><span class="rv-signal"><i></i><i></i><i></i></span>${DE.Icons.img('signal', 'rc-ico')}</div>
      <div class="rc-text"><b>Recruit a survivor</b><small>Someone out there is always listening. Who answers is up to fate.</small>
        <div class="rc-odds">${odds.map(r => `<span style="--c:${r.color}"><i></i>${r.name} ${Math.round(100 * r.weight / tw)}%</span>`).join('')}</div></div>
-     <div class="rc-go"><button class="btn primary ${can.ok ? '' : 'cant'}" data-action="recruit" ${can.ok ? '' : 'disabled'}>${DE.Icons.img('signal', 'ico-btn')} Call on the radio <span class="cost">${U().costText(cost)}</span></button>${can.ok ? '' : `<small class="neg">${esc(can.reason)}</small>`}</div></div>
+     <div class="rc-go"><button class="btn primary ${can.ok ? '' : 'cant'}" data-action="recruit" ${can.ok ? '' : 'disabled'}>${DE.Icons.img('signal', 'ico-btn')} Call on the radio <span class="cost">${U().costText(cost)}</span></button>
+       ${(() => { const p5 = DE.Survivors.recruitPlan(s, 5), pm = DE.Survivors.recruitPlan(s, 99); if (pm.n < 2) return ''; const b = (pl, n, label) => `<button class="btn small" data-action="recruitMany" data-n="${n}" title="Call ${pl.n} survivors at once">${label} <span class="cost">${U().costText(pl.cost)}</span></button>`;
+         return `<div class="rc-multi">${p5.n >= 2 && p5.n < pm.n ? b(p5, 5, 'Call ×' + p5.n) : ''}${b(pm, 'max', pm.n >= pm.free ? 'Fill all ' + pm.n + ' beds' : 'Call ×' + pm.n)}</div>`; })()}
+       ${can.ok ? '' : `<small class="neg">${esc(can.reason)}</small>`}</div></div>
    <div class="sv-sum">
      <div><small>Housing</small><b class="${pop >= capH ? 'warn' : ''}">${pop}/${capH}</b></div>
      <div><small>Morale</small><b class="${s.morale >= 50 ? 'pos' : s.morale >= 30 ? 'warn' : 'neg'}">${Math.round(s.morale)}</b></div>

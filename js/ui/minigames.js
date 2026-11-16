@@ -398,87 +398,146 @@ DE.UI.MG = (function () {
     });
   }
 
-  /* ================= FORGE ================= */
+  /* ================= FORGE =================
+   * One Blacksmith screen: the furnace and anvil on the left, the work in the middle (materials →
+   * item, the bar, the hammer button) and the blueprints on the right. Pick a blueprint, press the
+   * hammer: the three steps of the minigame (heat, hammer, quench) all play on that one bar. */
+  let forgeSel = null;
   function forgeMenu() {
     const s = S(); if (!s) return;
-    const lvl = DE.Gear.forgeLevel(s); const g = DE.Gear.ensure(s);
-    preload(['furnace', 'anvil_base', 'hammer', 'barrels', 'pillar', 'plank', 'arrow', 'btn_hammer'].concat(USES.common));
-    const body = shell('Blacksmith Forge', DE.Icons.room('forge', 'mg-room'), lvl ? `Forge level ${lvl} · ${g.items.length} item${g.items.length === 1 ? '' : 's'} in stock · ${g.ammo} rounds` : 'Build a Blacksmith Forge');
+    const lvl = DE.Gear.forgeLevel(s), g = DE.Gear.ensure(s), recipes = DE.Gear.recipes();
+    preload(['furnace', 'anvil_base', 'anvil', 'hammer', 'pillar', 'arrow', 'btn_hammer', 'slot', 'lock'].concat(USES.common));
+    const body = shell('Blacksmith', DE.Icons.room('forge', 'mg-room'), lvl ? `Forge level ${lvl} · ${g.items.length} item${g.items.length === 1 ? '' : 's'} in stock · ${g.ammo} rounds` : 'Build a Blacksmith Forge');
+    root.querySelector('.mg-panel').classList.add('bs');
+    const can = (id) => DE.Gear.canCraft(S(), id);
+    if (!recipes.some(r => r.id === forgeSel)) forgeSel = (recipes.find(r => can(r.id).ok) || recipes.find(r => !can(r.id).locked) || recipes[0]).id;
     const stat = (r) => r.kind === 'weapon' ? `×${r.dmg.toFixed(2)} damage · ${r.dur} waves${r.ammo ? ' · ' + r.ammo + ' rnd/wave' : ' · no ammo'}` : r.kind === 'armor' ? `stops ${Math.round(r.guard * 100)}% of injuries & bites · ${r.dur} hits` : `${r.amount} rounds (more if well made)`;
-    body.innerHTML = `<div class="fg-list">${DE.Gear.recipes().map(r => { const c = DE.Gear.canCraft(s, r.id);
-      return `<div class="fg-card ${c.ok ? '' : c.locked ? 'locked' : 'cant'}"><div class="fg-ico">${itemIcon(r)}</div><div class="fg-info"><b>${esc(r.name)}</b><small>${esc(stat(r))}</small><small class="muted">${esc(r.desc)}</small>
-        <span class="fg-cost">${DE.Util.costText(r.cost)}${r.mat ? DE.Icons.rare(r.mat, s.materials) : ''}</span>${c.ok ? '' : `<span class="fg-why">${ic(c.locked ? 'lock' : 'alert')} ${esc(c.reason)}</span>`}</div>
-        <button class="btn ${c.ok ? 'primary' : 'cant'} fg-go" data-id="${r.id}" type="button" ${c.ok ? '' : 'disabled'}>Forge</button></div>`; }).join('')}</div>
-      <p class="muted center">Forged gear goes to the Armory; guards carry it into fights. ${DE.Bunker && Object.values(s.rooms).some(r => r.type === 'armory' && r.level > 0) ? '' : 'Build an Armory to hand it out.'}</p>`;
-    body.querySelectorAll('.fg-go').forEach(b => b.addEventListener('click', () => { snd('click'); forge(body, b.dataset.id); }));
+    body.innerHTML = `<div class="bs-wrap">
+      <div class="bs-left fg-scene">${SP('pillar', 'fg-pil')}<div class="fg-furnace">${SP('furnace')}<i class="fg-fire"></i></div><div class="fg-anvil">${SP('anvil_base', 'fg-anv')}<i class="fg-bar"></i>${SP('hammer', 'fg-hammer')}<span class="fg-sparks"></span></div></div>
+      <div class="bs-mid"><div class="bs-step"></div>
+        <div class="bs-slots"><span class="fg-slot in"></span>${SP('arrow', 'fg-arr')}<span class="fg-slot out"></span></div>
+        <div class="bs-info"></div>
+        <div class="bs-bar">${SP('anvil', 'bs-anv')}<div class="bs-track"></div></div>
+        <button class="bs-go" type="button"><span class="bs-btn">${SP('hammer')}</span><small></small></button><div class="fg-blows"></div></div>
+      <div class="bs-right">${recipes.map(r => `<button class="bs-bp" data-id="${r.id}" type="button" title="${esc(r.name)}">${itemIcon(r)}<small>${esc(r.name)}</small>${SP('lock', 'bs-lock')}</button>`).join('')}</div></div>`;
+    const q = (c) => body.querySelector(c), wrap = q('.bs-wrap'), step = q('.bs-step'), info = q('.bs-info'), track = q('.bs-track'), go = q('.bs-go'), label = go.querySelector('small'), blows = q('.fg-blows');
+    const bar = q('.fg-bar'), fire = q('.fg-fire'), hammer = q('.fg-hammer'), sparks = q('.fg-sparks');
+    const fxAt = () => (bar.offsetParent ? bar : track);
+    const scene = q('.bs-left'), anvil = q('.fg-anvil'), slot = q('.fg-slot.out');
+    const kick = (el, cls) => { el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); };
+    const buzz = (ms) => { try { if (navigator.vibrate && (!DE.UI.Settings || DE.UI.Settings.screenFx())) navigator.vibrate(ms); } catch (e) { /* no haptics */ } };
+    /** A ring that bursts out of a spot (the blow landing, the steel hitting the water). */
+    const ring = (el, color) => { const L = fxLayer(); if (!L || document.body.classList.contains('no-anim')) return; const [x, y] = at(el), d = document.createElement('i'); d.className = 'bs-ring'; d.style.cssText = `left:${x.toFixed(0)}px;top:${y.toFixed(0)}px;border-color:${color}`; L.appendChild(d); setTimeout(() => d.remove(), 500); };
+    /** How much of the piece has taken shape (0..1): it grows out of the glowing blank in the slot. */
+    const form = (p) => slot.style.setProperty('--p', Math.max(0, Math.min(1, p)).toFixed(3));   // on a phone the furnace is hidden: effects come from the bar
+    const pips = (n) => `<span class="bs-pips">${['Heat', 'Hammer', 'Quench'].map((t, i) => `<i class="${i + 1 === n ? 'on' : i + 1 < n ? 'done' : ''}">${i + 1 < n ? '✓ ' : ''}${t}</i>`).join('')}</span>`;
+    const press = (cb) => on(document, 'keydown', (e) => { if (e.key !== ' ' && e.key !== 'Enter') return; e.preventDefault(); if (!e.repeat) cb(e); });
+
+    /* ---------- pick a blueprint ---------- */
+    const paint = () => {
+      const r = DE.Gear.recipe(forgeSel), c = can(forgeSel), mg = DE.Minigames, nx = mg.xpToNext(S(), 'forge'), L = mg.level(S(), 'forge');
+      body.querySelectorAll('.bs-bp').forEach(b => { const cc = can(b.dataset.id); b.className = 'bs-bp' + (b.dataset.id === forgeSel ? ' sel' : '') + (cc.ok ? '' : cc.locked ? ' locked' : ' cant'); });
+      q('.fg-slot.in').innerHTML = DE.Icons.res(Object.keys(r.cost)[0] || 'scrap', 'fg-mat'); slot.innerHTML = itemIcon(r) + `<span class="bs-form">${itemIcon(r)}</span>`; slot.className = 'fg-slot out'; form(0);
+      step.innerHTML = `<b>${esc(r.name)}</b><span>${esc(r.desc)}</span>`;
+      info.innerHTML = `<small>${esc(stat(r))}</small><span class="fg-cost">${DE.Util.costText(r.cost)}${r.mat ? DE.Icons.rare(r.mat, S().materials) : ''}</span>${c.ok ? '' : `<span class="fg-why">${ic(c.locked ? 'lock' : 'alert')} ${esc(c.reason)}</span>`}`;
+      track.className = 'bs-track idle'; track.innerHTML = `<i class="bs-bg"><i class="bs-fill" style="width:${nx ? Math.round(100 * nx.have / nx.need) : 100}%"></i></i><em>Mastery ${L}${nx ? ' · ' + nx.have + '/' + nx.need + ' XP' : ' — max'}</em>`;
+      go.classList.toggle('cant', !c.ok); label.textContent = c.ok ? 'Forge · Space' : c.reason;
+    };
+    const idle = () => {
+      body.querySelectorAll('.bs-bp').forEach(b => on(b, 'click', () => { snd('click'); note(660, .08, 'triangle', .04, 990); forgeSel = b.dataset.id; paint(); kick(b, 'pick'); kick(slot, 'swap'); }));
+      const start = () => { const c = can(forgeSel); if (!c.ok) { DE.UI.toast(c.reason, 'err'); go.classList.remove('nope'); void go.offsetWidth; go.classList.add('nope'); return; } snd('clank', 0); note(220, .25, 'sawtooth', .04, 440); kick(go, 'hit'); buzz(15); stopGame(); forge(forgeSel); };
+      on(go, 'click', start); press(start); paint();
+    };
+
+    /* ---------- the minigame ---------- */
+    function forge(id) {
+      const r = DE.Gear.recipe(id), room = DE.Minigames.bestRoom(S(), 'forge'), skill = DE.Minigames.skill(S(), 'forge', room), tier = r.tier || 1;
+      const score = { heat: 0, hammer: 0, quench: 0 }, chal = CHAL.forge(); let perfect = 0;
+      wrap.classList.add('busy'); go.classList.remove('cant'); slot.classList.add('hot'); let combo = 0, best = 0;
+      info.innerHTML = `<span class="mg-hchal">${ic('trophy')} ${esc(chal.text)}</span>`;
+      const say = (n, title, text) => { step.innerHTML = `${pips(n)}<b>${n} · ${title}</b><span>${text}</span>`; };
+      const gauge = (cls) => { track.className = 'bs-track ' + cls; track.innerHTML = '<i class="bs-bg"></i><i class="bs-zone"></i><b class="bs-needle"></b><u class="bs-time"></u>'; return [track.querySelector('.bs-zone'), track.querySelector('.bs-needle'), track.querySelector('.bs-time')]; };
+      // 1 · heat: hold the bellows to keep the metal in the glowing band
+      const heat = () => {
+        say(1, 'Heat', 'Hold the button to pump the bellows — keep the needle inside the green band');
+        const [band, temp, time] = gauge('heat'); label.textContent = 'Hold: bellows · Space';
+        let blowing = false, v = .15, inBand = 0, t = 0, ember = 0, tick = 0; const dur = 5, bw = (.2 - .025 * tier) * (1 + skill);
+        const puff = () => { if (blowing) return; blowing = true; go.classList.add('on'); scene.classList.add('blow'); note(70, .35, 'sawtooth', .05, 190); burst(fire.offsetParent ? fire : track, { n: 10, colors: ['#ffb02a', '#ff6a2a', '#fff4a8'], speed: 90, size: 5, up: true }); buzz(8); };
+        const down = (e) => { e.preventDefault(); puff(); }, up = () => { blowing = false; go.classList.remove('on'); scene.classList.remove('blow'); };
+        on(go, 'pointerdown', down); on(go, 'pointerup', up); on(go, 'pointerleave', up); on(go, 'pointercancel', up);
+        on(document, 'keydown', (e) => { if (e.key === ' ') { e.preventDefault(); puff(); } }); on(document, 'keyup', (e) => { if (e.key === ' ') up(); });
+        loop((dt) => { t += dt; const center = .62 + .16 * Math.sin(t * (.9 + .25 * tier)); band.style.left = ((center - bw / 2) * 100) + '%'; band.style.width = (bw * 100) + '%';
+          v += (blowing ? 1.15 : -.75) * dt * .55; v = Math.max(0, Math.min(1, v)); temp.style.left = (v * 100) + '%';
+          const ok = Math.abs(v - center) < bw / 2; if (ok) inBand += dt; temp.classList.toggle('ok', ok); band.classList.toggle('ok', ok); time.style.width = (100 * (1 - t / dur)) + '%';
+          bar.style.setProperty('--glow', v.toFixed(2)); fire.style.setProperty('--fire', (.4 + .6 * (blowing ? 1 : .3)).toFixed(2));
+          if (blowing && Math.random() < dt * 8) note(90 + Math.random() * 30, .12, 'sawtooth', .02);
+          // embers rise with the heat; while the needle sits in the band the steel "sings" — a rising tick
+          track.classList.toggle('glow', ok); form(.18 * Math.min(1, inBand / dur / .85));
+          if ((ember -= dt) <= 0) { ember = .22 - .14 * v; if (fire.offsetParent) burst(fire, { n: 1 + Math.round(v * 2), colors: ['#ffb02a', '#ff6a2a', '#ffe08a'], speed: 50 + 60 * v, size: 4, up: true }); }
+          if (ok && (tick -= dt) <= 0) { tick = .16; note(520 + 520 * (inBand / dur), .05, 'sine', .03); }
+          if (t >= dur) { score.heat = Math.min(1, inBand / dur / .85); go.classList.remove('on'); scene.classList.remove('blow'); track.classList.remove('glow');
+            popAt(track, score.heat > .8 ? 'White hot! ' + Math.round(score.heat * 100) + '%' : 'Heat ' + Math.round(score.heat * 100) + '%', score.heat > .8 ? 'gold big' : 'g'); if (score.heat > .8) { flashScr('rgba(255, 190, 80, .35)'); note(880, .25, 'triangle', .06, 1320); }
+            stopGame(); later(hammerPhase, 450); return false; } });
+      };
+      // 2 · hammer: strike when the marker crosses the sweet spot; it narrows and speeds up
+      const hammerPhase = () => {
+        const strikes = 3 + tier; let n = 0, sum = 0, x = 0, dir = 1, freeze = 0;
+        say(2, 'Hammer', `Strike when the needle crosses the green — ${strikes} blows`);
+        const [sweet, mark] = gauge('hammer'); label.textContent = 'Strike · Space'; blows.innerHTML = '';
+        const width = () => Math.max(.06, (.26 - .03 * tier - .02 * n) * (1 + skill));
+        const strike = (e) => { if (e && e.preventDefault) e.preventDefault(); if (n >= strikes || freeze > 0) return; const w = width(), acc = Math.max(0, 1 - Math.abs(x - .5) / (w / 2) * .5 - Math.max(0, Math.abs(x - .5) - w / 2) * 3); sum += Math.min(1, acc); n++;
+          const great = acc > .8, good = acc > .5; if (great) perfect++; combo = good ? combo + 1 : 0; best = Math.max(best, combo);
+          // the blow lands: the needle sticks for a beat (hit-stop), the anvil takes it, sparks fly, the ring of the steel climbs with the streak
+          freeze = great ? .16 : good ? .1 : .05; const semi = Math.min(12, (combo - 1) * 2), pitch = Math.pow(2, semi / 12);
+          kick(hammer, 'hit'); kick(go, 'hit'); kick(anvil, 'slam'); kick(bar, 'struck'); kick(track.querySelector('.bs-needle'), 'stuck'); sweet.classList.remove('flash', 'miss'); void sweet.offsetWidth; sweet.classList.add(good ? 'flash' : 'miss');
+          snd('clank', 0); if (good) { note((great ? 1320 : 990) * pitch, .22, 'triangle', .08); if (great) note(1980 * pitch, .3, 'sine', .04); } else note(140, .18, 'square', .05, 90);
+          buzz(great ? [0, 35] : good ? 18 : 8); sparks.classList.remove('go'); void sparks.offsetWidth; sparks.classList.add('go');
+          burst(fxAt(), { n: great ? 34 : good ? 16 : 5, colors: great ? ['#ffffff', '#fff4a8', '#ffd34a', '#ff9a2a'] : GOLD, speed: great ? 170 : 90, size: great ? 6 : 5, up: true, fall: good });
+          if (good) ring(fxAt(), great ? '#fff4a8' : '#ffb02a');
+          if (great) { popAt(fxAt(), combo > 1 ? 'PERFECT! ×' + combo : 'PERFECT!', 'gold big'); shake(combo > 2 ? 2 : 1); flashScr('rgba(255, 220, 120, .22)'); } else if (good) { popAt(fxAt(), combo > 1 ? 'Good ×' + combo : 'Good', 'g'); shake(1); } else popAt(fxAt(), 'Clunk…', 'r');
+          bar.style.setProperty('--shape', (n / strikes).toFixed(2)); form(.18 + .72 * (sum / strikes)); kick(slot, 'thump');
+          blows.innerHTML += `<i class="${great ? 'great' : good ? 'ok' : 'meh'}">${great ? 'Perfect' : good ? 'Good' : 'Off'}</i>`;
+          if (n >= strikes) { score.hammer = sum / strikes; if (best >= strikes) { later(() => { popAt(track, 'FLAWLESS!', 'gold big'); burst(track, { n: 30, colors: CONFETTI, speed: 150, size: 8, fall: true, shape: 'conf' }); note(1568, .4, 'triangle', .07, 2093); }, 250); } later(() => { stopGame(); quench(); }, 700); } };
+        on(go, 'pointerdown', strike); press(strike);
+        loop((dt) => { if (freeze > 0) { freeze -= dt; return; } const sp = (.7 + .12 * tier + .08 * n) * (1 - skill * .4); x += dir * sp * dt; if (x > 1) { x = 1; dir = -1; } if (x < 0) { x = 0; dir = 1; } mark.style.left = (x * 100) + '%'; const w = width(); sweet.style.left = ((.5 - w / 2) * 100) + '%'; sweet.style.width = (w * 100) + '%'; mark.classList.toggle('ok', Math.abs(x - .5) < w / 2); });
+      };
+      // 3 · quench: dip it when the steel shows cherry red
+      const quench = () => {
+        say(3, 'Quench', 'The steel is cooling — dip it when the needle is inside the white frame (cherry red)');
+        const [cherry, now] = gauge('quench'); label.textContent = 'Quench · Space';
+        let k = 0, done = false; const span = (.14 - .02 * tier) * (1 + skill), center = rnd(.45, .65);
+        cherry.style.cssText = `left:${(center - span / 2) * 100}%;width:${span * 100}%`;
+        const dip = (e) => { if (e && e.preventDefault) e.preventDefault(); if (done) return; done = true; const steam = (n) => burst(fxAt(), { n, colors: ['#ffffff', '#e8eef4', '#c8d4e0'], speed: 90, size: 14, up: true, shape: 'steam' }); steam(26); later(() => steam(18), 140); later(() => steam(12), 300);
+          kick(go, 'hit'); ring(fxAt(), '#d8f0ff'); flashScr('rgba(200, 235, 255, .3)'); shake(1); buzz(40); slot.classList.remove('hot'); slot.classList.add('cool'); form(1); note(3200, .7, 'sawtooth', .015, 500); score.quench = Math.max(0, 1 - Math.abs(k - center) / (span / 2) * .5 - Math.max(0, Math.abs(k - center) - span / 2) * 4);
+          popAt(track, score.quench > .75 ? 'Cherry red!' : score.quench > .3 ? 'Close' : k < center ? 'Too hot' : 'Too cold', score.quench > .75 ? 'gold big' : score.quench > .3 ? 'g' : 'r'); if (score.quench > .75) later(() => note(1760, .3, 'triangle', .06, 2637), 120); snd('splat'); note(2400, .5, 'sine', .02, 300); bar.classList.add('quenched'); later(() => { stopGame(); doneForge(); }, 600); };
+        on(go, 'pointerdown', dip); press(dip);
+        loop((dt) => { if (done) return false; k += dt * (.28 + .05 * tier); now.style.left = (Math.min(1, k) * 100) + '%'; now.classList.toggle('ok', Math.abs(k - center) < span / 2); bar.style.setProperty('--glow', (1 - k).toFixed(2)); if (k >= 1.05) dip(); });
+      };
+      const doneForge = () => {
+        const met = chal.id === 'perfect' ? perfect >= 2 : chal.id === 'cherry' ? score.quench >= .75 : score.heat >= .9;
+        const sc = Math.max(0, Math.min(1, .3 * score.heat + .5 * score.hammer + .2 * score.quench + (met ? .08 : 0)));
+        const res = DE.Gear.craft(S(), id, sc); if (!res.ok) { DE.UI.toast(res.reason, 'err'); return close(); }
+        const mg = DE.Minigames.ensure(S()), prevBest = mg.best.forge || 0, played = (mg.plays.forge || 0) > 0; mg.plays.forge = (mg.plays.forge || 0) + 1; mg.best.forge = Math.max(mg.best.forge || 0, sc); mg.xp.forge = (mg.xp.forge || 0) + Math.round(10 + 25 * sc + (met ? 15 : 0));
+        const qy = res.quality, out = { rewards: {}, lines: res.kind === 'ammo' ? ['+' + res.amount + ' rounds for the armory'] : [qy.name + ' ' + r.name + ' — ' + res.item.max + ' durability', 'Waiting in the Armory'], mastery: DE.Minigames.level(S(), 'forge') };
+        const card = res.item ? `<div class="fg-made" style="--qc:${qy.color}"><div class="fg-ico">${itemIcon(r)}</div><b>${esc(qy.name)} ${esc(r.name)}</b><small>Heat ${Math.round(score.heat * 100)}% · Hammer ${Math.round(score.hammer * 100)}% · Quench ${Math.round(score.quench * 100)}%</small></div>` : '';
+        const show = () => results('forge', body, sc, { out, card, challenge: met, prevBest, played, headline: res.item ? 'The ' + esc(r.name.toLowerCase()) + ' is done.' : 'A crate of fresh rounds.' }, { chal: Object.assign({}, chal, { text: chal.text + ' (finer work)' }) });
+        // the finished piece comes out of the water: it pops in its slot in the colour of its quality, then the results
+        const col = qy ? qy.color : '#ffd34a', fine = sc >= .6; slot.style.setProperty('--qc', col); slot.classList.remove('cool'); slot.classList.add('made'); kick(slot, 'thump');
+        burst(slot, { n: fine ? 30 : 16, colors: [col, '#ffffff', '#ffd34a'], speed: fine ? 130 : 80, size: 6 }); ring(slot, col); if (qy) { const [px, py] = at(slot); popAt([px, py - 62], qy.name + '!', fine ? 'gold big' : 'g'); }
+        [0, 1, 2].forEach(i => later(() => note([784, 988, 1175][i] * (fine ? 1.335 : 1), .22, 'triangle', .06), i * 110));
+        if (sc >= .8) { later(() => burst(slot, { n: 36, colors: CONFETTI, speed: 170, size: 8, fall: true, shape: 'conf' }), 200); shake(1); }
+        later(show, 1250);
+      };
+      heat();
+    }
+    idle();
   }
   /* item pictures: weapons and gear from the item / workshop sheets (two long guns from the weapon sprites) */
-  const ITEM_SP = { machete: 'mg/machete', pistol: 'mg/pistol', shotgun: 'mg/shotgun', rifle: 'sprites/rifle', carbine: 'mg/ak', marksman: 'sprites/sniper',
+  const ITEM_SP = { machete: 'mg/machete', pistol: 'mg/pistol', shotgun: 'sprites/shotgun', rifle: 'sprites/rifle', carbine: 'mg/ak', marksman: 'sprites/sniper',
     vest: 'mg/armor_vest', riot: 'mg/armor_riot', plate: 'mg/armor_plate', ammo: 'mg/bullets' };
   function itemIcon(r) {
     const k = ITEM_SP[r.id] || (r.kind === 'ammo' ? 'mg/bullets' : 'mg/pistol');
     return `<img class="sp fg-pic k-${r.kind || 'weapon'}" src="assets/${k}.png" alt="" draggable="false">`;
-  }
-  function forge(body, id) {
-    const s = S(), r = DE.Gear.recipe(id), c = DE.Gear.canCraft(s, id); if (!c.ok) { DE.UI.toast(c.reason, 'err'); return; }
-    const room = DE.Minigames.bestRoom(s, 'forge'), skill = DE.Minigames.skill(s, 'forge', room), tier = r.tier || 1;
-    body.innerHTML = `<div class="mg-hud"></div><div class="mg-stage mg-forge"><div class="fg-scene">${SP('pillar', 'fg-pil')}<div class="fg-furnace">${SP('furnace')}<i class="fg-fire"></i></div><div class="fg-anvil">${SP('anvil_base', 'fg-anv')}<i class="fg-bar"></i>${SP('hammer', 'fg-hammer')}<span class="fg-sparks"></span></div>${SP('barrels', 'fg-tub')}
-      <div class="fg-craft"><span class="fg-slot">${DE.Icons.res('scrap', 'fg-mat')}</span>${SP('arrow', 'fg-arr')}<span class="fg-slot out">${itemIcon(r)}</span></div>${SP('plank', 'fg-plank')}</div><div class="fg-ui"></div></div>`;
-    const hud = body.querySelector('.mg-hud'), ui = body.querySelector('.fg-ui'), bar = body.querySelector('.fg-bar'), fire = body.querySelector('.fg-fire'), hammer = body.querySelector('.fg-hammer'), sparks = body.querySelector('.fg-sparks');
-    const score = { heat: 0, hammer: 0, quench: 0 }, chal = CHAL.forge(); let perfect = 0;
-    const chalTag = `<span class="mg-hchal">${ic('trophy')} ${esc(chal.text)}</span>`;
-    const press = (cb) => { const h = (e) => { if (e.type === 'keydown' && e.key !== ' ' && e.key !== 'Enter') return; if (e.type === 'keydown') e.preventDefault(); cb(e); }; on(document, 'keydown', h); return h; };
-    // 1 · heat: hold the bellows to keep the metal in the glowing band
-    const heat = () => {
-      hud.innerHTML = '<b>1 · Heat</b><span>Hold the bellows to keep the metal in the band</span>' + chalTag;
-      ui.innerHTML = `<div class="fg-gauge"><i class="fg-band"></i><b class="fg-temp"></b></div><button class="btn primary fg-bellows" type="button">Hold: bellows</button>`;
-      const temp = ui.querySelector('.fg-temp'), band = ui.querySelector('.fg-band'), btn = ui.querySelector('.fg-bellows');
-      let blowing = false, T0 = 0, v = .15, inBand = 0, t = 0; const dur = 5, bw = (.2 - .025 * tier) * (1 + skill);
-      const down = (e) => { e.preventDefault(); blowing = true; btn.classList.add('on'); }, up = () => { blowing = false; btn.classList.remove('on'); };
-      on(btn, 'pointerdown', down); on(btn, 'pointerup', up); on(btn, 'pointerleave', up); on(document, 'keydown', (e) => { if (e.key === ' ') { e.preventDefault(); blowing = true; } }); on(document, 'keyup', (e) => { if (e.key === ' ') blowing = false; });
-      loop((dt) => { t += dt; const center = .62 + .16 * Math.sin(t * (.9 + .25 * tier)); band.style.left = ((center - bw / 2) * 100) + '%'; band.style.width = (bw * 100) + '%';
-        v += (blowing ? 1.15 : -.75) * dt * .55; v = Math.max(0, Math.min(1, v)); T0 = v; temp.style.left = (T0 * 100) + '%';
-        const ok = Math.abs(T0 - center) < bw / 2; if (ok) inBand += dt; temp.classList.toggle('ok', ok);
-        bar.style.setProperty('--glow', T0.toFixed(2)); fire.style.setProperty('--fire', (.4 + .6 * (blowing ? 1 : .3)).toFixed(2));
-        if (blowing && Math.random() < dt * 8) note(90 + Math.random() * 30, .12, 'sawtooth', .02);
-        if (t >= dur) { score.heat = Math.min(1, inBand / dur / .85); stopGame(); hammerPhase(); return false; } });
-    };
-    // 2 · hammer: strike when the marker crosses the sweet spot; it narrows and speeds up
-    const hammerPhase = () => {
-      const strikes = 3 + tier; let n = 0, sum = 0, x = 0, dir = 1;
-      hud.innerHTML = `<b>2 · Hammer</b><span>Strike when the marker is in the green — ${strikes} blows</span>` + chalTag;
-      ui.innerHTML = `<div class="fg-track"><i class="fg-sweet"></i><b class="fg-mark"></b></div><button class="fg-strike" type="button" aria-label="Strike">${SP('btn_hammer')}<small>Strike · Space</small></button><div class="fg-blows"></div>`;
-      const mark = ui.querySelector('.fg-mark'), sweet = ui.querySelector('.fg-sweet'), blows = ui.querySelector('.fg-blows');
-      const width = () => Math.max(.06, (.26 - .03 * tier - .02 * n) * (1 + skill));
-      const strike = () => { if (n >= strikes) return; const w = width(), acc = Math.max(0, 1 - Math.abs(x - .5) / (w / 2) * .5 - Math.max(0, Math.abs(x - .5) - w / 2) * 3); sum += Math.min(1, acc); n++; if (acc > .8) perfect++;
-        hammer.classList.remove('hit'); void hammer.offsetWidth; hammer.classList.add('hit'); snd('clank', 0); note(acc > .8 ? 1760 : acc > .5 ? 1320 : 880, .12, 'triangle', .07);
-        sparks.classList.remove('go'); void sparks.offsetWidth; sparks.classList.add('go'); burst(bar, { n: acc > .8 ? 22 : acc > .5 ? 12 : 5, colors: GOLD, speed: acc > .8 ? 120 : 70, size: 5, up: true }); if (acc > .8) { popAt(bar, 'PERFECT!', 'gold big'); shake(1); } else if (acc > .5) popAt(bar, 'Good', 'g'); bar.style.setProperty('--shape', (n / strikes).toFixed(2));
-        blows.innerHTML += `<i class="${acc > .8 ? 'great' : acc > .5 ? 'ok' : 'meh'}">${acc > .8 ? 'Perfect' : acc > .5 ? 'Good' : 'Off'}</i>`;
-        if (n >= strikes) { score.hammer = sum / strikes; later(() => { stopGame(); quench(); }, 500); } };
-      on(ui.querySelector('.fg-strike'), 'pointerdown', (e) => { e.preventDefault(); strike(); }); press(strike);
-      loop((dt) => { const sp = (.7 + .12 * tier + .08 * n) * (1 - skill * .4); x += dir * sp * dt; if (x > 1) { x = 1; dir = -1; } if (x < 0) { x = 0; dir = 1; } mark.style.left = (x * 100) + '%'; const w = width(); sweet.style.left = ((.5 - w / 2) * 100) + '%'; sweet.style.width = (w * 100) + '%'; });
-    };
-    // 3 · quench: dip it when the steel shows cherry red
-    const quench = () => {
-      hud.innerHTML = '<b>3 · Quench</b><span>Dip it in the water when it glows cherry red</span>' + chalTag;
-      ui.innerHTML = `<div class="fg-heatbar"><i class="fg-cherry"></i><b class="fg-now"></b></div><button class="btn primary fg-dip" type="button">Quench (Space)</button>`;
-      const now = ui.querySelector('.fg-now'); let k = 0, done = false; const span = (.14 - .02 * tier) * (1 + skill), center = rnd(.45, .65);
-      ui.querySelector('.fg-cherry').style.cssText = `left:${(center - span / 2) * 100}%;width:${span * 100}%`;
-      const dip = () => { if (done) return; done = true; burst(bar, { n: 22, colors: ['#ffffff', '#e8eef4', '#c8d4e0'], speed: 70, size: 12, up: true, shape: 'steam' }); score.quench = Math.max(0, 1 - Math.abs(k - center) / (span / 2) * .5 - Math.max(0, Math.abs(k - center) - span / 2) * 4); snd('splat'); note(2400, .5, 'sine', .02, 300); bar.classList.add('quenched'); later(() => { stopGame(); doneForge(); }, 500); };
-      on(ui.querySelector('.fg-dip'), 'pointerdown', (e) => { e.preventDefault(); dip(); }); press(dip);
-      loop((dt) => { if (done) return false; k += dt * (.28 + .05 * tier); now.style.left = (Math.min(1, k) * 100) + '%'; bar.style.setProperty('--glow', (1 - k).toFixed(2)); if (k >= 1.05) dip(); });
-    };
-    const doneForge = () => {
-      const met = chal.id === 'perfect' ? perfect >= 2 : chal.id === 'cherry' ? score.quench >= .75 : score.heat >= .9;
-      const sc = Math.max(0, Math.min(1, .3 * score.heat + .5 * score.hammer + .2 * score.quench + (met ? .08 : 0)));
-      const res = DE.Gear.craft(S(), id, sc); if (!res.ok) { DE.UI.toast(res.reason, 'err'); return close(); }
-      const outSlot = body.querySelector('.fg-slot.out'); if (outSlot) outSlot.classList.add('made');
-      const mg = DE.Minigames.ensure(S()), prevBest = mg.best.forge || 0, played = (mg.plays.forge || 0) > 0; mg.plays.forge = (mg.plays.forge || 0) + 1; mg.best.forge = Math.max(mg.best.forge || 0, sc); mg.xp.forge = (mg.xp.forge || 0) + Math.round(10 + 25 * sc + (met ? 15 : 0));
-      const q = res.quality, out = { rewards: {}, lines: res.kind === 'ammo' ? ['+' + res.amount + ' rounds for the armory'] : [q.name + ' ' + r.name + ' — ' + res.item.max + ' durability', 'Waiting in the Armory'], mastery: DE.Minigames.level(S(), 'forge') };
-      const card = res.item ? `<div class="fg-made" style="--qc:${q.color}"><div class="fg-ico">${itemIcon(r)}</div><b>${esc(q.name)} ${esc(r.name)}</b><small>Heat ${Math.round(score.heat * 100)}% · Hammer ${Math.round(score.hammer * 100)}% · Quench ${Math.round(score.quench * 100)}%</small></div>` : '';
-      results('forge', body, sc, { out, card, challenge: met, prevBest, played, headline: res.item ? 'The ' + esc(r.name.toLowerCase()) + ' is done.' : 'A crate of fresh rounds.' }, { chal: Object.assign({}, chal, { text: chal.text + ' (finer work)' }) });
-    };
-    heat();
   }
 
   /* ================= ARMORY ================= */

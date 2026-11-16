@@ -76,7 +76,7 @@ DE.Defense = (function () {
   function waveHp(state, n) {
     n = n || state.defense.wave;
     const weaken = isBossWave(n) ? 1 - (DE.Effects.get(state).bossWeaken || 0) : 1;
-    const mut = n === state.defense.wave ? DE.Events.mutation(state) : null; const noise = 1 + Math.min(0.6, DE.Events.noise(state) * 0.012);
+    const mut = n === state.defense.wave && !isRaid(state, n) ? DE.Events.mutation(state) : null; const noise = 1 + Math.min(0.6, DE.Events.noise(state) * 0.012);
     // after breaches the horde regroups: each consecutive breach weakens the next wave (min 60%)
     const regroup = Math.max(0.6, Math.pow(0.85, state.defense.breachStreak || 0));
     // choices in events can make the next horde bigger (refusing raiders) or smaller

@@ -119,21 +119,35 @@ DE.UI.Anim = (function () {
     P.hr = 3.4 * wander(t * .55, st.seed) + .6 * b; P.hy = -.5 * b;
   }
   function work(st, P) {
-    const t = st.t, s = st.seed;
-    P.tr = 6 + 1.4 * sin(TAU * t / 6.2); P.tsy = 1 + .01 * (1 - cos(TAU * t / 3.1)) / 2;
-    P.hr = 8 - 11 * bump(t / 6.2 + s, .72, .06);                     // a glance up now and then
-    P.aF = -27 + 3.5 * wander(t * 2.2, s); P.fF = -56 + 8 * wander(t * 3.1, s + 2);   // busy hands at chest height
-    P.aB = -22 + 3 * wander(t * 1.9, s + 4); P.fB = -52 + 7 * wander(t * 2.7, s + 6);
-    P.lL = 4; P.lR = -5; P.sR = 3;
+    // at the bench, one piece after another: reach for a part, bring it in, fit it with short ratchet
+    // strokes (the body gives with every stroke), set it down on the other side, then straighten up —
+    // one time holding the piece up to the light for a look, the next wiping the brow
+    const t = st.t, s = st.seed, T = 6.4, u = t / T + s * .21, n = Math.floor(u), c = frac(u) * T;
+    const win = (a, b, e) => smooth((c - a) / e) * (1 - smooth((c - b) / e));
+    const reach = win(0, .75, .3), fit = win(1.25, 4.0, .35), place = win(4.2, 4.75, .28), up = win(5.0, 6.15, .3);
+    const beat = fit * Math.pow(max(0, sin(TAU * t * 2.6 + s)), 2), wipe = n % 2 ? up : 0, look = n % 2 ? 0 : up;
+    P.tr = 7 + 9 * reach + 5 * fit + 6 * place - 6 * up + 1.4 * beat; P.tsy = 1 + .012 * (1 - cos(TAU * t / 3.1)) / 2;
+    P.hr = 9 + 5 * fit - 4 * reach - 14 * look - 5 * wipe + 2.5 * wander(t * .9, s) * (1 - fit);
+    P.aF = -30 - 36 * reach - 4 * fit + 5 * beat - 10 * place + 22 * wipe - 18 * look;
+    P.fF = -56 + 40 * reach - 6 * fit - 14 * beat + 6 * place + 34 * wipe - 36 * look;
+    P.aB = -24 - 6 * fit - 38 * place + 18 * look - 104 * wipe;
+    P.fB = -52 - 8 * fit + 3 * wander(t * 2.7, s + 6) * fit + 34 * place + 34 * look + (-44 + 8 * sin(TAU * t * 1.6)) * wipe;
+    P.b2x = 2 * reach - 1.5 * place; P.b2y = 1.5 * reach + 1.2 * fit + .9 * beat - up;
+    P.lL = 4 + 3 * reach; P.sL = 2 * fit + 2 * reach; P.lR = -5 - 2 * reach; P.sR = 3 + 3 * fit;
   }
   function repair(st, P) {
-    // three hammer blows (raise .38s, strike .2s), then a look at the result, then again
-    const c = frac(st.t / 3.6) * 3.6; let up;
-    if (c < 1.74) { const l = c - Math.floor(c / .58) * .58; up = l < .38 ? easeOut(l / .38) : 1 - easeIn((l - .38) / .2); P.b2y = 1.6 * exp(-((l / .06) ** 2)) * (c > .5 ? 1 : 0); }
-    else up = .3 * smooth((c - 1.74) / .4) * (1 - smooth((c - 3.2) / .4));
-    P.aF = -32 - 16 * up; P.fF = -34 - 70 * up;
-    P.tr = 14; P.hr = 10 - 8 * smooth((c - 1.9) / .3) * (1 - smooth((c - 3.0) / .3));
-    P.aB = -40; P.fB = -36; P.lL = 8; P.sL = 6; P.lR = -12; P.sR = 10;
+    // three hammer blows (raise .38s, strike .2s) with the whole body behind them — the back straightens
+    // on the way up, the knees and the off hand take the jolt — then a step back to look, a hand over
+    // the work, and again
+    const c = frac(st.t / 3.6 + st.seed * .11) * 3.6, l = c - Math.floor(c / .58) * .58; let up, hit;
+    if (c < 1.74) { up = l < .38 ? easeOut(l / .38) : 1 - easeIn((l - .38) / .2); hit = c > .5 ? exp(-((l / .07) ** 2)) : 0; }
+    else { up = .3 * smooth((c - 1.74) / .4) * (1 - smooth((c - 3.2) / .4)); hit = exp(-(((c - 1.74) / .07) ** 2)); }
+    const insp = smooth((c - 1.95) / .3) * (1 - smooth((c - 3.1) / .3));
+    P.aF = -32 - 22 * up; P.fF = -34 - 78 * up + 6 * hit;
+    P.tr = 15 - 8 * up + 3 * hit - 7 * insp; P.hr = 10 - 5 * up + 3 * hit - 6 * insp;
+    P.aB = -40 + 3 * hit - 8 * insp + 4 * sin(TAU * st.t * 1.2) * insp; P.fB = -36 - 4 * hit - 6 * insp;
+    P.b2x = 1.5 * hit; P.b2y = 1.2 + 2.2 * hit - 1.2 * up;
+    P.lL = 8; P.sL = 6 + 4 * hit; P.lR = -12; P.sR = 10 + 3 * hit;
   }
   function carry(st, P) {
     // haul a crate across the room and back; the legs follow the distance covered
@@ -188,6 +202,8 @@ DE.UI.Anim = (function () {
     P.aF = (-40 + 3 * kF) * keys - 112 * lift; P.fF = (-56 - 9 * kF) * keys - 30 * lift;
     P.aB = -36 + 3 * kB; P.fB = -58 - 9 * kB;
     P.lL = 3; P.lR = -5; P.sR = 3;
+    // alive at the desk: breathing, the weight moving from foot to foot, leaning in to read the screen
+    P.tsy = 1 + .014 * (1 - cos(TAU * t / 3.4)) / 2; P.b2x = 1.6 * wander(t * .35, st.seed + 5); P.tr += 2 * bump(t / 7.3 + st.seed, .5, .08);
   }
   /** Climbing down a ladder seen from the side (the ladder in front of the character): the hands take
    *  turns gripping the rail above the head and at the shoulder, the feet take turns on the rungs, and
