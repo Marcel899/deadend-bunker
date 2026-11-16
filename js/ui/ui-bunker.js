@@ -56,8 +56,8 @@ DE.UI.Bunker = (function () {
     const wing = cols < DE.CONFIG.MAX_COLS ? `<div class="wing ${f.expansion ? 'digging' : ''}" data-action="${f.expansion ? 'noop' : 'expandFloor'}" data-depth="${f.depth}" style="grid-column:${cols + 1}" id="wing-${f.depth}"><span class="wing-body"></span></div>` : '';
     return `<div class="floor ${fac ? 'has-facility' : ''} ${strata(f.depth)}" data-depth="${f.depth}" style="--cols:${cols}">
       <div class="shaft-slot"><div class="floor-num">B${f.depth}</div></div>
-      <div class="cells" style="grid-template-columns: repeat(${cols + 1}, 100px)">
-        <div class="ceiling"></div>${cells}${wing}
+      <div class="cells" style="grid-template-columns: repeat(${cols}, 100px) 134px">
+        <div class="ceiling"></div>${cells}<div class="endwall" aria-hidden="true"><i></i></div>${wing}
         <div class="corridor"><i class="stripe"></i></div>
       </div>
       ${fac ? `<div class="facility-tag" title="${esc(fac.lore)}">${Ic().img('facility', 'ico-inline')} ${esc(fac.name)}</div>` : ''}
@@ -256,7 +256,11 @@ DE.UI.Bunker = (function () {
     if (info) {
       const say = verdict === 'ok' ? 'defense holds' : verdict === 'warn' ? 'the wall will take hits' : 'defense too weak!';
       const raid = DE.Defense.isRaid(s, d.wave);
-      setHtml(info, `${Ic().img(raid ? 'truck' : 'wave', 'ico-inline')} ${DE.Defense.isBossWave(d.wave) ? 'BOSS ' : ''}${raid ? 'Bandit raid' : 'Wave'} ${d.wave} in <b>${U().fmtTime(secs)}</b> · <span class="wi-v">${say}</span>`);
+      // the attack bar: what is coming and when, our firepower against its strength, and how close it is
+      const boss = DE.Defense.isBossWave(d.wave), share = Math.round(100 * power.total / Math.max(1, power.total + hp)), left = Math.max(0, Math.min(1, secs / Math.max(1, DE.Defense.waveInterval(s))));
+      setHtml(info, `<div class="ab-top">${Ic().img(raid ? 'truck' : 'wave', 'ab-ico')}<span class="ab-name">${boss ? 'Boss wave' : raid ? 'Bandit raid' : 'Wave'} ${d.wave}</span><b class="ab-time">${secs > 0 ? U().fmtTime(secs) : 'now!'}</b></div>
+        <div class="ab-vs" title="Your firepower against the attack's strength"><i class="ab-us" style="width:${share}%"></i><span class="ab-l">${Ic().img('guard', 'ico-inline')}${U().fmt(power.total)}</span><span class="ab-r">${U().fmt(hp)}${Ic().img(raid ? 'skull' : 'zombie', 'ico-inline')}</span><u></u></div>
+        <div class="ab-foot"><span class="wi-v">${say}</span><i class="ab-clock"><i style="width:${Math.round(100 * (1 - left))}%"></i></i></div>`);
       info.title = `Threat ${U().fmt(hp)} vs your ${U().fmt(power.total)} damage per fight — click to open Defense`;
       info.className = 'wave-info ' + verdict;
     }

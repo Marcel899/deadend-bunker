@@ -619,13 +619,25 @@ t('minigames: triage heals the real injured and treats infection; radio can brin
   DE.Bunker.placeRoom(E, 'radio', 1, 8, 1, now); DE.Minigames.finish(E, 'radio', .9, { signal: 'survivor' });
   assert(Object.keys(E.survivors).length === n + 1, 'a survivor followed the directions');
 });
+t('recruiting several at once: limited by beds and stores, each one costs more', () => {
+  const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E);
+  const free = DE.Bunker.housingCapacity(E) - DE.Bunker.population(E);
+  assert(DE.Survivors.recruitPlan(E, 99).n <= free, 'never more than the free beds');
+  DE.Bunker.placeRoom(E, 'quarters', 1, 8, 5, now); E._fx = null; E.resources.food = E.resources.water = 1e6;
+  const one = DE.Survivors.recruitCost(E).food, plan = DE.Survivors.recruitPlan(E, 3), n0 = Object.keys(E.survivors).length;
+  assert(plan.n === 3 && plan.cost.food > 3 * one - 1, 'three cost at least three times one: ' + JSON.stringify(plan));
+  const r = DE.Survivors.recruitMany(E, 3); assert(r.ok && r.survivors.length === 3 && Object.keys(E.survivors).length === n0 + 3, 'three joined');
+  assert(Math.abs(1e6 - E.resources.food - plan.cost.food) < 1, 'paid what the plan said');
+  E.resources.food = 0; assert(DE.Survivors.recruitPlan(E, 5).n === 0 && !DE.Survivors.recruitMany(E, 5).ok, 'nothing without food');
+});
+
 t('raids: bandits in vehicles on raid waves; no bites, they shoot and loot; refusing the envoy brings one', () => {
   const E = DE.State.create(null, now); E._fx = DE.Effects.compute(E);
   assert(!DE.Defense.isRaid(E, 1) && !DE.Defense.isRaid(E, 10) && DE.Defense.isRaid(E, 4) && DE.Defense.isRaid(E, 11), 'schedule');
   const list = DE.Defense.waveComposition(2000, 11, true);
   assert(list.length && list.every(b => b.bandit && b.car >= 0 && b.car < list.cars.length), 'bandits seated in vehicles');
   assert(DE.Defense.waveComposition(2000, 11, false).every(z => !z.bandit), 'hordes stay zombies');
-  E.defense.wave = 4; E.defense.wall.hp = 1; DE.Defense.wallMaxHp(E); const g = Object.values(E.survivors)[0]; DE.Survivors.assign(E, g.id, { kind: 'guard' }); E._fx = null;
+  E.defense.wave = 4; E.defense.wall.hp = 1; DE.Defense.wallMaxHp(E); const g = Object.values(E.survivors)[0]; g.profession = 'farmer'; g.traits = []; g.level = 1; DE.Survivors.assign(E, g.id, { kind: 'guard' }); E._fx = null;
   const food0 = E.resources.food; const r = DE.Defense.resolveWave(E, now);
   assert(r.raid && r.breach && !r.infected && E.resources.food < food0, 'a breach in a raid loots the stores, nobody bitten: ' + JSON.stringify([r.raid, r.breach, r.infected]));
   const F = DE.State.create(null, now); F._fx = DE.Effects.compute(F); F.defense.wave = 11; F.defense.turrets = 0; for (let i = 0; i < 6; i++) { const v = DE.Survivors.spawn(F); DE.Survivors.assign(F, v.id, { kind: 'guard' }); v.level = 30; } F._fx = null;

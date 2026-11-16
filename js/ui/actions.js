@@ -158,6 +158,16 @@ DE.Actions = (function () {
  S().log.push({ t: Date.now(), msg: r.survivor.name + ' (' + P()[r.survivor.profession].name + ') joined the bunker.' });
  done(); DE.UI.Reveal.show(r.survivor);
  };
+ A.recruitMany = (p) => {
+ const plan = DE.Survivors.recruitPlan(S(), p.n === 'max' ? 99 : +p.n || 1); if (plan.n < 1) return fail(DE.Survivors.canRecruit(S()));
+ if (plan.n === 1) return A.recruit(p);
+ const r = DE.Survivors.recruitMany(S(), plan.n); if (!r.ok) return fail(r);
+ const esc = DE.Util.escapeHtml, R = DE.Data.RARITIES || {};
+ r.survivors.forEach(v => S().log.push({ t: Date.now(), msg: v.name + ' (' + P()[v.profession].name + ') joined the bunker.' }));
+ done(); DE.Audio.sfx && DE.Audio.sfx('levelup');
+ UI().modal({ title: r.survivors.length + ' survivors answered the call', cls: 'recruits', html: `<div class="rcm-list">${r.survivors.map((v, i) => { const ra = R[v.rarity] || {}; return `<div class="rcm" style="--c:${ra.color || '#9aa0ae'};animation-delay:${(i * .07).toFixed(2)}s">${DE.Icons.prof(v.profession, 'rcm-face')}<div><b>${esc(v.name)}</b><small>${esc(P()[v.profession].name)}${ra.name ? ' · <em>' + esc(ra.name) + '</em>' : ''}</small>${(v.traits || []).length ? `<small class="rcm-tr">${v.traits.map(t => esc((DE.Data.TRAITS && DE.Data.TRAITS[t] || {}).name || t)).join(' · ')}</small>` : ''}</div></div>`; }).join('')}</div><p class="muted">They are idle until you give them a job.</p>`,
+   buttons: [{ label: 'Put them to work', cls: 'primary', action: 'assignIdle' }, { label: 'Close' }] });
+ };
  A.revealAssign = (p) => { UI().closeModal(); A.openAssignSurvivor({ sid: p.sid }); };
  A.setRecruitProfession = () => {};   // recruiting is random now (kept for old bindings)
  A.setFilter = (p) => { UI().ui.survivorFilter = UI().ui.survivorFilter === p.filter && p.filter !== 'all' ? 'all' : p.filter; UI().refresh(true); };

@@ -63,7 +63,7 @@ DE.UI.Actors = (function () {
     const L = DE.UI.DigSite.layout();
     const crew = Object.values(state.survivors).filter(o => o.act && o.act.kind === 'mine').map(o => o.id).sort();
     const i = Math.max(0, crew.indexOf(sv.id)), hauler = i % 3 === 2;
-    if (!hauler) { const k = i - Math.floor((i + 1) / 3); return { site: true, kind: 'mine', anim: 'dig', sx: Math.max(70, L.faceX - 24 - 26 * (k % 4) - (k >= 4 ? 13 : 0)) }; }
+    if (!hauler) { const k = i - Math.floor((i + 1) / 3); return { site: true, kind: 'mine', anim: 'dig', sx: Math.max(70, L.faceX - 26 - 34 * (k % 4) - (k >= 4 ? 17 : 0)) }; }
     const k = Math.floor(i / 3), far = Math.max(L.cartX + 70, L.faceX - 44 - 10 * k), near = L.cartX + 36 + 8 * k, trip = (far - near) / WALK + 4.5;
     const back = Math.floor((Date.now() / 1000 + (hash(sv.id) % 9)) / trip) % 2 === 1;
     return { site: true, kind: 'mine', anim: 'work', sx: back ? near : far, walk: k === 0 ? 'push' : back ? 'haul' : 'walk' };

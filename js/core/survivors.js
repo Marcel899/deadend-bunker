@@ -68,6 +68,23 @@ DE.Survivors = (function () {
     return { ok: true };
   }
 
+  /** Recruiting several at once: each one costs a little more than the last. How many of `want`
+   *  the free beds and the stores allow, and what they cost together. */
+  function recruitPlan(state, want) {
+    const fx = DE.Effects.get(state), n0 = Object.keys(state.survivors).length, free = Math.max(0, DE.Bunker.housingCapacity(state) - DE.Bunker.population(state));
+    const total = { food: 0, water: 0 }; let n = 0;
+    while (n < Math.min(want, free)) {
+      const c = Math.ceil(C().RECRUIT_BASE_COST * Math.pow(C().RECRUIT_GROWTH, Math.max(0, n0 + n - 4)) * (1 - fx.recruitDiscount));
+      if (state.resources.food < total.food + c || state.resources.water < total.water + c) break;
+      total.food += c; total.water += c; n++;
+    }
+    return { n, cost: total, free };
+  }
+  function recruitMany(state, want) {
+    const out = []; for (let i = 0; i < want; i++) { const r = recruit(state); if (!r.ok) { if (!out.length) return r; break; } out.push(r.survivor); }
+    return { ok: true, survivors: out };
+  }
+
   function recruit(state, profession) {
     const c = canRecruit(state);
     if (!c.ok) return c;
@@ -158,5 +175,5 @@ DE.Survivors = (function () {
     }
   }
 
-  return { spawn, efficiency, guardPower, rarityBonus, mood, hungerMult, xpNeeded, recruitCost, canRecruit, recruit, assign, guards, idle, available, injure, moraleTarget, tick, traitSum };
+  return { spawn, efficiency, guardPower, rarityBonus, mood, hungerMult, xpNeeded, recruitCost, canRecruit, recruit, assign, guards, idle, available, injure, moraleTarget, tick, traitSum , recruitPlan, recruitMany };
 })();

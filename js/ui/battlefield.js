@@ -236,7 +236,7 @@ DE.UI.Battlefield = (function () {
    * is beaten the wrecks burn; after a breach the survivors run for the gate and the trucks leave. */
   const CAR = { buggy: { w: 124, h: 66, wheels: [[26, 52, 14], [98, 52, 14]] }, pickup: { w: 176, h: 84, wheels: [[38, 68, 16], [140, 68, 16]] }, truck: { w: 216, h: 112, wheels: [[42, 94, 18], [112, 94, 18], [176, 94, 18]] } };
   function carSvg(type) {
-    const I = '#1c1020', c = CAR[type], wheels = c.wheels.map(([x, y, r]) => `<g class="bf-wheel" style="transform-origin:${x}px ${y}px"><circle cx="${x}" cy="${y}" r="${r}" fill="#26232c" stroke="${I}" stroke-width="4"/><circle cx="${x}" cy="${y}" r="${r * .45}" fill="#8a8e98" stroke="${I}" stroke-width="2.5"/><path d="M${x - r * .45} ${y} H${x + r * .45} M${x} ${y - r * .45} V${y + r * .45}" stroke="${I}" stroke-width="2"/></g>`).join('');
+    const I = '#1c1020', c = CAR[type], wheels = c.wheels.map(([x, y, r]) => `<g class="bf-wheel"><circle cx="${x}" cy="${y}" r="${r}" fill="#26232c" stroke="${I}" stroke-width="4"/><circle cx="${x}" cy="${y}" r="${r * .45}" fill="#8a8e98" stroke="${I}" stroke-width="2.5"/><path d="M${x - r * .45} ${y} H${x + r * .45} M${x} ${y - r * .45} V${y + r * .45}" stroke="${I}" stroke-width="2"/></g>`).join('');
     let body = '';
     if (type === 'buggy') body = `<path d="M8 46 L18 30 H58 L70 18 H96 L112 34 L118 46 Z" fill="#c8662a" stroke="${I}" stroke-width="4" stroke-linejoin="round"/>
       <path d="M44 30 L54 6 H92 L100 30 M60 6 L56 30 M86 6 L88 30" fill="none" stroke="${I}" stroke-width="4" stroke-linecap="round"/><rect x="14" y="38" width="22" height="6" rx="2" fill="#7a3a1a"/>
