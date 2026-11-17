@@ -490,53 +490,63 @@ DE.UI.Drawers = (function () {
   * events), the team picker with seats, teams in the field and trip reports. Time-dependent bits
   * (truck positions, ETAs, progress) are written by tick() so the drawer HTML stays stable and the
   * trucks glide instead of being redrawn every second. */
- const EM = { W: 1000, H: 440, HOME: [70, 362] };
- const emXY = (l) => [l.map[0], 36 + l.map[1]];
- function emRoute(loc) {
- const [x, y] = emXY(loc), [hx, hy] = EM.HOME;
- return { x0: hx, y0: hy, cx: (hx + x) / 2 + (y - hy) * 0.18, cy: (hy + y) / 2 - Math.abs(x - hx) * 0.1, x1: x, y1: y };
+ const EM = { W: 1000, H: 427, HOME: [54, 347] };
+ const emXY = (l) => [l.map[0], l.map[1]];
+ /* The trails form a network: every place is reached through the one before it (VIA), so the
+  * paths branch out from the bunker instead of all crossing the map. */
+ const EM_VIA = { suburbs: 'home', gas: 'home', farmland: 'suburbs', waterplant: 'farmland', police: 'suburbs', hospital: 'gas',
+   mall: 'hospital', factory: 'hospital', trainyard: 'factory', airport: 'trainyard', base: 'trainyard', radiotower: 'mall', cdclab: 'radiotower' };
+ const emAt = (id) => { if (id === 'home') return EM.HOME; const l = DE.Expeditions.location(id); return l ? emXY(l) : EM.HOME; };
+ /** One leg of a trail, from place `a` to place `b`, bowed a little: [x0, y0, cx, cy, x1, y1]. */
+ function emLegCurve(a, b) {
+   let [x0, y0] = emAt(a); const [x1, y1] = emAt(b), dx = x1 - x0, dy = y1 - y0, d = Math.hypot(dx, dy) || 1;
+   if (a === 'home') { x0 += dx / d * 32; y0 += dy / d * 32; }
+   const bow = (b.length % 2 ? 1 : -1) * 0.12 * d;
+   return [x0, y0, (x0 + x1) / 2 - dy / d * bow, (y0 + y1) / 2 + dx / d * bow, x1, y1];
  }
- function emPoint(r, t) { const u = 1 - t; return [u * u * r.x0 + 2 * u * t * r.cx + t * t * r.x1, u * u * r.y0 + 2 * u * t * r.cy + t * t * r.y1]; }
+ const emLegD = (c) => `M${c[0].toFixed(0)} ${c[1].toFixed(0)} Q${c[2].toFixed(0)} ${c[3].toFixed(0)} ${c[4]} ${c[5]}`;
+ /** The chain of places from the bunker to `id`, e.g. ['home', 'gas', 'hospital']. */
+ function emChain(id) { const c = [id]; let k = id, n = 0; while (k !== 'home' && n++ < 20) { k = EM_VIA[k] || 'home'; c.unshift(k); } return c; }
+ const EM_ROUTES = {};
+ /** The whole route home → place, sampled into points with running lengths (for the truck). */
+ function emRoute(loc) {
+   if (EM_ROUTES[loc.id]) return EM_ROUTES[loc.id];
+   const ch = emChain(loc.id), pts = [], len = [0];
+   for (let i = 1; i < ch.length; i++) { const c = emLegCurve(ch[i - 1], ch[i]); for (let j = i === 1 ? 0 : 1; j <= 16; j++) { const t = j / 16, u = 1 - t; pts.push([u * u * c[0] + 2 * u * t * c[2] + t * t * c[4], u * u * c[1] + 2 * u * t * c[3] + t * t * c[5]]); } }
+   for (let i = 1; i < pts.length; i++) len.push(len[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
+   return (EM_ROUTES[loc.id] = { pts, len });
+ }
+ function emPoint(r, t) {
+   const L = r.len[r.len.length - 1] * Math.max(0, Math.min(1, t)); let i = 1; while (i < r.len.length - 1 && r.len[i] < L) i++;
+   const a = r.pts[i - 1], b = r.pts[i], k = (L - r.len[i - 1]) / ((r.len[i] - r.len[i - 1]) || 1); return [a[0] + (b[0] - a[0]) * k, a[1] + (b[1] - a[1]) * k];
+ }
  const emLeg = (f) => f < 0.5 ? f * 2 : 2 - f * 2;      // out until halfway, then home
  const PROF_TRIP = { scavenger: '+30% loot · −15% risk', hunter: '−20% risk', scout: '−20% trip time · maps twice as fast', medic: '−25% risk' };
  const skullsOf = (l) => l.danger < 0.2 ? 1 : l.danger < 0.4 ? 2 : 3;
  const DANGER = ['', 'Low danger', 'Dangerous', 'Deadly'];
- /** The wasteland: mountains in the north-west, forests, a river, the ruins of the old city, a highway. */
- function emTerrain() {
- const INK = '#1c1020'; let t = '';
- [[0, 110, 50, 34, 100], [60, 110, 118, 22, 176], [150, 110, 196, 52, 246], [232, 110, 282, 30, 336], [-20, 140, 24, 70, 70]].forEach(([x0, y0, px, py, x1]) => {
-   t += `<path d="M${x0} ${y0} L${px} ${py} L${x1} ${y0} Z" fill="#5c5446" stroke="${INK}" stroke-width="3" stroke-linejoin="round"/><path d="M${px} ${py} L${(px + x1) / 2 + 6} ${y0} L${x1} ${y0} Z" fill="#000" opacity=".18"/><path d="M${px} ${py} l-9 16 l6 -2 l5 6 l4 -8 l5 2 z" fill="#cfc8b4" opacity=".75"/>`; });
- const forest = (cx, cy, n, seed) => { let f = ''; for (let i = 0; i < n; i++) { const a = (i * 2.4 + seed), r = 6 + (i % 3) * 7, x = cx + Math.cos(a) * r * 1.6, y = cy + Math.sin(a) * r * .7, R = 9 + ((i * 7 + seed) % 5); f += `<circle cx="${x.toFixed(0)}" cy="${y.toFixed(0)}" r="${R}" fill="#3e5a2e" stroke="${INK}" stroke-width="2.5"/><circle cx="${(x - R * .35).toFixed(0)}" cy="${(y - R * .35).toFixed(0)}" r="${(R * .3).toFixed(1)}" fill="#fff" opacity=".12"/>`; } return f; };
- t += forest(140, 236, 7, 1) + forest(310, 400, 6, 3) + forest(468, 120, 5, 5) + forest(732, 420, 6, 2) + forest(860, 160, 4, 4) + forest(30, 280, 5, 6);
- t += `<path class="em-river" d="M520 -10 C 470 90, 560 160, 500 230 S 400 350, 455 450"/>`;
- [[560, 150], [585, 205], [615, 140], [690, 215], [470, 235], [500, 330], [870, 280], [640, 230], [720, 170]].forEach(([x, y], i) => { const w = 18 + (i % 3) * 7, h = 14 + (i % 2) * 9; t += `<path d="M${x} ${y + h} V${y + 3} l${w * .3} -3 l${w * .25} 4 l${w * .45} -4 V${y + h} Z" class="em-block"/>`; });
- t += `<path d="M${EM.HOME[0]} ${EM.HOME[1] + 6} C 300 430, 640 432, 1010 410" fill="none" stroke="#3a3632" stroke-width="16" stroke-linecap="round"/><path d="M${EM.HOME[0]} ${EM.HOME[1] + 6} C 300 430, 640 432, 1010 410" fill="none" stroke="#e8c84a" stroke-width="2" stroke-dasharray="10 12" opacity=".7"/>`;
- return t;
- }
  function emMap(s, sel) {
  const locs = DE.Data.LOCATIONS, active = s.expeditions.active, X = DE.Expeditions, coll = s.collection || {}, bps = s.blueprints || {};
- const roads = locs.map(l => { const r = emRoute(l), open = X.isOpen(s, l), on = active.some(e => e.location === l.id);
-   return `<path class="em-road ${open ? '' : 'locked'} ${l.id === sel.id ? 'sel' : ''} ${on ? 'active' : ''}" d="M${r.x0} ${r.y0} Q${r.cx.toFixed(0)} ${r.cy.toFixed(0)} ${r.x1} ${r.y1}"/>`; }).join('');
+ const onRoute = (id, to) => emChain(to).includes(id);
+ const roads = locs.map(l => { const open = X.isOpen(s, l), on = active.some(e => onRoute(l.id, e.location)), d = emLegD(emLegCurve(EM_VIA[l.id] || 'home', l.id));
+   return `<g class="em-trail ${open ? '' : 'locked'} ${onRoute(l.id, sel.id) ? 'sel' : ''} ${on ? 'active' : ''}"><path class="em-dirt" d="${d}"/><path class="em-road" d="${d}"/></g>`; }).join('');
  const pins = locs.map(l => {
    const open = X.isOpen(s, l), [x, y] = emXY(l), on = active.some(e => e.location === l.id), lvl = X.explore(s, l.id), sk = skullsOf(l);
    const items = X.collectiblesAt(l.id), got = items.filter(c => coll[c.id]).length, bp = X.blueprintsAt(l.id).filter(d => !bps[d.id]).length;
-   const badges = !open ? '' : (bp ? `<g class="em-bp" transform="translate(40 -44)"><title>A blueprint is waiting here</title><circle r="12"/><image href="${DE.Icons.src('scroll')}" x="-9" y="-9" width="18" height="18"/></g>` : '')
-     + (items.length ? `<g class="em-cl ${got === items.length ? 'full' : ''}" transform="translate(-40 -44)"><title>Collectibles found here</title><circle r="12"/><text y="4">${got}/${items.length}</text></g>` : '');
+   const badges = !open ? '' : (bp ? `<g class="em-bp" transform="translate(40 -48)"><title>A blueprint is waiting here</title><circle r="12"/><image href="${DE.Icons.src('scroll')}" x="-9" y="-9" width="18" height="18"/></g>` : '')
+     + (items.length ? `<g class="em-cl ${got === items.length ? 'full' : ''}" transform="translate(-40 -48)"><title>Collectibles found here</title><circle r="12"/><text y="4">${got}/${items.length}</text></g>` : '');
    return `<g class="em-pin ${open ? '' : 'locked'} ${l.id === sel.id ? 'sel' : ''} ${on ? 'busy' : ''}" transform="translate(${x} ${y})" data-action="expLocation" data-id="${l.id}"><title>${esc(l.name)}${open ? ' · ' + DANGER[sk] + ' · explored ' + lvl + '/' + X.MAX_EXPLORE : ' · reach B' + l.minDepth}</title>
-   <rect class="em-hit" x="-52" y="-62" width="104" height="128"/><ellipse class="em-halo" cx="0" cy="11" rx="52" ry="14"/><g class="lm">${DE.UI.Landmarks.draw(l.id, !open)}</g>
-   <text class="em-name" y="31">${esc(l.name)}</text>
-   ${open ? `<g transform="translate(${-sk * 8 + 1} 37)">${Array.from({ length: sk }, (_, i) => `<image href="${DE.Icons.src('skull')}" x="${i * 16}" y="0" width="14" height="14"/>`).join('')}</g><g class="em-pips">${Array.from({ length: X.MAX_EXPLORE }, (_, i) => `<circle cx="${-16 + i * 8}" cy="60" r="3.2" class="${i < lvl ? 'on' : ''}"/>`).join('')}</g>` : `<text class="em-risk" y="48">reach B${l.minDepth}</text>`}${badges}</g>`; }).join('');
+   <rect class="em-hit" x="-50" y="-60" width="100" height="104"/><ellipse class="em-halo" cx="0" cy="0" rx="50" ry="12"/>
+   ${open ? '' : `<g class="em-fog"><ellipse cx="-14" cy="-26" rx="32" ry="17"/><ellipse cx="18" cy="-34" rx="28" ry="15"/><ellipse cx="2" cy="-12" rx="44" ry="15"/><text class="em-q" y="-14">?</text></g>`}
+   <text class="em-name" y="18">${esc(l.name)}</text>
+   ${open ? `<g transform="translate(${-sk * 7 - 32} 23)">${Array.from({ length: sk }, (_, i) => `<image href="${DE.Icons.src('skull')}" x="${i * 14}" y="0" width="12" height="12"/>`).join('')}</g><g class="em-pips">${Array.from({ length: X.MAX_EXPLORE }, (_, i) => `<circle cx="${8 + i * 7}" cy="29" r="2.8" class="${i < lvl ? 'on' : ''}"/>`).join('')}</g>` : `<text class="em-risk" y="32">reach B${l.minDepth}</text>`}${badges}</g>`; }).join('');
  const stops = active.map(e => { const r = emRoute(X.location(e.location)); return (e.stops || []).map((f, i) => { const [x, y] = emPoint(r, emLeg(f)); return `<circle class="em-stop ${i < (e.stop || 0) ? 'past' : ''}" cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6"/>`; }).join(''); }).join('');
  const trucks = active.map(e => `<g class="em-truck" data-trip="${e.id}" style="opacity:0"><g class="em-flip"><image href="${DE.Icons.src('vehicle')}" x="-22" y="-34" width="44" height="44"/></g><text class="em-eta" y="22" data-eta="${e.id}"></text></g>`).join('');
  return `<div class="exp-map"><svg viewBox="0 0 ${EM.W} ${EM.H}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Expedition map">
- <defs><radialGradient id="em-bg" cx=".3" cy=".75" r="1"><stop offset="0" stop-color="#6a6448"/><stop offset=".6" stop-color="#4a4a38"/><stop offset="1" stop-color="#2f3024"/></radialGradient>
- <pattern id="em-grid" width="50" height="50" patternUnits="userSpaceOnUse"><path d="M50 0 H0 V50" fill="none" stroke="#fff" stroke-opacity=".05" stroke-width="1"/></pattern>
- <radialGradient id="em-vig" cx=".5" cy=".5" r=".75"><stop offset=".65" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".45"/></radialGradient></defs>
- <rect width="${EM.W}" height="${EM.H}" fill="url(#em-bg)"/>${emTerrain()}<rect width="${EM.W}" height="${EM.H}" fill="url(#em-grid)"/>
+ <defs><radialGradient id="em-vig" cx=".5" cy=".5" r=".75"><stop offset=".7" stop-color="#000" stop-opacity="0"/><stop offset="1" stop-color="#000" stop-opacity=".3"/></radialGradient></defs>
+ <image href="assets/ui/expedition-map.jpg?v=1" width="${EM.W}" height="${EM.H}" preserveAspectRatio="none"/>
  <g>${roads}</g><g>${stops}</g>
- <g class="em-home" transform="translate(${EM.HOME[0]} ${EM.HOME[1]})"><circle r="30" class="em-disc home"/><image href="${DE.Icons.src('home')}" x="-20" y="-21" width="40" height="40"/><text class="em-name" y="48">Bunker</text></g>
- <g>${pins}</g><g>${trucks}</g><rect width="${EM.W}" height="${EM.H}" fill="url(#em-vig)" pointer-events="none"/>
- <text class="em-title" x="${EM.W - 16}" y="${EM.H - 14}">THE WASTELAND</text></svg></div>`;
+ <g class="em-home" transform="translate(${EM.HOME[0]} ${EM.HOME[1]})"><text class="em-name" y="48">Bunker</text></g>
+ <g>${pins}</g><g>${trucks}</g><rect width="${EM.W}" height="${EM.H}" fill="url(#em-vig)" pointer-events="none"/></svg></div>`;
  }
  /** What a place still holds: its exploration track, collectibles, blueprint and rare materials. */
  function exThumb(s, c, lvl) {
