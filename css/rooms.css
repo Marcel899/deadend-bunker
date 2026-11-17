@@ -414,3 +414,17 @@ body.hq .dig-site::after { content: ''; position: absolute; inset: 0; pointer-ev
 .endwall::before { content: ''; position: absolute; left: 4px; right: 4px; top: 8px; bottom: 8px; background: radial-gradient(circle, #2a2830 0 2.2px, transparent 2.6px) 50% 0 / 100% 37px repeat-y; opacity: .75; }
 .endwall i { position: absolute; left: -3px; right: -3px; bottom: 49px; height: 9px; background: repeating-linear-gradient(135deg, #ffd34a 0 6px, #1c1020 6px 12px); border-top: 2px solid var(--ink); border-bottom: 2px solid var(--ink); opacity: .85; }
 .floor .wing { margin-left: 38px; }
+
+/* dig site: the uncut rock ahead of the face reads as the next floor, and an empty crew is obvious */
+.dig-art .dig-ghost { position: absolute; top: 34px; height: 198px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+  border: 3px dashed rgba(255, 217, 138, .28); border-radius: 14px; background: rgba(0, 0, 0, .12); color: rgba(255, 236, 200, .55); pointer-events: none; text-align: center; min-width: 0; overflow: hidden; }
+.dig-art.smooth .dig-ghost { transition: left 1.2s linear, width 1.2s linear; }
+.dig-ghost b { font-family: var(--display); font-weight: 400; font-size: 34px; line-height: 1; letter-spacing: 1px; color: rgba(255, 217, 138, .5); }
+.dig-ghost small { font-size: 12px; font-weight: 800; white-space: nowrap; }
+.dig-site:hover .dig-ghost { border-color: rgba(255, 211, 74, .55); }
+.dig-hud .dh-empty { display: flex; flex-direction: column; align-items: flex-start; gap: 5px; margin-top: 2px; }
+.dig-hud .dh-empty small { color: #c9bfae; }
+.dig-hud .dh-empty .btn { pointer-events: auto; }
+.dig-site:not(.crewed) .dig-lamp { opacity: .3; animation: none; }
+.dig-sign { transform-box: fill-box; transform-origin: 50% 100%; animation: dig-sign 3.2s ease-in-out infinite; }
+@keyframes dig-sign { 0%, 100% { transform: rotate(-2deg); } 50% { transform: rotate(2deg); } }

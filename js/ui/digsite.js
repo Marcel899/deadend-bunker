@@ -32,9 +32,10 @@ DE.UI.DigSite = (function () {
   const rock = (x, y, w, fill, k) => `<path d="M${x - w} ${y} l${w * .3} ${-w * .7} l${w * .6} ${-w * .4} l${w * .9} ${w * .2} l${w * .3} ${w * .9} z" fill="${fill}" ${k ? S2 : S3}/>`;
 
   /** Where the rock face is: the tunnel grows with progress; between digs, a small quarry alcove. */
+  const ALCOVE = 330;    // the quarry alcove is wide enough that the HUD never hides the face or the crew
   function faceAt(s, W) {
-    if (!s.excavation) return 180;
-    return Math.round(110 + DE.Excavation.progress(s) * (W - 140));
+    if (!s.excavation) return Math.min(ALCOVE, W - 60);
+    return Math.round(Math.min(ALCOVE, W - 60) + DE.Excavation.progress(s) * Math.max(0, W - 30 - ALCOVE));
   }
 
   /* Machines are drawn relative to the face (x = 0) and travel with it. */
@@ -182,12 +183,13 @@ DE.UI.DigSite = (function () {
    *  layer's rock with a jagged edge), the rubble pile, the machine, and while the crew works: dust
    *  billowing off the face, chips flying back, dirt trickling from the roof and pebbles bouncing. */
   const FW = 470, FX = 420;            // front layer width, and where x = 0 sits inside it
-  function front(L, layer, d, digging, machineOn) {
+  function front(L, layer, d, digging, machineOn, crewed) {
     const r = rng(d * 17 + 3);
     let jag = ''; const pts = []; for (let y = ROOF + 6; y <= G; y += 22) pts.push([Math.round(r() * 14 - 8), Math.min(G, y)]);
     jag = pts.map(([x, y], i) => (i ? 'L' : 'M') + x + ' ' + y).join(' ');
     let o = '';
     if (digging && machineOn) o += machine(L, layer);
+    if (!crewed) o += idleProps(L);
     // the rubble pile at the foot of the face (grows and is carted away: .dig-pile)
     o += `<g class="dig-pile">`; for (let i = 0; i < 6; i++) o += rock(-18 - i * 15 - r() * 8, G - (i % 2) * 2, 6 + r() * 6, i % 2 ? L.rock : L.face, true); o += `</g>`;
     // the face: a band of fresh rock, its jagged edge outlined, a highlight just inside
@@ -201,6 +203,15 @@ DE.UI.DigSite = (function () {
       + `<g class="dig-dirt">${[0, 1, 2, 3].map(i => `<rect x="${-26 - i * 14}" y="${ROOF + 12}" width="${2 + (i % 2)}" height="${6 + i * 2}" rx="1" fill="${L.face}" style="animation-delay:${(i * .7).toFixed(2)}s"/>`).join('')}</g>`
       + `<g class="dig-pebbles">${[0, 1, 2].map(i => `<circle cx="${-6 - i * 9}" cy="${ROOF + 30 + i * 30}" r="${2.5 - i * .4}" fill="${L.rock}" ${S2} style="animation-delay:${(i * .6).toFixed(2)}s"/>`).join('')}</g></g>`;
     return `<svg class="dig-front-svg" width="${FW}" height="${H}" viewBox="${-FX} 0 ${FW} ${H}" aria-hidden="true">${o}</svg>`;
+  }
+
+  /** Nobody on the mining crew: tools left at the face, a lantern turned low and a sign asking for hands. */
+  function idleProps(L) {
+    return `<g class="dig-idle">`
+      + `<g transform="translate(-118 ${G})"><rect x="-3" y="-66" width="7" height="66" fill="#7a4e2a" ${S2}/><g class="dig-sign"><rect x="-46" y="-92" width="92" height="40" rx="5" fill="#c99a5a" ${S3}/><path d="M-40 -84 h80 M-40 -60 h80" stroke="#a87a42" stroke-width="2"/>`
+      + `<text x="0" y="-76" text-anchor="middle" font-family="Lilita One, sans-serif" font-size="13" fill="${INK}">MINERS</text><text x="0" y="-61" text-anchor="middle" font-family="Lilita One, sans-serif" font-size="13" fill="#a3202a">WANTED</text></g></g>`
+      + img('pickaxe', -52, G - 4, 34) + img('lantern', -80, G - 2, 20)
+      + `</g>`;
   }
 
   /** The mine cart shuttles between the lift and the face: rolls up empty, is loaded (the rubble pile
@@ -227,7 +238,7 @@ DE.UI.DigSite = (function () {
     const W = site.clientWidth || 1200;
     const d = DE.Excavation.nextDepth(s), crew = DE.Excavation.miners(s).length, digging = !!s.excavation;
     const Lr = DE.Excavation.layer(d), layer = Lr.id, L = LOOK[layer] || LOOK.topsoil;
-    const fx = faceAt(s, W), machineOn = fx > 330;
+    const fx = faceAt(s, W), machineOn = fx > ALCOVE + 90;
     lay = { faceX: fx, cartX: 112, depth: d, active: digging, W };
     const sg = [d, digging ? 1 : 0, crew ? 1 : 0, W, layer, machineOn ? 1 : 0].join(':');
     const artEl = document.getElementById('dig-art');
@@ -235,13 +246,16 @@ DE.UI.DigSite = (function () {
       sig = sg; cartKey = ''; if (cartAnim) { cartAnim.cancel(); cartAnim = null; }
       artEl.innerHTML = `<div class="dig-reveal" style="width:${fx}px">${tunnel(L, d, W)}</div>`
         + `<div class="dig-cart" style="left:${lay.cartX - 22}px;top:${G - 40}px">${img2('f3_minecart', 44, 40)}<div class="dig-cart-load">${rockHtml(L)}</div></div>`
-        + `<div class="dig-front" style="left:${-FX}px;transform:translateX(${fx}px)">${front(L, layer, d, digging, machineOn)}</div>`;
+        + `<div class="dig-front" style="left:${-FX}px;transform:translateX(${fx}px)">${front(L, layer, d, digging, machineOn, crew > 0)}</div>`
+        + `<div class="dig-ghost" style="left:${fx + 26}px;width:${Math.max(0, W - fx - 50)}px"><b>B${d}</b><small>${DE.Util.escapeHtml(Lr.name)} · ${digging ? 'being dug out' : 'solid rock'}</small></div>`;
       void artEl.offsetWidth; artEl.classList.add('smooth');
     } else if (artEl) {
       const rv = artEl.querySelector('.dig-reveal'), fr = artEl.querySelector('.dig-front');
       if (rv && rv.style.width !== fx + 'px') rv.style.width = fx + 'px';
       const tf = `translateX(${fx}px)`; if (fr && fr.style.transform !== tf) fr.style.transform = tf;
+      const gh = artEl.querySelector('.dig-ghost'); if (gh && gh.style.left !== (fx + 26) + 'px') { gh.style.left = (fx + 26) + 'px'; gh.style.width = Math.max(0, W - fx - 50) + 'px'; }
     }
+    const ghost = artEl && artEl.querySelector('.dig-ghost'); if (ghost) { const v = W - fx > 160 ? '' : 'hidden'; if (ghost.style.visibility !== v) ghost.style.visibility = v; }
     const pace = Math.max(.3, DE.Excavation.speed(s));
     if (artEl) artEl.style.setProperty('--pace', (1 / Math.min(2.5, Math.max(.6, pace))).toFixed(2));
     site.classList.toggle('active', digging); site.classList.toggle('crewed', crew > 0);
@@ -274,12 +288,16 @@ DE.UI.DigSite = (function () {
     let h;
     if (s.excavation) {
       const p = DE.Excavation.progress(s);
-      h = `<b>${ic('dig')} B${s.excavation.depth} · ${U.escapeHtml(L.name)}</b><div class="dig-prog"><i style="width:${(100 * p).toFixed(1)}%"></i></div><span>${Math.floor(100 * p)}% · ${U.fmtTime(DE.Excavation.remaining(s))} left</span><span class="dh-crew">${crew.length ? crew.length + ' miner' + (crew.length > 1 ? 's' : '') + ' · ×' + sp.toFixed(1) + ' pace' : '<i class="neg">No miners — very slow</i>'}</span>`;
+      h = `<b>${ic('dig')} B${s.excavation.depth} · ${U.escapeHtml(L.name)}</b><div class="dig-prog"><i style="width:${(100 * p).toFixed(1)}%"></i></div><span>${Math.floor(100 * p)}% · ${U.fmtTime(DE.Excavation.remaining(s))} left</span>${crew.length ? `<span class="dh-crew">${crew.length} miner${crew.length > 1 ? 's' : ''} · ×${sp.toFixed(1)} pace</span>` : ''}`;
     } else {
       const c = DE.Excavation.canStart(s), miss = DE.Excavation.requirements(s, d).filter(r => !r.ok);
       const q = (s._rates && s._rates.quarry) || {}; const qs = Object.keys(q).filter(r => q[r] > 0).map(r => '+' + U.fmt(q[r], 2) + DE.Icons.res(r, 'ico-inline') + '/s').join(' ');
       h = `<b>${ic('dig')} Next: B${d} · ${U.escapeHtml(L.name)}</b>` + (miss.length ? `<span class="neg">Needs ${miss.map(r => U.escapeHtml(r.text)).join(' + ')}</span>` : `<span>${U.costText(DE.Excavation.cost(s, d))}</span><span>≈ ${U.fmtTime(DE.Excavation.time(s, d))} with ${crew.length || 'no'} miner${crew.length === 1 ? '' : 's'}</span>`)
         + (qs ? `<span class="dh-crew">Quarrying ${qs}</span>` : '') + (c.ok ? `<span class="dh-go">Tap to start digging</span>` : '');
+    }
+    if (!crew.length) {
+      const idle = DE.Survivors.idle(s).length;
+      h += `<span class="dh-empty"><i class="neg">No miners posted${s.excavation ? ' — digging at a crawl' : ''}</i>${idle ? `<button class="btn tiny primary" type="button" data-action="fillMiners">${ic('pop')} Send ${Math.min(idle, DE.Excavation.minerCap(s))} miner${Math.min(idle, DE.Excavation.minerCap(s)) > 1 ? 's' : ''}</button>` : `<small>Free up a survivor to dig</small>`}</span>`;
     }
     if (el.innerHTML !== h) el.innerHTML = h;
   }
