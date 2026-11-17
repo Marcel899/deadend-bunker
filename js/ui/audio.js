@@ -1,4 +1,6 @@
-/* Audio: every sound and the soundtrack are synthesised with the Web Audio API (no audio files).
+/* Audio: the soundtrack and the UI sounds are synthesised with the Web Audio API; combat, zombies,
+ * explosions, tools and machines use recorded samples (assets/sfx/<name>-<n>.mp3, see CREDITS.md
+ * there). A sample set loads after the first gesture; until it has, the synth version plays.
  *
  *   DE.Audio.sfx(name)   click · buy · upgrade · error · shot · heavy · launch · boom · alarm · event · dig · hit
  *                        · clank · ratchet (building sites) · complete · levelup · pick · rattle (dig site)
@@ -39,6 +41,7 @@ DE.Audio = (function () {
     verb.connect(lp); lp.connect(fb); fb.connect(verb); lp.connect(musicBus);
     noiseBuf = ctx.createBuffer(1, ctx.sampleRate, ctx.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
     applyVolumes();
+    loadSamples();
     if (prefs.musicOn) startMusic();
     return true;
   }
@@ -50,6 +53,35 @@ DE.Audio = (function () {
   }
   // unlock on the first gesture (required by iOS / iPadOS Safari)
   ['pointerdown', 'touchstart', 'keydown'].forEach(ev => window.addEventListener(ev, () => ensure(), { passive: true }));
+
+  /* ---------- recorded samples: name → [variants, gain] (a random variant, slightly re-pitched) ---------- */
+  const SAMPLES = {
+    shot: [3, .32], rifle: [2, .4], heavy: [2, .42], boom: [3, .6], launch: [1, .38],
+    splat: [3, .26], thud: [2, .36], casing: [3, .12], groan: [4, .26], groanbig: [2, .36],
+    zdie: [4, .3], bigdie: [2, .45], clank: [3, .24], pick: [3, .3], creak: [1, .45],
+    engine: [1, .35], powerup: [1, .4], buy: [2, .32], error: [1, .3],
+  };
+  const SFX_VER = 1, bufs = {};
+  let samplesAsked = false;
+  function loadSamples() {
+    if (samplesAsked || typeof fetch !== 'function') return; samplesAsked = true;
+    Object.keys(SAMPLES).forEach(name => {
+      for (let i = 0; i < SAMPLES[name][0]; i++) {
+        fetch('assets/sfx/' + name + '-' + i + '.mp3?v=' + SFX_VER).then(r => r.ok ? r.arrayBuffer() : Promise.reject(r.status))
+          .then(a => new Promise((ok, no) => ctx.decodeAudioData(a, ok, no)))
+          .then(b => { (bufs[name] = bufs[name] || []).push(b); }).catch(() => { /* keep the synth version */ });
+      }
+    });
+  }
+  function playSample(name, t) {
+    const list = bufs[name], s = ctx.createBufferSource(), g = ctx.createGain();
+    s.buffer = list[Math.floor(Math.random() * list.length)];
+    s.playbackRate.value = .93 + Math.random() * .14;
+    g.gain.value = SAMPLES[name][1];
+    s.connect(g); g.connect(out); s.start(t);
+  }
+  /** One effect: the recorded sample when it has loaded, else the synthesised one. */
+  function play(name, t) { if (bufs[name] && bufs[name].length) playSample(name, t); else if (FX[name]) FX[name](t); }
 
   /* ---------- building blocks ---------- */
   function tone(freq, t0, dur, type, vol, bus, glideTo) {
@@ -135,15 +167,15 @@ DE.Audio = (function () {
     if (pan && ctx.createStereoPanner) {
       // positional: everything this sound makes goes through a panner
       const p = ctx.createStereoPanner(); p.pan.value = Math.max(-1, Math.min(1, pan)); p.connect(sfxBus);
-      out = p; try { FX[name](ctx.currentTime + .005); } finally { out = sfxBus; }
+      out = p; try { play(name, ctx.currentTime + .005); } finally { out = sfxBus; }
       setTimeout(() => { try { p.disconnect(); } catch (e) { /* gone */ } }, 3000);
-    } else FX[name](ctx.currentTime + .005);
+    } else play(name, ctx.currentTime + .005);
   }
   /** A minigame sound (its own volume in the settings). */
   function mg(name, minGapMs) {
     if (!prefs.mgOn || !FX[name] || !ensure()) return;
     const now = performance.now(); if (now - (last['mg:' + name] || 0) < (minGapMs != null ? minGapMs : 30)) return; last['mg:' + name] = now;
-    out = mgBus; try { FX[name](ctx.currentTime + .005); } finally { out = sfxBus; }
+    out = mgBus; try { play(name, ctx.currentTime + .005); } finally { out = sfxBus; }
   }
   /** A tone on the minigame bus (pitch and length chosen by the minigame: notes, beeps, sweeps). */
   function mgTone(freq, dur, type, vol, glideTo) {

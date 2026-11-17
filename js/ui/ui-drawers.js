@@ -731,7 +731,7 @@ DE.UI.Drawers = (function () {
  else if (tab === 'audio') body = sCard('mg:speaker', 'Audio', 'Turn each part up, down or off', `
    ${vol('music', 'musicOn', 'toggleMusic', 'Music', 'The soundtrack (darker at night).', 'mg:radio_speaker')}
    ${vol('sfx', 'sfxOn', 'toggleSfx', 'Sound effects', 'Fights, building, digging, weather and the bunker.', 'mg:speaker')}
-   ${vol('mg', 'mgOn', 'toggleMg', 'Minigames', 'Sounds in the forge, radio, power grid and other room games.', 'mg:trophy')}`);
+   ${vol('mg', 'mgOn', 'toggleMg', 'Minigames', 'Sounds in the forge, radio, power grid and other room games.', 'mg:trophy')}`) + `<p class="muted set-credit"><small>Sound effects: The Free Firearm Sound Library, Kenney and Freesound (CC0); "Oculus Audio Pack 01" by Oculus VR, LLC, licensed under <a href="https://creativecommons.org/licenses/by/4.0/" target="_blank" rel="noopener">CC BY 4.0</a>. Full list in assets/sfx/CREDITS.md.</small></p>`;
  else if (tab === 'interface') body = sCard('info', 'Interface', 'How the bunker talks to you', `
    ${sw('speech', P.speech, 'Speech bubbles', 'Survivors talk about what they are doing, how they feel and what happens.', false, 'mail')}
    ${sw('autoEvents', P.autoEvents, 'Open decisions by themselves', 'Off: decisions only wait in the pill on the surface until you open them.', false, 'scroll')}
