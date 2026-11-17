@@ -109,9 +109,11 @@ DE.Save = (function () {
       if (Array.isArray(src.floors)) {
         src.floors.forEach((f, i) => {
           if (!U().isObj(f)) return;
-          // floors from older versions were all dug 16 cells wide; newer ones remember their width
-          const base = U().clamp(N(f.base, C().START_FLOOR_SLOTS), 4, C().MAX_COLS);
-          const cols = U().clamp(Array.isArray(f.slots) ? f.slots.length : base, base, C().MAX_COLS);
+          // floors from older versions were all dug 16 cells wide; newer ones remember their width.
+          // Floors dug before they were made narrower (up to 24 cells) keep their width and rooms.
+          const had = Array.isArray(f.slots) ? f.slots.length : 0, cap = U().clamp(had, C().MAX_COLS, 24);
+          const base = U().clamp(N(f.base, had ? Math.min(16, had) : 16), 4, cap);
+          const cols = U().clamp(had || base, base, cap);
           const floor = DE.State.emptyFloor(N(f.depth, i + 1), cols); floor.base = base;
           if (Array.isArray(f.slots)) for (let k = 0; k < cols; k++) floor.slots[k] = typeof f.slots[k] === 'string' ? f.slots[k] : null;
           if (U().isObj(f.expansion)) floor.expansion = { endsAt: N(f.expansion.endsAt, now), duration: NN(f.expansion.duration, 1), cells: C().WING_CELLS };

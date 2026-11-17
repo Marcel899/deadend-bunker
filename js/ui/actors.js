@@ -63,10 +63,12 @@ DE.UI.Actors = (function () {
     const L = DE.UI.DigSite.layout();
     const crew = Object.values(state.survivors).filter(o => o.act && o.act.kind === 'mine').map(o => o.id).sort();
     const i = Math.max(0, crew.indexOf(sv.id)), hauler = i % 3 === 2;
-    if (!hauler) { const k = i - Math.floor((i + 1) / 3); return { site: true, kind: 'mine', anim: 'dig', sx: Math.max(70, L.faceX - 26 - 34 * (k % 4) - (k >= 4 ? 17 : 0)) }; }
+    // `spot` names the post (not its x): the face creeps forward with every 1% of progress, and a key
+    // built from x would re-plan the walk (and the lift ride down) every tick, so the crew never got there
+    if (!hauler) { const k = i - Math.floor((i + 1) / 3); return { site: true, kind: 'mine', anim: 'dig', spot: L.depth + ':d' + k, sx: Math.max(70, L.faceX - 26 - 34 * (k % 4) - (k >= 4 ? 17 : 0)) }; }
     const k = Math.floor(i / 3), far = Math.max(L.cartX + 70, L.faceX - 44 - 10 * k), near = L.cartX + 36 + 8 * k, trip = (far - near) / WALK + 4.5;
     const back = Math.floor((Date.now() / 1000 + (hash(sv.id) % 9)) / trip) % 2 === 1;
-    return { site: true, kind: 'mine', anim: 'work', sx: back ? near : far, walk: k === 0 ? 'push' : back ? 'haul' : 'walk' };
+    return { site: true, kind: 'mine', anim: 'work', spot: L.depth + ':' + (back ? 'n' : 'f') + k, sx: back ? near : far, walk: k === 0 ? 'push' : back ? 'haul' : 'walk' };
   }
   /** Where a survivor stands at the dig site (scene x in site px, on the tunnel floor). */
   function sitePoint(sx) {
@@ -316,7 +318,7 @@ DE.UI.Actors = (function () {
       let a = actors[id]; if (!a) { a = make(sv); a.isNew = TALK.ready; }
       if (a.prof !== sv.profession) { a.el.remove(); delete actors[id]; a = make(sv); }
       const t = target(s, sv);
-      const key = (t.room || 'none') + ':' + t.kind + ':' + (t.sx | 0) + (t.bed ? ':' + t.bed.y : '');
+      const key = (t.room || 'none') + ':' + t.kind + ':' + (t.spot != null ? t.spot : (t.sx | 0)) + (t.bed ? ':' + t.bed.y : '');
       // at a work station they stand a step up, at the machine (they step up when they arrive)
       const atWork = t.kind === 'work' && t.room && !t.bed && !t.site;
       const pointFor = () => { const q = t.site ? sitePoint(t.sx) : t.room ? (t.bed ? bedPoint(t.room, t.bed) : roomPoint(t.room, t.sx)) : shaftPoint(t.floor || 1); if (q && atWork) q.y -= WORK_LIFT; return q; };
@@ -343,6 +345,10 @@ DE.UI.Actors = (function () {
           } else plan(a, dest);
           a.pendingAnim = t.anim; a.segEnd = 0; bubble(a, '', '');
         }
+      } else if (t.site && !riding && !a.lift && !a.queue.length && a.segEnd === 0 && a.placed) {
+        // at the dig site: follow the face as the tunnel grows (a short shuffle forward, still swinging)
+        const dest = pointFor();
+        if (dest && dest.floor === a.floor && (Math.abs(dest.x - a.x) > 4 || Math.abs(dest.y - a.y) > 3)) moveTo(a, dest.x, dest.y, snapCheck ? 0 : Math.min(1.5, Math.abs(dest.x - a.x) / WALK + .3));
       } else if (snapCheck && !a.queue.length && a.segEnd === 0 && a.placed) {
         // standing at a station whose room may have moved (re-render): snap if far off (checked once
         // after a re-layout, not every tick: it reads the room's geometry)

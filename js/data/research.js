@@ -60,7 +60,7 @@ DE.Data.RESEARCH = {
   excavation3: { id: 'excavation3', branch: 'engineering', name: 'Abyss Drilling', icon: '🌑', cost: 9000, time: 900, requires: ['excavation2'],
     desc: 'Deep-core drills for the basalt: dig to B10 (Mining Station Lv 20).', effects: [{ type: 'maxFloor', value: 10 }] },
   excavation4: { id: 'excavation4', branch: 'engineering', name: 'Thermal Boring', icon: '🔥', cost: 24000, time: 1500, requires: ['excavation3', 'fusion'],
-    desc: 'A borer that melts through the magma rock: dig to B12 (Mining Station Lv 30).', effects: [{ type: 'maxFloor', value: 12 }] },
+    desc: 'A borer that melts through the magma rock: dig to B16 (Mining Station Lv 30).', effects: [{ type: 'maxFloor', value: 16 }] },
 
   /* ---------------- Survival ---------------- */
   medicine: { id: 'medicine', branch: 'survival', name: 'Field Medicine', icon: '💊', cost: 60, time: 60, requires: [],

@@ -42,8 +42,10 @@ t('starting scrap covers farm, water and workshop', () => {
   const R = DE.Data.ROOMS, need = R.farm.cost.scrap + R.water.cost.scrap + R.workshop.cost.scrap;
   assert(S.resources.scrap >= need + 100, 'scrap ' + S.resources.scrap + ' vs ' + need);
 });
-// the rest of the suite uses the classic five-room layout
+// the rest of the suite uses the classic five-room layout, on a first floor dug before floors were
+// made narrower (16 cells, as old saves have it)
 (function classic() {
+  while (S.floors[0].slots.length < 16) S.floors[0].slots.push(null); S.floors[0].base = 16;
   const gen = Object.values(S.rooms).find(r => r.type === 'generator');
   gen.workers.slice().forEach(id => DE.Survivors.assign(S, id, null));
   S.floors[0].slots[4] = S.floors[0].slots[5] = null; delete S.rooms[gen.id];
@@ -131,14 +133,16 @@ t('demolish refunds and frees slot', () => {
 
 t('floors expand sideways and rooms relocate', () => {
   S.resources.scrap = 1e5; S.resources.concrete = 1e5;
-  const r = DE.Bunker.expand(S, 1, now); assert(r.ok, r.reason);
-  now = run(S, DE.Bunker.getFloor(S, 1).expansion.duration + 1, now, 1);
-  assert(DE.Bunker.getFloor(S, 1).slots.length === DE.CONFIG.START_FLOOR_SLOTS + DE.CONFIG.WING_CELLS, 'cols ' + DE.Bunker.getFloor(S, 1).slots.length);
-  assert(DE.Bunker.wingCount(DE.Bunker.getFloor(S, 1)) === 1, 'one wing');
-  const b2 = DE.Bunker.build(S, 'workshop', 1, 12, now); assert(b2.ok, b2.reason); const ws = b2.room; ws.level = 1; ws.construction = null; const m = DE.Bunker.move(S, ws.id, 1, 16); assert(m.ok, m.reason); assert(ws.slot === 16);
-  assert(DE.Bunker.getFloor(S, 1).slots[16] === ws.id && DE.Bunker.getFloor(S, 1).slots[12] === null);
-  assert(!DE.Bunker.move(S, ws.id, 1, 0).ok, 'cannot move onto quarters');
-  DE.Bunker.demolish(S, ws.id);
+  const old = DE.Bunker.expand(S, 1, now); assert(!old.ok, 'a wide floor from an old save keeps its width but grows no further');
+  const E = DE.State.create(null, now); E.resources.scrap = 1e5; E.resources.concrete = 1e5; E._fx = null;
+  const r = DE.Bunker.expand(E, 1, now); assert(r.ok, r.reason);
+  run(E, DE.Bunker.getFloor(E, 1).expansion.duration + 1, now, 1);
+  assert(DE.Bunker.getFloor(E, 1).slots.length === DE.CONFIG.START_FLOOR_SLOTS + DE.CONFIG.WING_CELLS, 'cols ' + DE.Bunker.getFloor(E, 1).slots.length);
+  assert(DE.Bunker.wingCount(DE.Bunker.getFloor(E, 1)) === 1, 'one wing');
+  const b2 = DE.Bunker.build(E, 'workshop', 1, 6, now); assert(b2.ok, b2.reason); const ws = b2.room; ws.level = 1; ws.construction = null; const m = DE.Bunker.move(E, ws.id, 1, 10); assert(m.ok, m.reason); assert(ws.slot === 10);
+  assert(DE.Bunker.getFloor(E, 1).slots[10] === ws.id && DE.Bunker.getFloor(E, 1).slots[6] === null);
+  assert(!DE.Bunker.move(E, ws.id, 1, 0).ok, 'cannot move onto quarters');
+  assert(DE.Bunker.getFloor(E, 1).slots.length <= DE.CONFIG.MAX_COLS, 'floors stay short');
 });
 
 console.log('Living world');
@@ -164,7 +168,7 @@ t('events: costs are a share of what you have; rewards keep pace with the econom
   E.resources.scrap = 20000; E._fx = null; assert(DE.Events.resolve(E, { cost: { scrap: 0.1 } }).scrap === -2000, '10% of 20000');
   E.resources.scrap = 0; assert(!DE.Events.resolve(E, { cost: { scrap: 0.1 } }).scrap, 'nothing to pay from an empty store');
   const early = DE.Events.worth(E, 'food', 3); assert(early > 0, 'a reward early on');
-  for (const id in E.rooms) E.rooms[id].level = 30; DE.Bunker.placeRoom(E, 'storage', 1, 12, 50); E._fx = null; E._rates = DE.Economy.computeRates(E);
+  for (const id in E.rooms) E.rooms[id].level = 30; DE.Bunker.placeRoom(E, 'storage', 1, 6, 50); E._fx = null; E._rates = DE.Economy.computeRates(E);
   const late = DE.Events.worth(E, 'food', 3); assert(late > early * 5, 'rewards grow with output: ' + early + ' → ' + late);
   assert(DE.Events.worth(E, 'concrete', 3) > 0, 'concrete rewards before any mixer exists');
 });
@@ -208,7 +212,7 @@ t('trades give a share of one stock for its value in another, better with a good
 t('bus upgrade raises team capacity and expedition speed', () => {
   const E = DE.State.create(null, now); E.research.done.construction = true; E._fx = null; E.resources.scrap = 1e5; E.resources.concrete = 1e5; E.resources.fuel = 1e5; E.resources.research = 1e5;
   assert(DE.Events.bus(E).capacity === 3);
-  E.floors[0].slots.push(null, null, null, null); const gb = DE.Bunker.build(E, 'garage', 1, 12, now); assert(gb.ok, gb.reason); Object.values(E.rooms).find(r => r.type === 'garage').level = 1; Object.values(E.rooms).find(r => r.type === 'garage').construction = null; E._fx = null;
+  const gb = DE.Bunker.build(E, 'garage', 1, 6, now); assert(gb.ok, gb.reason); Object.values(E.rooms).find(r => r.type === 'garage').level = 1; Object.values(E.rooms).find(r => r.type === 'garage').construction = null; E._fx = null;
   const r = DE.Events.upgradeBus(E); assert(r.ok, r.reason); assert(DE.Events.bus(E).capacity === 4);
 });
 t('goals complete and pay out', () => {
@@ -300,7 +304,7 @@ t('excavation: the clay needs Excavation I and a Mining Station; limestone needs
   fill(S); delete S.research.done.excavation1; S._fx = null;
   let c = DE.Excavation.canStart(S); assert(!c.ok && /Excavation I/.test(c.reason) && /Mining Station/.test(c.reason), c.reason);
   S.research.done.excavation1 = true; S._fx = null; c = DE.Excavation.canStart(S); assert(!c.ok && /Mining Station/.test(c.reason), 'still needs the station');
-  const mh = DE.Bunker.build(S, 'minehead', 2, 10, now); assert(mh.ok, mh.reason); now = run(S, mh.room.construction.duration + 1, now, 1); S._fx = null;
+  const mh = DE.Bunker.build(S, 'minehead', 2, 6, now); assert(mh.ok, mh.reason); now = run(S, mh.room.construction.duration + 1, now, 1); S._fx = null;
   assert(DE.Excavation.canStart(S).ok, 'clay open'); assert(DE.Excavation.minerCap(S) === 2, 'Lv1 adds no post yet');
   mh.room.level = 4; S._fx = null; assert(DE.Excavation.minerCap(S) === 4, 'Lv4: two more posts');
   DE.Excavation.start(S, now); const before = S.resources.concrete; now = digOut(S, now); assert(S.floors.length === 3, 'B3 dug');
@@ -320,7 +324,10 @@ t('excavation: old saves with a timed dig keep their progress', () => {
   const old = JSON.parse(JSON.stringify(S)); old.excavation = { depth: old.floors.length + 1, endsAt: Date.now() + 50000, duration: 100 };
   const L = DE.Save.sanitize(old); assert(L.excavation && Math.abs(L.excavation.work / L.excavation.need - 0.5) < 0.05, 'half done');
   const o2 = JSON.parse(JSON.stringify(S)); o2.floors.forEach(f => delete f.base);
-  const L2 = DE.Save.sanitize(o2); assert(L2.floors[1].base === 16 && DE.Bunker.wingCount(L2.floors[1]) === 0, 'old floors were 16 wide');
+  const L2 = DE.Save.sanitize(o2); assert(L2.floors[0].base === 16 && L2.floors[0].slots.length === 16 && DE.Bunker.wingCount(L2.floors[0]) === 0, 'old floors were 16 wide');
+  assert(L2.floors[1].slots.length === o2.floors[1].slots.length, 'narrow floors are not widened on load');
+  const o4 = JSON.parse(JSON.stringify(S)); while (o4.floors[0].slots.length < 24) o4.floors[0].slots.push(null); o4.floors[0].slots[22] = 'rX';
+  assert(DE.Save.sanitize(o4).floors[0].slots.length === 24, 'a floor widened to 24 cells keeps every cell');
   const o3 = JSON.parse(JSON.stringify(S)); const sid = Object.keys(o3.survivors)[0]; o3.survivors[sid].assignment = { kind: 'dig' };
   assert(DE.Save.sanitize(o3).survivors[sid].assignment.kind === 'dig', 'miners stay miners');
 });
@@ -456,7 +463,7 @@ t('offline progression credits production and caps', () => {
 });
 t('offline completes construction timers and limits waves', () => {
   const O = DE.State.create(null, now); O.resources.scrap = 1000; O.resources.fuel = 1e5;
-  const r = DE.Bunker.build(O, 'workshop', 1, 12, now);
+  const r = DE.Bunker.build(O, 'workshop', 1, 6, now);
   DE.Offline.process(O, now + 10 * 3600 * 1000);
   assert(r.room.level === 1, 'built'); assert(O.defense.wave <= 1 + DE.CONFIG.OFFLINE_MAX_WAVES + 1, 'waves ' + O.defense.wave);
   assert(O.defense.nextWaveAt > now + 10 * 3600 * 1000 - 1000, 'next wave in the future');
