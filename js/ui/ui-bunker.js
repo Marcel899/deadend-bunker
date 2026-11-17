@@ -272,7 +272,7 @@ DE.UI.Bunker = (function () {
     }
     const surface = $('#surface'); if (!surface) return;
     if (DE.UI.Camera && surface.querySelector('.wave-info, .ev-pill, .dc-chip')) DE.UI.Camera.pinHud();
-    const wrap = document.getElementById('bunker-wrap'); if (wrap) { const C = DE.UI.Camera, w = (C && C.mode() === 'surface' ? C.surfaceWidth() : wrap.clientWidth) + 'px'; if (surface.style.width !== w) surface.style.width = w; }
+    const wrap = document.getElementById('bunker-wrap'); if (wrap) { const C = DE.UI.Camera, w = (C && C.mode() !== 'bunker' ? C.surfaceWidth() : wrap.clientWidth) + 'px'; if (surface.style.width !== w) surface.style.width = w; }
     // structure levels drive which overworld artwork is visible (css/overworld.css)
     const scene = $('#scene');
     if (scene) {

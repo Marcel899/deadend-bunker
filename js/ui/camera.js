@@ -12,9 +12,9 @@ DE.UI = DE.UI || {};
 
 DE.UI.Camera = (function () {
   const OW_RATIO = 1664 / 600, SURF_BORDER = 10;
-  const LIMITS = { bunker: [0.25, 2.5], surface: [0.3, 3] };
+  const LIMITS = { both: [0.2, 2.5], bunker: [0.25, 2.5], surface: [0.3, 3] };
   let wrap = null, bunker = null, ctl = null, hud = null;
-  let mode = 'bunker';
+  let mode = 'both';
   let k = 1, tx = 0, ty = 0;
   const saved = {};                 // per view: { k, cx, cy } (view centre in content px)
   let anim = 0, inertia = 0;
@@ -23,7 +23,7 @@ DE.UI.Camera = (function () {
   let suppressClick = false;
   let fresh = true;                 // no input since the view was framed: re-frame when the content changes size
 
-  try { const m = localStorage.getItem('de.view'); if (m === 'surface' || m === 'bunker') mode = m; } catch (e) { /* private mode */ }
+  try { const m = localStorage.getItem('de.view'); if (m === 'surface' || m === 'bunker' || m === 'both') mode = m; } catch (e) { /* private mode */ }
 
   /* ---------- geometry ---------- */
   function viewSize() { return { w: wrap.clientWidth, h: wrap.clientHeight }; }
@@ -31,6 +31,7 @@ DE.UI.Camera = (function () {
    *  on very wide screens). In bunker view the surface is hidden. */
   function surfaceWidth() {
     if (!wrap) return 0; const v = viewSize();
+    if (mode === 'both') { const f = document.getElementById('floors'); return Math.max(v.w, f ? f.offsetWidth : 0); }   // spans the floors below
     return Math.round(Math.max(v.w, (v.h - SURF_BORDER) * OW_RATIO));
   }
   function natural() { return { w: bunker.offsetWidth || 1, h: bunker.offsetHeight || 1 }; }
@@ -44,7 +45,7 @@ DE.UI.Camera = (function () {
   function clamp() {
     const [lo, hi] = limits(); k = Math.max(lo, Math.min(hi, k));
     const v = viewSize(), n = natural();
-    tx = clampAxis(tx, n.w * k, v.w); ty = mode === 'bunker' && n.h * k <= v.h ? 0 : clampAxis(ty, n.h * k, v.h);   // a short bunker hangs from the top
+    tx = clampAxis(tx, n.w * k, v.w); ty = mode !== 'surface' && n.h * k <= v.h ? 0 : clampAxis(ty, n.h * k, v.h);   // a short bunker hangs from the top
   }
   function apply() {
     if (!bunker) return;
@@ -90,28 +91,28 @@ DE.UI.Camera = (function () {
 
   /* ---------- views ---------- */
   function setMode(m, opts) {
-    if (m !== 'bunker' && m !== 'surface') return;
+    if (m !== 'bunker' && m !== 'surface' && m !== 'both') return;
     if (bunker && m === mode && !(opts && opts.force)) return;
     stopMotion();
     if (bunker && m !== mode) saved[mode] = Object.assign({ k }, centre());
     mode = m;
     try { localStorage.setItem('de.view', m); } catch (e) { /* ignore */ }
     if (!wrap) return;
-    wrap.classList.toggle('view-bunker', m === 'bunker'); wrap.classList.toggle('view-surface', m === 'surface');
+    wrap.classList.toggle('view-bunker', m === 'bunker'); wrap.classList.toggle('view-both', m === 'both'); wrap.classList.toggle('view-surface', m === 'surface');
     if (ctl) ctl.querySelectorAll('[data-view]').forEach(b => b.classList.toggle('on', b.dataset.view === m));
-    const sf = document.getElementById('surface'); if (sf && m === 'surface') sf.style.width = surfaceWidth() + 'px';
+    const sf = document.getElementById('surface'); if (sf && m !== 'bunker') sf.style.width = surfaceWidth() + 'px';
     // the floors' layers (survivors, lift, badges) measure the floors: lay them out again now they show
-    if (m === 'bunker' && DE.UI.Bunker && DE.UI.state && DE.UI.state()) DE.UI.Bunker.render();
+    if (m !== 'surface' && DE.UI.Bunker && DE.UI.state && DE.UI.state()) DE.UI.Bunker.render();
     const s = saved[m];
     if (s) glide(s.k, s.cx, s.cy, 0); else { home(0); fresh = true; }
     bunker.classList.remove('cam-in'); void bunker.offsetWidth; bunker.classList.add('cam-in');
   }
-  function toggle() { setMode(mode === 'bunker' ? 'surface' : 'bunker'); }
+  function toggle() { setMode(mode === 'both' ? 'bunker' : mode === 'bunker' ? 'surface' : 'both'); }
 
   /** Centre an element of the bunker (switching to bunker view if needed). */
   function focus(el, ms) {
     if (!el) return;
-    if (mode !== 'bunker') setMode('bunker');
+    if (mode === 'surface') setMode('both');
     const r = rect(el); if (!r) return;
     glide(k, r.left + r.width / 2, r.top + r.height / 2, ms == null ? 400 : ms);
   }
@@ -220,6 +221,7 @@ DE.UI.Camera = (function () {
     const icon = (n) => (DE.Icons ? DE.Icons.img(n) : '');
     ctl = document.createElement('div'); ctl.id = 'view-ctl';
     ctl.innerHTML = `<div class="vc-seg" role="tablist" aria-label="View">
+        <button type="button" data-view="both" title="Surface and bunker together (V)">${icon('home')}<span>Both</span></button>
         <button type="button" data-view="bunker" title="Bunker view (V)">${icon('bunker')}<span>Bunker</span></button>
         <button type="button" data-view="surface" title="Surface view (V)">${icon('map')}<span>Surface</span></button>
       </div>
@@ -265,7 +267,7 @@ DE.UI.Camera = (function () {
     // content or view size changes (new floor, wider floor, window resize): keep the view in bounds
     let lastSurfW = 0;
     const onResize = () => {
-      if (mode === 'surface') { const sf = document.getElementById('surface'), w = surfaceWidth(); if (sf && w !== lastSurfW) { const c = centre(), ow = natural().w; lastSurfW = w; sf.style.width = w + 'px'; const f = natural().w / ow; glide(k, c.cx * f, c.cy * f, 0); return; } }
+      if (mode !== 'bunker') { const sf = document.getElementById('surface'), w = surfaceWidth(); if (sf && w !== lastSurfW) { const c = centre(), ow = natural().w; lastSurfW = w; sf.style.width = w + 'px'; const f = natural().w / ow; glide(k, c.cx * f, c.cy * f, 0); return; } }
       if (fresh && !saved[mode]) home(0); else apply();
     };
     if (typeof ResizeObserver !== 'undefined') { const ro = new ResizeObserver(onResize); ro.observe(wrap); ro.observe(bunker); }

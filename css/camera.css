@@ -32,3 +32,6 @@
 #view-hud.incoming .wave-info .ab-time { background: #c8323c; animation: blink 1s infinite; }
 /* room names on the top floor stay clear of the clock and the wave card */
 #bunker-wrap.view-bunker #bunker { padding-top: 46px; }
+/* both: the overworld on top, the floors below, one map */
+#bunker-wrap.view-both .surface { position: relative; }
+#bunker-wrap.view-both #bunker { padding-top: 0; }
