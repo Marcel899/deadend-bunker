@@ -245,6 +245,9 @@ DE.UI.Bunker = (function () {
 
   function setAnim(rig, a) { Array.from(rig.classList).forEach(c => { if (c.startsWith('a-')) rig.classList.remove(c); }); rig.classList.add('a-' + a); }
 
+  /** "4:05" style countdown, short enough for the compact wave card. */
+  function clockText(sec) { sec = Math.max(0, Math.ceil(sec)); const h = Math.floor(sec / 3600), m = Math.floor(sec % 3600 / 60), x = sec % 60; return (h ? h + ':' + String(m).padStart(2, '0') : m) + ':' + String(x).padStart(2, '0'); }
+
   function updateSurface(s, now) {
     const d = s.defense; const maxHp = DE.Defense.wallMaxHp(s);
     setText($('#wall-lvl'), 'Lv ' + d.wall.level);
@@ -257,11 +260,12 @@ DE.UI.Bunker = (function () {
       const say = verdict === 'ok' ? 'defense holds' : verdict === 'warn' ? 'the wall will take hits' : 'defense too weak!';
       const raid = DE.Defense.isRaid(s, d.wave);
       // the attack bar: what is coming and when, our firepower against its strength, and how close it is
-      const boss = DE.Defense.isBossWave(d.wave), share = Math.round(100 * power.total / Math.max(1, power.total + hp)), left = Math.max(0, Math.min(1, secs / Math.max(1, DE.Defense.waveInterval(s))));
-      setHtml(info, `<div class="ab-top">${Ic().img(raid ? 'truck' : 'wave', 'ab-ico')}<span class="ab-name">${boss ? 'Boss wave' : raid ? 'Bandit raid' : 'Wave'} ${d.wave}</span><b class="ab-time">${secs > 0 ? U().fmtTime(secs) : 'now!'}</b></div>
-        <div class="ab-vs" title="Your firepower against the attack's strength"><i class="ab-us" style="width:${share}%"></i><span class="ab-l">${Ic().img('guard', 'ico-inline')}${U().fmt(power.total)}</span><span class="ab-r">${U().fmt(hp)}${Ic().img(raid ? 'skull' : 'zombie', 'ico-inline')}</span><u></u></div>
-        <div class="ab-foot"><span class="wi-v">${say}</span><i class="ab-clock"><i style="width:${Math.round(100 * (1 - left))}%"></i></i></div>`);
-      info.title = `Threat ${U().fmt(hp)} vs your ${U().fmt(power.total)} damage per fight — click to open Defense`;
+      const boss = DE.Defense.isBossWave(d.wave), share = Math.round(100 * power.total / Math.max(1, power.total + hp));
+      // compact: name and countdown on top, one slim bar (our firepower against theirs) under it;
+      // the verdict is the card's colour, the words are in the tooltip
+      setHtml(info, `<div class="ab-top">${Ic().img(raid ? 'truck' : 'wave', 'ab-ico')}<span class="ab-name">${boss ? 'Boss ' : raid ? 'Raid ' : 'Wave '}${d.wave}</span><b class="ab-time">${secs > 0 ? clockText(secs) : 'now!'}</b></div>
+        <div class="ab-vs"><i class="ab-us" style="width:${share}%"></i><span class="ab-l">${U().fmt(power.total)}</span><span class="ab-r">${U().fmt(hp)}</span><u></u></div>`);
+      info.title = `${say.charAt(0).toUpperCase() + say.slice(1)}\nThreat ${U().fmt(hp)} vs your ${U().fmt(power.total)} damage per fight\nClick to open Defense`;
       info.className = 'wave-info ' + verdict;
     }
     const surface = $('#surface'); if (!surface) return;

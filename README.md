@@ -35,6 +35,7 @@ node tests/test.js
 ```
 index.html            page skeleton, script order
 css/style.css         all styling (cartoon cutaway, drawers, modals)
+css/layout.css        last layer: HUD layout (top bar, dock, wave card, toasts, panels, phones)
 js/data/              pure data: config, resources, rooms, research tree, survivors, world (zombies, facilities, locations, legacy)
 js/core/
   util.js             formatting, RNG, cost helpers

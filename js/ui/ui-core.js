@@ -87,14 +87,13 @@ DE.UI = (function () {
  ${R[r].capped ? '' : `<span class="res-plus" data-action="openDrawer" data-drawer="research" title="Research">+</span>`}
  <i class="res-rate">+0/s</i>
  </div>`).join('');
- // defense per second sits first, right before the survivor counter: damage/s plus a bar for how
- // much of the next wave that firepower would cut down
- $('#chips').innerHTML = `<div class="chip def" id="chip-def" data-action="openDrawer" data-drawer="defense" title="Defense">${DE.Icons.img('shield')}<span class="cd-body"><b>0/s</b><span class="cd-bar"><i></i></span></span></div>
- <div class="chip" id="chip-pop" data-action="openDrawer" data-drawer="survivors" title="Population / housing">${DE.Icons.img('pop')}<b>0/0</b></div>
+ // status chips, left to right: survivors, morale, the next wave (its colour and bar say whether the
+ // defense would hold: firepower against the wave's strength), decisions waiting, and the menu
+ $('#chips').innerHTML = `<div class="chip" id="chip-pop" data-action="openDrawer" data-drawer="survivors" title="Population / housing">${DE.Icons.img('pop')}<b>0/0</b></div>
  <div class="chip" id="chip-morale" title="Morale">${DE.Icons.img('morale')}<b>60</b></div>
- <div class="chip" id="chip-wave" data-action="openDrawer" data-drawer="defense" title="Next zombie wave">${DE.Icons.img('wave')}<b>--</b><small class="cw-n">W1</small></div>
- <div class="chip" id="chip-lp" data-action="openDrawer" data-drawer="legacy" title="Legacy Points">${DE.Icons.img('res.legacy')}<b>0</b></div>
- <div class="chip decide" id="chip-events" data-action="nextEvent" title="Decisions waiting for you">${DE.Icons.img('scroll')}<b>0</b></div>`;
+ <div class="chip def" id="chip-wave" data-action="openDrawer" data-drawer="defense" title="Next zombie wave">${DE.Icons.img('wave')}<span class="cd-body"><b>--</b><span class="cd-bar"><i></i></span></span><small class="cw-n">W1</small></div>
+ <div class="chip decide" id="chip-events" data-action="nextEvent" title="Decisions waiting for you">${DE.Icons.img('scroll')}<b>0</b></div>
+ <button class="chip chip-menu" id="chip-menu" data-action="openDrawer" data-drawer="settings" title="Menu & settings (O)">${DE.Icons.img('gear')}</button>`;
  }
 
  /** Little red counters on the nav dock: what needs attention where. */
@@ -159,12 +158,10 @@ DE.UI = (function () {
  const cw = $('#chip-wave'), boss = DE.Defense.isBossWave(s.defense.wave);
  cw.querySelector('b').textContent = clock(secs);
  cw.querySelector('.cw-n').textContent = (boss ? 'BOSS ' : 'W') + s.defense.wave;
- cw.classList.toggle('warn', secs < 30); cw.classList.toggle('boss', boss);
- cw.title = (boss ? 'BOSS wave ' : 'Zombie wave ') + s.defense.wave + ' in ' + U().fmtTime(secs) + '\nClick to open Defense';
- updateDefChip(s);
+ updateDefChip(s, secs, boss);
  const nEv = (s.events || []).length; const ce = $('#chip-events'); if (ce) { ce.querySelector('b').textContent = nEv; ce.style.display = nEv ? '' : 'none'; }
- $('#chip-lp b').textContent = U().fmt(s.prestige.points);
- $('#chip-lp').style.display = (s.prestige.lifetime > 0 || s.stats.maxDepth >= 3) ? '' : 'none';
+ // Legacy only takes a slot in the dock once a reconstruction is possible (floor B3) or was done
+ const lg = document.querySelector('#bottombar [data-nav="legacy"]'); if (lg) { const on = s.prestige.lifetime > 0 || s.stats.maxDepth >= 3; if (lg.hidden === on) lg.hidden = !on; }
  }
 
  /** "4:05" / "1:02:30" — compact countdown for the wave chip. */
@@ -174,16 +171,16 @@ DE.UI = (function () {
  }
  /** Shield chip: total damage per second of guards, turrets and missiles, and how much of the next
   *  wave it would kill (bar; green = the wave is beaten before it reaches the wall). */
- function updateDefChip(s) {
- const el = $('#chip-def'); if (!el) return;
+ function updateDefChip(s, secs, boss) {
+ const el = $('#chip-wave'); if (!el) return;
  const pw = DE.Defense.defensePower(s), threat = DE.Defense.waveHp(s);
  const dps = pw.guardDps + pw.turretDps + pw.missileDps, ratio = threat > 0 ? pw.total / threat : 1;
  const f = (n) => U().fmt(n, n > 0 && n < 10 ? 1 : undefined);
- el.querySelector('b').textContent = f(dps) + '/s';
  el.querySelector('.cd-bar i').style.width = Math.min(100, ratio * 100).toFixed(1) + '%';
- const cls = 'chip def ' + (ratio >= 1 ? 'good' : ratio >= 0.6 ? 'meh' : 'bad');
+ const cls = 'chip def ' + (ratio >= 1 ? 'good' : ratio >= 0.6 ? 'meh' : 'bad') + (secs < 30 ? ' soon' : '') + (boss ? ' boss' : '');
  if (el.className !== cls) el.className = cls;
- el.title = 'Defense: ' + f(dps) + ' damage per second'
+ el.title = (boss ? 'BOSS wave ' : 'Zombie wave ') + s.defense.wave + ' in ' + U().fmtTime(secs)
+   + '\nDefense: ' + f(dps) + ' damage per second'
    + '\n• Guards ' + f(pw.guardDps) + '/s (' + pw.guards + ')'
    + '\n• Turrets ' + f(pw.turretDps) + '/s (' + s.defense.turrets + ')'
    + (pw.missileDps ? '\n• Missiles ' + f(pw.missileDps) + '/s' : '')
@@ -198,7 +195,7 @@ DE.UI = (function () {
  // merges into one pill with a ×N counter; the same `key` (e.g. one room being upgraded again)
  // replaces the text instead of stacking. At most three are visible, hovering pauses the timer
  // and a tap dismisses.
- const TOAST_MAX = 3;
+ const TOAST_MAX = 3, toastMax = () => (window.innerWidth <= 700 ? 2 : TOAST_MAX);
  function toast(msg, kind, ms, iconKey, opts) {
  const root = $('#toasts'); if (!root) return null;
  opts = opts || {}; kind = kind || 'info';
@@ -222,7 +219,7 @@ DE.UI = (function () {
  root.prepend(el);
  requestAnimationFrame(() => el.classList.add('show'));
  arm(el, dur);
- Array.from(root.children).filter(t => !t.classList.contains('out')).slice(TOAST_MAX).forEach(dismissToast);
+ Array.from(root.children).filter(t => !t.classList.contains('out')).slice(toastMax()).forEach(dismissToast);
  return el;
  }
  function arm(el, ms) {
@@ -231,16 +228,15 @@ DE.UI = (function () {
  el._t = setTimeout(() => dismissToast(el), ms);
  }
  function dismissToast(el) { if (!el || el.classList.contains('out')) return; clearTimeout(el._t); el.classList.add('out'); el.classList.remove('show'); setTimeout(() => el.remove(), 300); }
- /** Centre the stack over the bunker view, under the top bar (and under an open drawer's header). */
+ /** Centre the stack at the bottom of the bunker view, or of an open drawer. */
  function placeToasts() {
  const root = $('#toasts'), top = $('#topbar'), wrap = $('#bunker-wrap'), game = $('#game-screen'); if (!root || !top || !wrap || !game) return;
- const g = game.getBoundingClientRect(), r = wrap.getBoundingClientRect(), dr = $('#drawer');
- const open = !!dr && !dr.classList.contains('hidden');
- // over an open panel, notifications stack up from the bottom edge (the panel's header and first
- // buttons stay visible); over the bunker they hang from the top of the view
- root.classList.toggle('at-bottom', open);
- if (open) root.style.setProperty('--tb', Math.round(g.bottom - r.bottom + 14) + 'px');
- else root.style.top = Math.round(r.top - g.top + 10) + 'px';
+ const dr = $('#drawer'), open = !!dr && !dr.classList.contains('hidden');
+ const g = game.getBoundingClientRect(), r = (open ? dr : wrap).getBoundingClientRect();
+ // notifications stack up from the bottom edge of the view, over a panel and over the bunker alike:
+ // the surface scene, the wave card and a panel's header and first buttons stay clear
+ root.classList.add('at-bottom'); root.classList.toggle('over-drawer', open);
+ root.style.setProperty('--tb', Math.round(g.bottom - r.bottom + 12) + 'px'); root.style.top = '';
  root.style.left = Math.round(r.left - g.left + r.width / 2) + 'px';
  root.style.maxWidth = Math.max(260, Math.min(520, r.width - 24)) + 'px';
  }

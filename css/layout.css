@@ -1,0 +1,110 @@
+/* ==========================================================================
+   Layout pass: a calmer HUD. Loaded last, so it wins over the older layers in
+   style.css / overworld.css. Sections:
+     1. top bar chips (wave chip carries the defense verdict, menu button)
+     2. bottom dock
+     3. wave card on the surface (compact)
+     4. notifications (stack up from the bottom of the view)
+     5. panels: drawers span the full width on desktop, overview side panel
+     6. phones: one tidy row of chips, all seven resources visible
+   ========================================================================== */
+
+/* ---------- 1. top bar chips ---------- */
+#chip-wave .cd-body b { font-size: 16px; color: #fff; font-variant-numeric: tabular-nums; min-width: 40px; }
+#chip-wave.soon { animation: blink 1s infinite; }
+#chip-wave.boss { border-color: #e0473a; }
+.chip-menu { font: inherit; color: inherit; padding: 4px 7px !important; }
+.chip-menu img.ico { width: 26px !important; height: 26px !important; transition: transform .3s; }
+.chip-menu:hover img.ico { transform: rotate(45deg); }
+/* the brand opened the same menu; the gear does it now on every screen size */
+#topbar > .brand { display: none !important; }
+
+/* ---------- 2. bottom dock ---------- */
+.nav-btn[hidden] { display: none !important; }
+
+/* ---------- 3. wave card (compact) ---------- */
+.wave-info { width: 176px !important; padding: 5px 8px 6px !important; gap: 4px !important; top: 8px !important; right: 8px !important;
+  border-width: 2px !important; border-radius: 10px !important; box-shadow: 0 2px 0 var(--ink2), inset 0 0 0 2px var(--abc, #3fae3a) !important; }
+.wave-info .ab-top { gap: 5px; }
+.wave-info .ab-ico { width: 18px !important; height: 18px !important; }
+.wave-info .ab-name { font-size: 13px !important; }
+.wave-info .ab-time { font-size: 13px !important; padding: 0 6px !important; border-radius: 6px; }
+.wave-info .ab-vs { height: 14px !important; border-radius: 6px !important; padding: 0 5px !important; font-size: 10px !important; line-height: 1; }
+.wave-info .ab-vs u { opacity: .6; }
+.wave-info .ab-foot { display: none !important; }
+
+/* ---------- 4. notifications ---------- */
+#toasts { max-width: min(440px, calc(100% - 24px)) !important; gap: 5px !important; }
+.toast { font-size: 13px; padding: 5px 10px 6px 6px !important; }
+.toast-ico { width: 22px !important; height: 22px !important; } .toast-ico img.ico { width: 18px !important; height: 18px !important; }
+
+/* ---------- 5. panels ---------- */
+@media (min-width: 981px) {
+  /* a drawer gets the whole width: the overview beside it only repeated the top bar */
+  #drawer { right: 0 !important; }
+  #drawer-body { padding-left: max(16px, calc((100% - 1280px) / 2)) !important; padding-right: max(16px, calc((100% - 1280px) / 2)) !important; }
+  .drawer-head { padding-left: max(14px, calc((100% - 1280px) / 2)) !important; padding-right: max(14px, calc((100% - 1280px) / 2)) !important; }
+}
+
+/* overview: tighter, ordered by urgency */
+.ov-head { padding: 2px 2px 10px !important; gap: 10px !important; }
+.ov-head .ov-home { width: 40px !important; height: 40px !important; }
+.ov-head h3 { font-size: 21px !important; }
+.ov-head p { font-size: 12.5px !important; }
+.ov-card { margin-bottom: 10px !important; padding: 9px 11px !important; }
+.ov-card h4 { font-size: 17px !important; margin-bottom: 6px !important; }
+.ov-card h4 .ico-h4 { width: 22px; height: 22px; }
+.ov-todo { box-shadow: inset 4px 0 0 #ffc531, inset 0 2px 0 rgba(255, 255, 255, .06), 0 3px 0 rgba(0, 0, 0, .35) !important; }
+.ov-todo.calm { box-shadow: inset 4px 0 0 #7fdc3e, inset 0 2px 0 rgba(255, 255, 255, .06), 0 3px 0 rgba(0, 0, 0, .35) !important; }
+.ov-todo h4 { color: #fff !important; }
+.ov-tips { margin: 0 !important; padding-left: 16px !important; font-size: 13px; line-height: 1.35; }
+.ov-tips li { margin: 0 0 5px; } .ov-tips li:last-child { margin-bottom: 0; }
+.ov-tips .tip-btn { margin-left: 4px; }
+.ov-prog { display: flex; align-items: center; gap: 8px; padding: 4px 0; }
+.ov-prog + .ov-prog { border-top: 2px solid rgba(0, 0, 0, .25); }
+.ov-prog .ico-ov { width: 26px; height: 26px; flex: 0 0 26px; }
+.ov-prog > div { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.ov-prog > div > span { display: flex; justify-content: space-between; gap: 8px; font-size: 13px; }
+.ov-prog b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.ov-prog small { flex: none; color: #c9c3d6; font-weight: 800; font-variant-numeric: tabular-nums; }
+.ov-prog .bar { margin: 0; height: 7px; }
+.ov-grid { gap: 6px !important; margin-bottom: 10px !important; }
+.ov-tile { padding: 6px 7px !important; gap: 6px !important; }
+.ov-tile .ico-ov { width: 26px !important; height: 26px !important; flex-basis: 26px !important; }
+
+/* ---------- 6. phones ---------- */
+@media (max-width: 700px) {
+  #topbar { row-gap: 5px !important; padding: max(5px, env(safe-area-inset-top)) 6px 6px !important; }
+  /* chips: one row that always fits, nothing scrolled off the edge */
+  #chips { order: 1; flex: 1 1 100% !important; overflow: visible !important; justify-content: space-between !important; gap: 5px !important; }
+  #chips .chip { flex: 1 1 0 !important; min-width: 0; justify-content: center; padding: 3px 6px 3px 4px !important; gap: 4px !important; font-size: 13px; }
+  #chips .chip img.ico { width: 22px !important; height: 22px !important; }
+  #chips .chip b { font-size: 14px !important; }
+  #chips .chip-menu { flex: 0 0 auto !important; padding: 3px 6px !important; }
+  #chip-wave .cd-body { min-width: 0 !important; }
+  #chip-wave .cd-body b { font-size: 14px; min-width: 0; }
+  /* resources: all seven side by side, icon over the number */
+  #resbar { order: 2; display: grid !important; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 4px !important; padding: 0 !important; overflow: visible !important; flex: 1 1 100% !important; }
+  #resbar .res { min-width: 0 !important; max-width: none !important; margin: 0 !important; padding: 2px 2px 4px !important; flex-direction: column; align-items: center; justify-content: center; gap: 1px !important; min-height: 0 !important; border-width: 2px !important; border-radius: 10px !important; }
+  #resbar .res-icon { position: static !important; transform: none !important; width: 22px !important; height: 22px !important; }
+  #resbar .res-icon img.ico { width: 22px !important; height: 22px !important; }
+  #resbar .res-body { width: 100%; gap: 2px !important; }
+  #resbar .res-line { justify-content: center !important; }
+  #resbar .res-amt { font-size: 12.5px !important; letter-spacing: 0 !important; }
+  #resbar .res-max, #resbar .res-plus, #resbar .res-rate { display: none !important; }
+  #resbar .res-cap { height: 4px !important; border-width: 1px !important; margin: 0 3px; }
+  /* the wave card is a small tag in the corner */
+  .wave-info { width: 140px !important; padding: 4px 6px 5px !important; gap: 3px !important; top: 6px !important; right: 6px !important; }
+  .wave-info .ab-name { font-size: 12px !important; } .wave-info .ab-time { font-size: 12px !important; }
+  .wave-info .ab-vs { height: 11px !important; font-size: 9px !important; }
+  /* notifications: narrower, two at most (ui-core) */
+  .toast { font-size: 12px; }
+  /* overview: two facts per row */
+  .ov-grid { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .ov-tile span small { font-size: 10px; }
+}
+/* settings tabs: full names on phones (five in a row cut them to "Grap…") */
+@media (max-width: 480px) {
+  .set-tabs { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
+  .btn.set-tab { min-height: 54px; }
+}
