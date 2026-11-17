@@ -2320,3 +2320,10 @@ body.no-anim .rg-t img { animation: none !important; }
 @keyframes rgRecoil { 30% { transform: rotate(calc(var(--gr, 0deg) - 9deg)) translateY(6%); filter: brightness(1.35) drop-shadow(-4px 6px 0 rgba(0, 0, 0, .3)); } }
 body.fx-off .rg-gun.fire { animation: none; }
 @media (max-width: 600px) { .rg-gun { height: auto; width: 74%; } }
+/* the drawn sight: white lines with a dark outline so it reads on any backdrop, a red dot in the middle */
+.rg-cross { width: 76px !important; height: 76px !important; margin: -38px 0 0 -38px !important; overflow: visible; filter: drop-shadow(0 0 3px rgba(0, 0, 0, .55)) !important; }
+.rg-cross .rc-ink { fill: none; stroke: #120f18; stroke-width: 7; stroke-linecap: round; }
+.rg-cross .rc-line { fill: none; stroke: #f4f1e8; stroke-width: 3.2; stroke-linecap: round; }
+.rg-cross .rc-tick { stroke: #ff5a4d; stroke-width: 3; }
+.rg-cross .rc-dot { fill: #ff3a2a; stroke: #120f18; stroke-width: 2; }
+.rg-field.empty .rg-cross .rc-line { stroke: #9a96a6; } .rg-field.empty .rg-cross .rc-dot { fill: #6a6676; }
