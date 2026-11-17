@@ -60,50 +60,33 @@ DE.UI.Battlefield = (function () {
   const ang = (a) => { a = a % 360; if (a > 180) a -= 360; if (a < -180) a += 360; return a; };
 
   /* ---------- turrets ---------- */
-  /* Turret look follows the calibre upgrades: a shielded machine gun (calibre 0-2), an armoured
-   * twin cannon with a sensor mast (3-5), a four-barrel rotary gun with radar (6+). Roof turrets sit
-   * on a bolted pedestal, ground ones in a sandbag nest. The head pivots at svg (0,0). */
+  /* Turrets use the defense sprites (assets/defense): a sentry gun up to calibre 2, a minigun on a
+   * tripod from calibre 3, a bigger minigun from calibre 6. The sprite is split into base and head;
+   * the head turns around its pivot (svg 0,0). Returns the markup and how high the pivot sits above
+   * the mount line. */
   function turretTier(s) { const c = (s && s.defense && s.defense.turretLevel) || 0; return c >= 6 ? 2 : c >= 3 ? 1 : 0; }
+  const TUR = { sentry: { w: 70, px: .40, py: .55 }, minigun: { w: 74, px: .27, py: .62 } };
   function turretSvg(ground, tier) {
-    const I = '#1c1020';
-    const nest = ground ? `<g fill="#d8b06e" stroke="${I}" stroke-width="2.5"><ellipse cx="-24" cy="17" rx="12" ry="6"/><ellipse cx="24" cy="17" rx="12" ry="6"/><ellipse cx="0" cy="19" rx="13" ry="6"/><ellipse cx="-12" cy="10" rx="11" ry="5"/><ellipse cx="12" cy="10" rx="11" ry="5"/></g><path d="M-30 17 h10 M14 17 h10" stroke="#a47a42" stroke-width="1.5"/>` : '';
-    const base = `<path d="M-16 22 L-10 8 H10 L16 22 Z" fill="#4e5058" stroke="${I}" stroke-width="3" stroke-linejoin="round"/><rect x="-16" y="18" width="32" height="4" fill="url(#ow-hazard)"/>
-      <g fill="#c9ccd4">${[-9, 9].map(x => `<circle cx="${x}" cy="13" r="1.6"/>`).join('')}</g><rect x="-7" y="1" width="14" height="8" rx="2" fill="#3a3f4a" stroke="${I}" stroke-width="2.5"/>`;
-    let head;
-    if (tier === 0) head = `<g class="bf-recoil"><rect x="8" y="-3" width="26" height="6" rx="2" fill="#2d2f36" stroke="${I}" stroke-width="2.5"/>
-        <g fill="#5a5d66">${[13, 18, 23].map(x => `<circle cx="${x}" cy="0" r="1.2"/>`).join('')}</g><rect x="31" y="-5" width="7" height="10" rx="1.5" fill="#3a3f4a" stroke="${I}" stroke-width="2"/></g>
-      <path d="M2 -14 L12 -11 V11 L2 14 Z" fill="#7a7e88" stroke="${I}" stroke-width="2.5" stroke-linejoin="round"/>
-      <rect x="-14" y="-10" width="18" height="20" rx="5" fill="#6a6e78" stroke="${I}" stroke-width="3"/><rect x="-10" y="-7" width="9" height="3" rx="1.5" fill="#a8acb6"/>
-      <rect x="-12" y="4" width="10" height="9" rx="2" fill="#4f6a3a" stroke="${I}" stroke-width="2"/><path d="M-2 9 q6 4 10 -4" fill="none" stroke="#c9a040" stroke-width="2.4" stroke-dasharray="2 1.5"/>
-      <circle cx="-3" cy="-2" r="2.4" fill="#ff4a2e" class="bf-eye"/>`;
-    else if (tier === 1) head = `<g class="bf-recoil">${[-4.5, 4.5].map(y => `<rect x="10" y="${y - 2.6}" width="30" height="5.2" rx="2" fill="#2d2f36" stroke="${I}" stroke-width="2.2"/><rect x="37" y="${y - 3.8}" width="6" height="7.6" rx="1.5" fill="#3a3f4a" stroke="${I}" stroke-width="1.8"/>`).join('')}</g>
-      <path d="M-16 -12 Q-16 -16 -11 -16 H8 L16 -8 V8 L8 16 H-11 Q-16 16 -16 12 Z" fill="#5e7a4a" stroke="${I}" stroke-width="3" stroke-linejoin="round"/>
-      <path d="M-12 -12 H6 L12 -6" fill="none" stroke="#9ab27a" stroke-width="2.5" stroke-linecap="round"/><path d="M-16 4 H16" stroke="#3e5530" stroke-width="2"/>
-      <g fill="#2d2f36">${[-10, -3, 4].map(x => `<circle cx="${x}" cy="9" r="1.5"/>`).join('')}</g>
-      <path d="M-8 -16 V-26" stroke="${I}" stroke-width="2.5"/><rect x="-12" y="-31" width="10" height="6" rx="2" fill="#3a3f4a" stroke="${I}" stroke-width="2"/><circle cx="-4" cy="-28" r="1.8" fill="#6fdc4a" class="bf-eye"/>
-      <rect x="4" y="-6" width="7" height="5" rx="1.5" fill="#1a2a20" stroke="${I}" stroke-width="1.6"/><circle cx="7.5" cy="-3.5" r="1.6" fill="#ff4a2e" class="bf-eye"/>`;
-    else head = `<g class="bf-recoil"><rect x="8" y="-8" width="8" height="16" rx="2" fill="#3a3f4a" stroke="${I}" stroke-width="2.2"/>
-        <g class="bf-spin">${[-5.4, -1.8, 1.8, 5.4].map((y, k) => `<rect x="15" y="${y - 1.6}" width="28" height="3.2" rx="1.2" fill="${k % 2 ? '#2d2f36' : '#4e5058'}" stroke="${I}" stroke-width="1.4"/>`).join('')}</g>
-        <rect x="26" y="-8" width="4" height="16" rx="1" fill="#5a5d66" stroke="${I}" stroke-width="1.6"/><rect x="40" y="-7.5" width="5" height="15" rx="1.5" fill="#3a3f4a" stroke="${I}" stroke-width="1.8"/></g>
-      <path d="M-18 -10 Q-18 -17 -10 -17 H6 Q12 -17 12 -10 V10 Q12 17 6 17 H-10 Q-18 17 -18 10 Z" fill="#4a4e5a" stroke="${I}" stroke-width="3"/>
-      <rect x="-18" y="-3" width="30" height="6" fill="url(#ow-hazard)" stroke="${I}" stroke-width="1.5"/><path d="M-13 -13 H5" stroke="#8a8e98" stroke-width="2.5" stroke-linecap="round"/>
-      <rect x="-26" y="-4" width="10" height="16" rx="2" fill="#5e7a4a" stroke="${I}" stroke-width="2"/><path d="M-16 6 q10 8 26 2" fill="none" stroke="#c9a040" stroke-width="2.6" stroke-dasharray="2.2 1.4"/>
-      <g class="bf-radar"><path d="M-6 -17 V-24" stroke="${I}" stroke-width="2.5"/><path d="M-16 -30 Q-6 -22 4 -30 Z" fill="#c9ccd4" stroke="${I}" stroke-width="2"/></g>
-      <rect x="2" y="-12" width="8" height="6" rx="2" fill="#1a1a2a" stroke="${I}" stroke-width="1.6"/><circle cx="6" cy="-9" r="2" fill="#4ad8ff" class="bf-eye"/>`;
-    const reach = tier === 2 ? 46 : 42;
-    return `<svg viewBox="-36 -36 72 58" width="72" height="58" aria-hidden="true">${nest}${base}
-      <g class="bf-head">${head}</g>
-      <circle class="bf-flash" cx="${reach}" cy="0" r="${tier ? 8 : 7}" fill="#fff4a8" opacity="0"/></svg>`;
+    const name = tier ? 'minigun' : 'sentry', T = TUR[name], Z = DE.Data.DEF_SPRITES || {};
+    const w = T.w * (tier === 2 ? 1.18 : 1), hs = Z[name + '_head'] || [1, 1], bs = Z[name + '_base'] || [1, 1];
+    const k = w / hs[0], hh = hs[1] * k, bh = bs[1] * k, hx = -T.px * w, hy = -T.py * hh;
+    const lift = (1 - T.py) * hh + bh, reach = (1 - T.px) * w;
+    const html = `<svg viewBox="-60 -60 120 ${(60 + lift).toFixed(1)}" width="120" height="${(60 + lift).toFixed(1)}" aria-hidden="true">
+      ${ground ? `<ellipse cx="${(hx + w / 2).toFixed(1)}" cy="${lift.toFixed(1)}" rx="${(w * .42).toFixed(1)}" ry="4" fill="#1c1020" opacity=".3"/>` : ''}
+      <image href="assets/defense/${name}_base.png" x="${hx.toFixed(1)}" y="${(hy + hh - .5).toFixed(1)}" width="${w.toFixed(1)}" height="${bh.toFixed(1)}"/>
+      <g class="bf-head"><g class="bf-recoil"><image href="assets/defense/${name}_head.png" x="${hx.toFixed(1)}" y="${hy.toFixed(1)}" width="${w.toFixed(1)}" height="${hh.toFixed(1)}"/></g></g>
+      <circle class="bf-flash" cx="${reach.toFixed(1)}" cy="0" r="${tier ? 8 : 7}" fill="#fff4a8" opacity="0"/></svg>`;
+    return { html, lift, reach };
   }
   function syncTurrets(s) {
     const n = Math.min(s.defense.turrets, MOUNTS().length), tier = turretTier(s); const sig = 't' + n + ':' + tier;
     if (sig === st.turretSig) return; st.turretSig = sig;
     st.turrets.forEach(t => t.el.remove()); st.turrets = [];
     MOUNTS().slice(0, n).forEach(([x, y, ground], i) => {
-      const el = unit(turretSvg(ground, tier), 'bf-turret t' + tier + (ground ? ' ground' : ''));
-      put(el, x - 36, y - 22 - 36);
+      const tv = turretSvg(ground, tier), el = unit(tv.html, 'bf-turret t' + tier + (ground ? ' ground' : ''));
+      put(el, x - 60, y - tv.lift - 60);
       // pivot (svg 0,0) sits 22 units above the mount line
-      const t = { el, head: el.querySelector('.bf-head'), recoil: el.querySelector('.bf-recoil'), flash: el.querySelector('.bf-flash'), x, y, px: x, py: y - 22, reach: tier === 2 ? 46 : 42, a: -8 + i * 3, cd: Math.random() * .5, scan: Math.random() * 6, target: null };
+      const t = { el, head: el.querySelector('.bf-head'), recoil: el.querySelector('.bf-recoil'), flash: el.querySelector('.bf-flash'), x, y, px: x, py: y - tv.lift, reach: tv.reach, a: -8 + i * 3, cd: Math.random() * .5, scan: Math.random() * 6, target: null };
       aimHead(t); st.turrets.push(t);
     });
   }
@@ -127,7 +110,7 @@ DE.UI.Battlefield = (function () {
     t.a = ang(t.a + Math.max(-turn, Math.min(turn, d))); aimHead(t);
     // fire only once the barrel is on target
     if (t.target && Math.abs(d) < 3 && t.cd <= 0 && (st.incoming || st.fighting) && t.target.x < OW().W - 10) {
-      t.cd = (t.reach > 44 ? .2 : .32) + Math.random() * .18; t.el.classList.add('firing'); clearTimeout(t.fireT); t.fireT = setTimeout(() => t.el.classList.remove('firing'), 600);
+      t.cd = (t.el.classList.contains('t2') ? .2 : t.el.classList.contains('t1') ? .26 : .34) + Math.random() * .18; t.el.classList.add('firing'); clearTimeout(t.fireT); t.fireT = setTimeout(() => t.el.classList.remove('firing'), 600);
       const r = t.a * Math.PI / 180; const mx = t.px + Math.cos(r) * 38, my = t.py + Math.sin(r) * 38;
       DE.Audio.sfxAt('heavy', sx(t.px), 90);
       tracer(mx, my, t.target.x + (Math.random() - .5) * 8, t.target.y - t.target.h * (.35 + Math.random() * .3), true);

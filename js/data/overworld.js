@@ -50,6 +50,13 @@ DE.Data.OVERWORLD = {
       { name: 'Shock wire', desc: 'Insulated wire on the fence top. +150 damage per wave, draws 0.5 power/s.', cost: { scrap: 900, fuel: 120 }, effects: { defenseFlat: 150 } },
       { name: 'High-voltage grid', desc: 'Three live strands and arc posts. +600 damage per wave, draws 1 power/s.', cost: { scrap: 4200, concrete: 500, fuel: 600 }, effects: { defenseFlat: 450 } },
     ] },
+  flamer: { id: 'flamer', name: 'Flame Turrets', icon: 'fire', desc: 'Fuel-fed flamethrowers that hose down whatever reaches the wall.',
+    requires: { barricades: 1 },
+    levels: [
+      { name: 'None', desc: 'No fire at the gate.', cost: null },
+      { name: 'Flame turret', desc: 'One flamethrower by the right tower. +350 damage per wave.', cost: { scrap: 1200, concrete: 100, fuel: 300 }, effects: { defenseFlat: 350 } },
+      { name: 'Twin flamers', desc: 'A second flamethrower beside the door. +900 damage per wave, traps +15%.', cost: { scrap: 5000, concrete: 400, fuel: 1500 }, effects: { defenseFlat: 550, trapDmgMult: 0.15 } },
+    ] },
   mortar: { id: 'mortar', name: 'Mortar Pit', icon: 'target', desc: 'Lobs shells over the wall into the thick of the horde.',
     requires: { towers: 1 },
     levels: [
@@ -71,4 +78,4 @@ DE.Data.OVERWORLD = {
       { name: 'Heavy battery', desc: 'Bigger warheads, faster reload. +100 dmg/s area damage.', cost: { scrap: 90000, concrete: 25000, fuel: 8000 }, effects: { missileDps: 60 } },
     ] },
 };
-DE.Data.OVERWORLD_ORDER = ['fence', 'gate', 'barricades', 'trench', 'towers', 'lights', 'electric', 'mortar', 'road', 'missile'];
+DE.Data.OVERWORLD_ORDER = ['fence', 'gate', 'barricades', 'trench', 'towers', 'lights', 'electric', 'flamer', 'mortar', 'road', 'missile'];

@@ -509,12 +509,8 @@ body.no-anim .ow-dish, body.no-anim .ow-flame, body.no-ambient .ow-dish, body.no
 .cz-preview[data-tod="day"] .ow-ruins-glow, .cz-preview[data-tod="day"] .ow-flare { opacity: 0 !important; }
 .cz-preview[data-tod="day"] .ow-searchlight { opacity: 0; } .ow-searchlight { transition: opacity 2s; }
 
-/* turret models (battlefield.js turretSvg) */
-.bf-turret .bf-spin { transform-box: fill-box; transform-origin: 50% 50%; }
-.bf-turret.firing .bf-spin { animation: bfSpin .12s linear infinite; } @keyframes bfSpin { 50% { transform: scaleY(-1); } }
-.bf-turret .bf-radar { transform-box: fill-box; transform-origin: 50% 100%; animation: bfRadar 2.4s ease-in-out infinite alternate; } @keyframes bfRadar { from { transform: scaleX(1); } to { transform: scaleX(-1); } }
-.bf-turret .bf-eye { animation: owLed 1.8s steps(1) infinite; }
-body.no-anim .bf-turret .bf-spin, body.no-anim .bf-turret .bf-radar, body.no-anim .bf-turret .bf-eye { animation: none; }
+/* turret sprites (battlefield.js turretSvg) */
+.bf-turret image { image-rendering: auto; }
 
 /* level rules for the electric fence, mortar pit and trench */
 #scene[data-electric="0"] .eq-electric-0 { display: inline; }
@@ -570,3 +566,17 @@ body.no-anim .bf-turret .bf-spin, body.no-anim .bf-turret .bf-radar, body.no-ani
 .ow-tflames { opacity: .25; } .surface.incoming .ow-tflames, .surface.fight .ow-tflames { opacity: 1; }
 .ow-tflame { animation: czFlame .35s ease-in-out infinite alternate; animation-delay: var(--d, 0s); }
 body.no-anim .ow-spark, body.no-anim .ow-tflame, body.no-anim .ow-mortarpuff circle { animation: none; }
+
+/* flame turrets (overworld.js flamers) */
+#scene[data-flamer="1"] .ge-flamer-1, #scene[data-flamer="2"] .ge-flamer-1 { display: inline; }
+#scene[data-flamer="2"] .ge-flamer-2 { display: inline; }
+.menu-scene[data-flamer="1"] .ge-flamer-1, .menu-scene[data-flamer="2"] .ge-flamer-1 { display: inline; }
+.menu-scene[data-flamer="2"] .ge-flamer-2 { display: inline; }
+.cz-preview[data-flamer="1"] .ge-flamer-1, .cz-preview[data-flamer="2"] .ge-flamer-1 { display: inline; }
+.cz-preview[data-flamer="2"] .ge-flamer-2 { display: inline; }
+.ow-flamefire { transform: scale(.28); transition: transform .4s; }
+.surface.incoming .ow-flamefire, .surface.fight .ow-flamefire { transform: scale(1); animation: owRoar .18s ease-in-out infinite alternate; }
+@keyframes owRoar { from { transform: scale(.92, .86); } to { transform: scale(1.04, 1.06); } }
+.ow-epanel { animation: ow-flicker 1.4s ease-in-out infinite; }
+body.no-anim .ow-flamefire, body.no-anim .ow-epanel { animation: none; }
+.ico-struct[src^="assets/defense/"] { object-fit: contain; }

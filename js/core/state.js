@@ -39,7 +39,7 @@ DE.State = (function () {
       log: [],
       settings: { autosave: true, animations: true },
       flags: {},
-      overworld: { fence: 0, gate: 0, barricades: 0, trench: 0, towers: 0, lights: 0, electric: 0, mortar: 0, road: 0, missile: 0 },
+      overworld: { fence: 0, gate: 0, barricades: 0, trench: 0, towers: 0, lights: 0, electric: 0, flamer: 0, mortar: 0, road: 0, missile: 0 },
       cosmetics: { sel: {}, owned: {}, name: 'SHELTER 07' },
       events: [], artifacts: {}, rep: { traders: 0, militia: 0, growers: 0 }, bus: { level: 1 }, goals: { done: {} }, buffs: [], eventChains: [], nextEventAt: 0,
       materials: { circuits: 0, alloy: 0, chem: 0, cells: 0 }, collection: {}, blueprints: {}, explore: {},

@@ -14,6 +14,11 @@ DE.UI.Overworld = (function () {
   const BK = { l: 200, r: 700, c: 450, doorL: 345, doorR: 555 };   // bunker body
   const TL = 20, TR = 760;                                          // tower x (150 wide)
   const FL = 10, FR = 930;                                          // fence extent
+  /** A defense sprite (assets/defense/<name>.png, cut by tools/cut_defense.py) standing on `bottom`. */
+  function spr(name, x, bottom, w, attrs) {
+    const z = (DE.Data && DE.Data.DEF_SPRITES && DE.Data.DEF_SPRITES[name]) || [w, w], h = w * z[1] / z[0];
+    return `<image href="assets/defense/${name}.png" x="${x}" y="${(bottom - h).toFixed(1)}" width="${w}" height="${h.toFixed(1)}" preserveAspectRatio="none"${attrs ? ' ' + attrs : ''}/>`;
+  }
 
   /* ---------- defs ---------- */
   function defs() {
@@ -243,12 +248,37 @@ DE.UI.Overworld = (function () {
     return `<g class="ow-fence">${plank0}${mesh}${razor}${fort}</g>`;
   }
   /* Sandbag nests (barricades 1) and steel hedgehogs + timber barricades in the approach (2). */
+  /* Sandbag nests by the towers (barricades 1); barbed wire and Czech hedgehogs out in the approach (2). */
   function barricades() {
-    const nest = (x, n, rows) => { let s = ''; for (let r = 0; r < rows; r++) for (let i = 0; i < n - r; i++) s += `<ellipse cx="${x + i * 34 + r * 17}" cy="${GROUND - 8 - r * 15}" rx="19" ry="10"/>`; return s; };
-    return `<g class="lv ge-barricades-1"><g fill="url(#ow-sand)" stroke="${INK}" stroke-width="3.5">${nest(96, 3, 2)}${nest(742, 4, 3)}${nest(30, 2, 1)}</g>
-        <g stroke="#7a5a32" stroke-width="2" opacity=".6">${[96, 130, 776, 810, 844].map(x => `<path d="M${x - 8} ${GROUND - 8} h16"/>`).join('')}</g></g>
-      <g class="lv ge-barricades-2">${[972, 1046, 1122].map((x, i) => `<use href="#ow-hedgehog" x="${x}" y="${GROUND - 52 + i * 2}" width="58" height="50"/>`).join('')}
-        <g stroke="${INK}" stroke-width="4" stroke-linejoin="round"><path d="M936 ${GROUND} L980 ${GROUND - 64} M984 ${GROUND} L940 ${GROUND - 64}" stroke-width="12"/><path d="M936 ${GROUND} L980 ${GROUND - 64} M984 ${GROUND} L940 ${GROUND - 64}" stroke="#8d5b36" stroke-width="6"/><rect x="928" y="${GROUND - 46}" width="64" height="10" rx="2" fill="#7a4c2c"/></g></g>`;
+    return `<g class="lv ge-barricades-1">${spr('sandbagnest', 50, GROUND + 8, 112)}${spr('sandbagnest', 732, GROUND + 8, 124)}</g>
+`;
+  }
+  /* Obstacles out in the approach, drawn over the grass: the electric fence panel at the fence end,
+   * barbed wire and Czech hedgehogs (barricades 2). */
+  function approach() {
+    return `<g class="lv ge-electric-1">${spr('electric', FR + 22, GROUND + 12, 118, 'class="ow-epanel"')}</g>
+      <g class="lv ge-barricades-2">${spr('barbwire', 1080, GROUND + 12, 124)}${spr('hedgehog', 1206, GROUND + 12, 74)}${spr('hedgehog', 1262, GROUND + 15, 62)}</g>`;
+  }
+  /* The end of the fence where the horde hits it, drawn side-on (the zombies walk into it from the
+   * right): a timber A-frame barricade (fence 0), a steel end post (1), a Jersey barrier in profile
+   * (2), an inverted-T concrete wall section (3). */
+  function fenceEnd() {
+    const x = FR, g = GROUND + 2;
+    const timber = `<g class="lv eq-fence-0" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round">
+        <path d="M${x - 18} ${g} L${x + 10} ${g - 78} M${x + 34} ${g} L${x + 6} ${g - 78}" stroke-width="11"/><path d="M${x - 18} ${g} L${x + 10} ${g - 78} M${x + 34} ${g} L${x + 6} ${g - 78}" stroke="#8d5b36" stroke-width="5"/>
+        <rect x="${x - 12}" y="${g - 44}" width="40" height="9" rx="2" fill="#7a4c2c"/><rect x="${x - 6}" y="${g - 66}" width="28" height="8" rx="2" fill="#8d5b36"/>
+        <path d="M${x + 28} ${g - 40} l16 -6 M${x + 22} ${g - 62} l16 -8" stroke="#c8a070" stroke-width="4"/></g>`;
+    const post = `<g class="lv eq-fence-1" stroke="${INK}" stroke-width="3.5"><rect x="${x - 4}" y="${g - 112}" width="14" height="112" fill="url(#ow-steel)"/><rect x="${x - 8}" y="${g - 8}" width="22" height="8" fill="#5a5f6a"/><path d="M${x + 10} ${g - 100} l18 -10" stroke-width="4"/></g>`;
+    // Jersey barrier profile: wide foot, sloped lower face, upright top (seen from its end)
+    const jersey = (cx, sc) => `<path d="M${cx - 30 * sc} ${g} V${g - 8 * sc} L${cx - 22 * sc} ${g - 18 * sc} L${cx - 10 * sc} ${g - 54 * sc} H${cx + 10 * sc} L${cx + 22 * sc} ${g - 18 * sc} L${cx + 30 * sc} ${g - 8 * sc} V${g} Z" fill="url(#ow-concrete)"/>
+      <path d="M${cx - 10 * sc} ${g - 54 * sc} H${cx + 10 * sc} V${g - 46 * sc} H${cx - 10 * sc} Z" fill="url(#ow-hazard)" stroke-width="2"/><path d="M${cx - 22 * sc} ${g - 18 * sc} H${cx + 22 * sc}" stroke="#6c6865" stroke-width="2"/>`;
+    const jer = `<g class="lv eq-fence-2" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round">${jersey(x + 10, 1.5)}</g>`;
+    // T-wall: tall thin slab on a broad foot, lifting eye on top
+    const twall = `<g class="lv eq-fence-3" stroke="${INK}" stroke-width="4" stroke-linejoin="round">
+        <path d="M${x - 40} ${g} V${g - 18} L${x - 9} ${g - 28} V${g - 168} Q${x + 3} ${g - 176} ${x + 15} ${g - 168} V${g - 28} L${x + 46} ${g - 18} V${g} Z" fill="url(#ow-concrete)"/>
+        <path d="M${x - 9} ${g - 70} H${x + 15} M${x - 9} ${g - 120} H${x + 15}" stroke="#6c6865" stroke-width="2.5"/><rect x="${x - 9}" y="${g - 50}" width="24" height="14" fill="url(#ow-hazard)" stroke-width="2"/>
+        <path d="M${x - 3} ${g - 172} q6 -12 12 0" fill="none" stroke-width="3.5"/>${jersey(x + 74, 1.1)}</g>`;
+    return `<g class="ow-fenceend">${timber}${post}${jer}${twall}</g>`;
   }
   function towers() {
     const beam = (x, flip) => `<g class="ow-searchlight" style="transform-origin:${x + 75}px 240px"><path d="M${x + 75} 240 L${x + 75 + (flip ? -1 : 1) * 520} 60 L${x + 75 + (flip ? -1 : 1) * 620} 240 z" fill="url(#ow-beam)" opacity=".5"/></g>`;
@@ -395,13 +425,19 @@ DE.UI.Overworld = (function () {
   }
   /* Trench line out in the approach (DE.Data.OVERWORLD.trench): stakes, then flames when burning. */
   function trench() {
-    const a = 1196, b = 1336, y = GROUND + 4;
-    let stakes = ''; for (let x = a + 8; x < b - 4; x += 13) stakes += `<path d="M${x} ${y + 4} l${(x % 3) - 1 + 4} -24 l4 24" fill="#c8a070" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`;
+    const a = 1350, b = 1490, y = GROUND + 4;
     const flames = Array.from({ length: 9 }, (_, i) => { const x = a + 14 + i * 14; return `<path class="ow-tflame" style="--d:${(-i * .13).toFixed(2)}s;transform-origin:${x}px ${y}px" d="M${x - 7} ${y} Q${x - 8} ${y - 18} ${x} ${y - 30} Q${x + 2} ${y - 18} ${x + 7} ${y - 22} Q${x + 10} ${y - 10} ${x + 7} ${y} Z" fill="${i % 2 ? '#ff8a2a' : '#ffb03a'}" stroke="${INK}" stroke-width="2"/>`; }).join('');
     return `<g class="ow-trench"><g class="lv ge-trench-1"><path d="M${a - 10} ${y - 2} Q${a} ${y + 14} ${(a + b) / 2} ${y + 16} Q${b} ${y + 14} ${b + 10} ${y - 2} Z" fill="#2a1a12" stroke="${INK}" stroke-width="3.5"/>
-        <path d="M${a - 14} ${y - 3} q8 -8 18 -2 M${b + 14} ${y - 3} q-8 -8 -18 -2" fill="#6a4530" stroke="${INK}" stroke-width="3"/><g>${stakes}</g></g>
+        <path d="M${a - 14} ${y - 3} q8 -8 18 -2 M${b + 14} ${y - 3} q-8 -8 -18 -2" fill="#6a4530" stroke="${INK}" stroke-width="3"/>${spr('spikestrip', a - 6, y + 12, 82)}${spr('spikestrip', a + 66, y + 12, 82)}</g>
       <g class="lv ge-trench-2"><ellipse cx="${(a + b) / 2}" cy="${y}" rx="80" ry="14" fill="#ffb040" opacity=".35" filter="url(#ow-blur6)"/><g class="ow-tflames">${flames}</g>
-        <use href="#ow-barrel" x="${b + 16}" y="${y - 38}" width="26" height="35" style="color:#c8302a"/></g></g>`;
+        <use href="#ow-barrel" x="${b + 16}" y="${y - 38}" width="26" height="35" style="color:#c8302a"/>${spr('steelspikes', a - 70, y + 12, 70)}</g></g>`;
+  }
+  /* Flame turrets (DE.Data.OVERWORLD.flamer): body sprite plus a separate flame that roars while a
+   * wave is on and shrinks to a pilot light otherwise. */
+  function flamers() {
+    const one = (x, w) => { const Z = (DE.Data && DE.Data.DEF_SPRITES) || {}, b = Z.flamer_body || [204, 178], f = Z.flamer_fire || [167, 178], k = w / b[0];
+      return `<g class="ow-flamer">${spr('flamer_body', x, GROUND + 16, w)}<g class="ow-flamefire" style="transform-origin:${(x + w).toFixed(0)}px ${(GROUND + 16 - b[1] * k * .72).toFixed(0)}px">${spr('flamer_fire', x + w - 1, GROUND + 16, +(f[0] * k).toFixed(1))}</g></g>`; };
+    return `<g class="lv ge-flamer-1">${one(782, 58)}</g><g class="lv ge-flamer-2">${one(630, 58)}</g>`;
   }
   /* Front wall & gate (DE.Data.OVERWORLD.gate): a low forecourt wall in the foreground, in front of
    * the blast door, with a gate on the door path. Timber (1), brick + iron bars (2), concrete +
@@ -548,7 +584,7 @@ DE.UI.Overworld = (function () {
 
   function svg() {
     return `<svg class="ow-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      ${defs()}${sky()}${mountains()}${clouds()}${farLandmarks()}${skyline()}${hills()}${trees()}${road()}${wasteland()}${fence()}${electricFence()}${flag()}${towers()}${compoundProps()}${roofGear()}${mortarPit()}${bunker()}${barricades()}${ground()}${trench()}${frontWall()}${yard()}${foliage()}${seasonal()}${dust()}
+      ${defs()}${sky()}${mountains()}${clouds()}${farLandmarks()}${skyline()}${hills()}${trees()}${road()}${wasteland()}${fence()}${fenceEnd()}${electricFence()}${flag()}${towers()}${compoundProps()}${roofGear()}${mortarPit()}${bunker()}${barricades()}${ground()}${approach()}${trench()}${frontWall()}${flamers()}${yard()}${foliage()}${seasonal()}${dust()}
     </svg>`;
   }
 
@@ -558,7 +594,7 @@ DE.UI.Overworld = (function () {
   /** The compound only, with its own ids (pv-ow-*), for the Customize preview. Built once. */
   let pvCache = null;
   function previewSvg() {
-    if (!pvCache) pvCache = `<svg class="ow-svg cz-pvsvg" viewBox="140 96 660 440" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${defs()}${sky()}${hills()}${fence()}${electricFence()}${flag()}${towers()}${compoundProps()}${roofGear()}${mortarPit()}${bunker()}${barricades()}${ground()}${frontWall()}${yard()}</svg>`
+    if (!pvCache) pvCache = `<svg class="ow-svg cz-pvsvg" viewBox="140 96 660 440" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${defs()}${sky()}${hills()}${fence()}${fenceEnd()}${electricFence()}${flag()}${towers()}${compoundProps()}${roofGear()}${mortarPit()}${bunker()}${barricades()}${ground()}${frontWall()}${yard()}</svg>`
       .replace(/id="ow-/g, 'id="pv-ow-').replace(/#ow-/g, '#pv-ow-');
     return pvCache;
   }

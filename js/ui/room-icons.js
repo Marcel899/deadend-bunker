@@ -95,7 +95,9 @@ DE.UI.RoomIcons = (function () {
     DE.Icons.roomSrc = (type) => PNG.has(type) ? 'assets/rooms/icons/' + type + '.png' : roomSrc(type);
     DE.Icons.room = (type, cls) => { const s = DE.Icons.roomSrc(type); return s ? `<img class="ico ico-room ${cls || ''}" src="${s}" alt="" draggable="false">` : DE.Icons.img('room.' + type, cls || 'ico-room'); };
     const SPNG = new Set((DE.Data && DE.Data.STRUCT_ICONS) || []);
-    DE.Icons.structure = (key, cls) => { const s = SPNG.has(key) ? 'assets/rooms/icons/s-' + key + '.png' : structSrc(key); return s ? `<img class="ico ico-struct ${cls || ''}" src="${s}" alt="" draggable="false">` : ''; };
+    // the defense sprite sheet (assets/defense) wins where it has a matching picture
+    const DEF = { fence: 'chainfence', gate: 'jersey', barricades: 'sandbagnest', trench: 'spikestrip', towers: 'watchtower', electric: 'electric', flamer: 'flamer', turret: 'sentry', trap: 'steelspikes' };
+    DE.Icons.structure = (key, cls) => { const s = DEF[key] ? 'assets/defense/' + DEF[key] + '.png' : SPNG.has(key) ? 'assets/rooms/icons/s-' + key + '.png' : structSrc(key); return s ? `<img class="ico ico-struct ${cls || ''}" src="${s}" alt="" draggable="false">` : ''; };
   }
   install();
   return { roomSrc, structSrc, SIG, install };
