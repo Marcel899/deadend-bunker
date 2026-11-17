@@ -1,0 +1,37 @@
+/* ============ CAMERA (js/ui/camera.js) ============
+   The main view is a map: #bunker is moved and zoomed with a transform, #bunker-wrap never scrolls.
+   Two views: the bunker (floors) and the surface (overworld). */
+#bunker-wrap { overflow: hidden; touch-action: none; cursor: grab; -webkit-user-select: none; user-select: none; overscroll-behavior: none; }
+#bunker-wrap.dragging, #bunker-wrap.dragging * { cursor: grabbing !important; }
+#bunker { transform-origin: 0 0; position: relative; }
+#bunker.cam-in { animation: camIn .28s ease-out; } @keyframes camIn { from { opacity: .35; } }
+
+/* bunker view: the floors only */
+#bunker-wrap.view-bunker #surface { display: none; }
+/* surface view: the overworld only, as big as the view */
+#bunker-wrap.view-surface #bunker > :not(#surface) { display: none !important; }
+#bunker-wrap.view-surface #bunker { min-width: 0; padding-bottom: 0; background: #4a2e20; }
+#bunker-wrap.view-surface .surface { position: relative; }
+
+/* the view switch and zoom buttons, bottom left of the view */
+#view-ctl { position: absolute; left: 10px; bottom: 10px; z-index: 8; display: flex; gap: 8px; align-items: center; cursor: default; pointer-events: none; }
+#view-ctl > * { pointer-events: auto; }
+#view-ctl .vc-seg, #view-ctl .vc-zoom { display: flex; padding: 3px; gap: 3px; background: linear-gradient(180deg, #1d1d29, #15151f); border: 3px solid var(--ink, #0d0b12); border-radius: 14px; box-shadow: inset 0 2px 0 rgba(255, 255, 255, .08), 0 3px 0 rgba(0, 0, 0, .45); }
+#view-ctl button { display: flex; align-items: center; gap: 5px; border: 2px solid transparent; background: transparent; color: #f4ead0; font-family: var(--display, sans-serif); font-size: 14px; letter-spacing: .4px; padding: 3px 10px 3px 6px; border-radius: 10px; cursor: pointer; text-shadow: var(--outline, none); min-height: 34px; }
+#view-ctl button img.ico { width: 24px; height: 24px; }
+#view-ctl button:hover:not(:disabled) { background: rgba(255, 255, 255, .08); }
+#view-ctl .vc-seg button.on { background: linear-gradient(180deg, #ffd24a, #f0a818); color: #2b1600; text-shadow: none; border-color: var(--ink, #0d0b12); box-shadow: 0 2px 0 #a86a00; }
+#view-ctl .vc-seg button.alert:not(.on) { animation: vcAlert 1s steps(1) infinite; } @keyframes vcAlert { 50% { background: #c8323c; color: #fff; } }
+#view-ctl .vc-zoom button { width: 34px; padding: 0; justify-content: center; font-size: 20px; line-height: 1; }
+#view-ctl .vc-zoom button:disabled { opacity: .35; cursor: default; }
+@media (max-width: 640px) { #view-ctl .vc-seg button span { display: none; } #view-ctl .vc-seg button { padding: 3px 6px; } }
+
+/* status overlays pinned to the view (moved out of the overworld by camera.js) */
+#view-hud { position: absolute; inset: 0; z-index: 7; pointer-events: none; }
+#view-hud .wave-info, #view-hud .ev-pill { pointer-events: auto; }
+#view-hud.incoming .wave-info .ab-time { background: #c8323c; animation: blink 1s infinite; }
+/* room names on the top floor stay clear of the clock and the wave card */
+#bunker-wrap.view-bunker #bunker { padding-top: 46px; }
+/* both: the overworld on top, the floors below, one map */
+#bunker-wrap.view-both .surface { position: relative; }
+#bunker-wrap.view-both #bunker { padding-top: 0; }

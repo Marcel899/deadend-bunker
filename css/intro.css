@@ -1,0 +1,21 @@
+/* Intro cutscene additions (base styles live in style.css under #intro / .in-*). */
+#intro .in-top { position: absolute; right: 18px; top: calc(9vh + 12px); z-index: 4; display: flex; align-items: center; gap: 12px; }
+#intro .in-top .in-skip { position: static; font-size: 16px; padding: 8px 16px; min-height: 44px; }
+#intro .in-skip:focus-visible { outline: 3px solid #ffd98a; outline-offset: 2px; }
+#intro.titled .in-top { display: none; }
+/* one dot per scene, filled as the film reaches it */
+#intro .in-dots { display: flex; gap: 6px; }
+#intro .in-dots i { width: 9px; height: 9px; border-radius: 50%; border: 2px solid rgba(255, 243, 216, .7); background: transparent; transition: background .3s; }
+#intro .in-dots i.on { background: #ffd98a; border-color: #ffd98a; }
+#intro .in-stage { cursor: pointer; }
+/* the "click for next scene" hint fades after the first scene */
+#intro .in-hint { position: absolute; left: 50%; top: calc(9vh + 20px); transform: translateX(-50%); z-index: 4; padding: 4px 12px; border-radius: 10px; background: rgba(0, 0, 0, .45);
+  color: #fff3d8; font: 400 14px var(--display); letter-spacing: .3px; white-space: nowrap; pointer-events: none; transition: opacity .8s; }
+#intro .in-hint.off { opacity: 0; }
+#intro.tall .in-hint { top: auto; bottom: 14px; }
+/* a caption sits on a soft dark band so it reads on bright frames (the glowing hatch, lit rooms) */
+#intro .in-cap { padding: 6px 18px 8px; border-radius: 14px; background: radial-gradient(ellipse at center, rgba(0, 0, 0, .5), rgba(0, 0, 0, 0) 72%); }
+/* jumping to the next scene: every transition and fade lands at once */
+#intro.snap, #intro.snap * { transition: none !important; }
+@media (max-width: 640px) { #intro .in-hint { font-size: 12px; } #intro .in-top { right: 10px; gap: 8px; } #intro .in-top .in-skip { font-size: 14px; padding: 6px 12px; } }
+@media (prefers-reduced-motion: reduce) { #intro .in-ash i, #intro .in-motes u { animation: none; opacity: 0; } }
