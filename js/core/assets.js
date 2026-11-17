@@ -13,18 +13,17 @@ DE.Assets = (function () {
   const loaded = {};   // key → url
   let pending = 0;
 
+  /* Only the extras that actually ship are probed (probing every room type cost ~70 failed requests
+   * on each load). Add a key here when you drop a matching PNG into /assets. */
+  const SHIPPED = [];   // e.g. ['room.farm', 'surface']
   function manifest() {
-    const list = [];
-    // Full-size room interiors and a surface backdrop are optional extras; icons come from DE.Icons.
-    Object.keys(DE.Data.ROOMS).forEach(t => list.push(['room.' + t, 'assets/rooms/' + t + '.png']));
-    list.push(['surface', 'assets/surface.png']);
-    return list;
+    return SHIPPED.map(k => [k, k === 'surface' ? 'assets/surface.png' : 'assets/rooms/' + k.slice(5) + '.png']);
   }
 
   /** Probe every optional asset; `onDone` fires once when all probes settle. */
   function load(onDone) {
     if (typeof Image === 'undefined') { if (onDone) onDone(); return; }
-    const list = manifest(); pending = list.length;
+    const list = manifest(); pending = list.length; if (!pending) { if (onDone) onDone(); return; }
     const settle = () => { if (--pending === 0 && onDone) onDone(); };
     list.forEach(([key, url]) => {
       const img = new Image();

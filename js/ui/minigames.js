@@ -94,7 +94,7 @@ DE.UI.MG = (function () {
     const G = DE.Minigames.GAMES[g], room = c.room, tier = DE.Minigames.tier(s, g, room), skill = DE.Minigames.skill(s, g, room), lv = DE.Minigames.level(s, g), chal = CHAL[g](tier);
     const body = shell(G.name, DE.Icons.room(room.type, 'mg-room'), `${esc(DE.Data.ROOMS[room.type].name)} · <span class="mg-stars-sm">${'★'.repeat(tier)}${'☆'.repeat(4 - tier)}</span> · Mastery ${lv}`);
     preload(USES[g].concat(USES.common));
-    body.innerHTML = `<div class="mg-intro"><div class="mg-art">${ART[g].map((n, i) => SP(n, 'a' + i)).join('')}</div><p class="mg-how">${HOW[g]}</p><div class="mg-perks"><span>${ic('star')} Difficulty ${tier}/4</span><span>${ic('pop')} Staff bonus +${Math.round(skill * 100)}%</span><span>${ic('chest')} ${esc(PAYS[g])}</span></div>
+    body.innerHTML = `<div class="mg-intro"><div class="mg-art">${ART[g].map((n, i) => SP(n, 'a' + i)).join('')}</div><p class="mg-how">${HOW[g]}</p><div class="mg-perks"><span>${ic('star')} Difficulty ${tier}/4</span><span>${ic('pop')} Staff bonus +${Math.round(skill * 100)}%</span>${(DE.Minigames.ensure(s).plays[g] || 0) ? `<span>${ic('trophy')} Best ${Math.round(100 * (DE.Minigames.ensure(s).best[g] || 0))}% · ${'★'.repeat(stars(DE.Minigames.ensure(s).best[g] || 0)) || 'no stars yet'}</span>` : ''}<span>${ic('chest')} ${esc(PAYS[g])}</span></div>
       <div class="mg-chal">${SP('trophy')}<span><small>Challenge</small>${esc(chal.text)}</span><b>+25%</b></div>
       <button class="btn primary mg-go" type="button">Start</button></div>`;
     body.querySelector('.mg-go').addEventListener('click', () => { snd('click'); run(g, body, { tier, skill, level: lv, room, chal }); });
@@ -124,6 +124,7 @@ DE.UI.MG = (function () {
       <div class="mg-rewards">${Object.keys(out.rewards || {}).map((r, i) => `<span class="mg-rw" style="animation-delay:${(.5 + i * .12).toFixed(2)}s">${DE.Icons.res(r, 'ico-inline')} +<b data-to="${out.rewards[r]}">0</b></span>`).join('')}</div>
       <ul class="mg-lines">${(out.lines || []).map((l, i) => `<li style="animation-delay:${(.7 + i * .15).toFixed(2)}s">${esc(l)}</li>`).join('')}</ul>
       ${nx ? `<div class="mg-mast"><span>Mastery ${out.mastery}</span><i><b style="--w:${Math.round(100 * nx.have / nx.need)}%"></b></i><small>${nx.have}/${nx.need} XP</small></div>` : out.mastery ? `<div class="mg-mast"><span>Mastery ${out.mastery} — max</span></div>` : ''}
+      ${g !== 'forge' && DE.Minigames.waitFor(s, g) > 0 ? `<p class="mg-next">${SP('stopwatch')} ${esc(DE.Minigames.GAMES[g].name)} is ready again in ${DE.Util.fmtTime(DE.Minigames.waitFor(s, g))}</p>` : ''}
       <div class="mg-btns">${g === 'forge' ? '<button class="btn mg-again" type="button">Forge another</button>' : ''}<button class="btn primary mg-done" type="button">Done</button></div></div>`;
     body.querySelector('.mg-done').addEventListener('click', () => close());
     const again = body.querySelector('.mg-again'); if (again) again.addEventListener('click', () => forgeMenu());
@@ -272,7 +273,7 @@ DE.UI.MG = (function () {
     rare: [['circuit', 'Circuit board'], ['crystal_blue', 'Strange crystal'], ['crystal_purple', 'Purple crystal'], ['cell_green', 'Power cell'], ['cell_blue', 'Charged cell'], ['alien_device', 'Odd device'], ['orb', 'Glowing orb']] };
   function sortGame(stage, env) {
     const T = env.tier, bins = BINS.slice(0, [4, 6, 7, 8][T - 1]), limit = (40 + 10 * env.skill) | 0, every = [1.25, 1.05, .9, .75][T - 1], beltT = [6.5, 5.6, 4.8, 4.1][T - 1] * (1 + env.skill * .5);
-    stage.innerHTML = `<div class="so-belt"><i class="so-rollers"></i></div><div class="so-items"></div><div class="so-bins">${bins.map(b => `<button class="so-bin b-${b.id}" data-bin="${b.id}" type="button">${SP(b.box, 'so-box')}<span>${b.icon()}${b.name}</span></button>`).join('')}</div><div class="so-pop"></div><div class="so-combo"><b>×1</b><small>combo</small><em></em></div>`;
+    stage.innerHTML = `<div class="so-belt"><i class="so-rollers"></i></div><div class="so-items"></div><div class="so-bins">${bins.map((b, k) => `<button class="so-bin b-${b.id}" data-bin="${b.id}" type="button"><kbd class="mg-key">${k + 1}</kbd>${SP(b.box, 'so-box')}<span>${b.icon()}${b.name}</span></button>`).join('')}</div><div class="so-pop"></div><div class="so-combo"><b>×1</b><small>combo</small><em></em></div>`;
     const lane = stage.querySelector('.so-items'), pop = stage.querySelector('.so-pop'), comboEl = stage.querySelector('.so-combo');
     const showCombo = (bad) => { const m = Math.min(5, 1 + Math.floor(combo / 3)); comboEl.querySelector('b').textContent = '×' + m; comboEl.querySelector('em').textContent = good + ' sorted' + (total - good > 0 ? ' · ' + (total - good) + ' missed' : ''); comboEl.className = 'so-combo m' + m + (bad ? ' bad' : ''); void comboEl.offsetWidth; comboEl.classList.add(bad ? 'shake' : 'pulse'); };
     let t = 0, next = .4, items = [], score = 0, combo = 0, best = 0, wrong = 0, good = 0, total = 0, sel = null, over = false; const sorted = {};
@@ -292,12 +293,14 @@ DE.UI.MG = (function () {
     }
     function flyText(bin, txt) { const r = bin.getBoundingClientRect(), s2 = stage.getBoundingClientRect(); const d = document.createElement('b'); d.textContent = txt; d.style.left = (r.left - s2.left + r.width / 2) + 'px'; d.style.top = (r.top - s2.top) + 'px'; pop.appendChild(d); later(() => d.remove(), 900); }
     stage.querySelectorAll('.so-bin').forEach(b => on(b, 'click', () => { if (sel) drop(sel, b); }));
+    // keys 1-8: the item furthest along the belt (or the one picked up) goes into that bin
+    on(document, 'keydown', (e) => { const k = +e.key; if (!k || k > bins.length || over || paused) return; const live = items.filter(i => !i.dead && !i.drag); const it = sel && !sel.dead ? sel : live.sort((a, b) => b.x - a.x)[0]; if (it) drop(it, stage.querySelectorAll('.so-bin')[k - 1]); });
     function finish() { if (over) return; over = true; const acc = total ? good / total : 0; const sc = Math.max(0, Math.min(1, acc * .8 + Math.min(.2, score / (total * 60 || 1)))); sorted.medicine && (sorted.medicine = sorted.medicine);
       const C = env.chal, chal = C.id === 'clean' ? wrong === 0 && good >= 8 : C.id === 'combo' ? best >= 6 : good >= C.n;
       later(() => env.done(sc, { sorted, challenge: chal, headline: good + ' of ' + total + ' items sorted' + (total - good ? '' : ' — not one in the wrong bin') + '.' }), 400); }
     loop((dt) => {
-      if (over) return false; t += dt; next -= dt; if (next <= 0 && t < limit - 2) { spawn(); next = every * rnd(.8, 1.2); }
-      for (const it of items) { if (it.dead) continue; if (!it.drag) it.x += 112 / beltT * dt; it.el.style.left = it.x + '%'; it.el.style.top = it.y + '%'; if (it.x > 100) { it.dead = true; it.el.classList.add('fall'); later(() => it.el.remove(), 400); combo = 0; showCombo(true); } }
+      if (over) return false; t += dt; next -= dt; const ramp = 1 + .35 * t / limit; if (next <= 0 && t < limit - 2) { spawn(); next = every * rnd(.8, 1.2) / ramp; }
+      for (const it of items) { if (it.dead) continue; if (!it.drag) it.x += 112 / beltT * ramp * dt; it.el.style.left = it.x + '%'; it.el.style.top = it.y + '%'; if (it.x > 100) { it.dead = true; it.el.classList.add('fall'); later(() => it.el.remove(), 400); combo = 0; showCombo(true); } }
       items = items.filter(i => !i.dead || i.el.isConnected);
       hudSet(env, `${clock(limit - t, limit)}<span>Score ${score}</span><span class="${combo >= 3 ? 'pos' : ''}">Combo ${combo}</span>`);
       if (t >= limit) finish();
@@ -325,7 +328,7 @@ DE.UI.MG = (function () {
     pats.forEach(p => { p.stab = rnd(.55, .95); p.known = false; p.done = false; p.ok = false; if (!p.id) p.face = 'face' + faces.pop(); });
     const stock = {}; CURES.forEach(([id]) => stock[id] = 0); pats.forEach(p => stock[p.ail.cure]++); for (let i = 0; i < Math.max(1, 3 - T); i++) stock[pick(CURES)[0]]++;
     stage.innerHTML = `<div class="tr-pats">${pats.map((p, i) => `<div class="tr-pat" data-i="${i}"><div class="tr-top"><div class="tr-face">${p.face ? SP(p.face) : DE.Icons.prof(p.prof, 'tr-pic')}<i class="tr-badge"></i></div><div class="tr-info"><b>${esc(p.name)}</b><small class="tr-sym">Not examined</small></div></div><svg class="tr-ecg" viewBox="0 0 120 24" preserveAspectRatio="none"><path class="tr-wave" d="${ECG}"/><path class="tr-flat" d="M0 12 H120"/></svg><span class="tr-vit">${SP('ico_heart')}<i class="tr-stab"><b></b></i></span><button class="btn small tr-ex" type="button">${SP('stethoscope')}Examine</button></div>`).join('')}</div>
-      <div class="tr-tray">${CURES.map(([id, nm]) => `<button class="tr-cure" data-c="${id}" type="button">${SP(CURE_SP[id])}<span>${esc(nm)}</span><b>${stock[id]}</b></button>`).join('')}</div>`;
+      <div class="tr-tray">${CURES.map(([id, nm]) => `<button class="tr-cure${stock[id] ? '' : ' empty'}" data-c="${id}" type="button"><kbd class="mg-key">${CURES.findIndex(c => c[0] === id) + 1}</kbd>${SP(CURE_SP[id])}<span>${esc(nm)}</span><b>${stock[id]}</b></button>`).join('')}</div>`;
     let chosen = null, t = 0, over = false, wrongs = 0;
     const rows = Array.from(stage.querySelectorAll('.tr-pat'));
     rows.forEach((row, i) => {
@@ -333,13 +336,14 @@ DE.UI.MG = (function () {
       on(row, 'click', () => {
         const p = pats[i]; if (!chosen || p.done || over) return;
         if (stock[chosen] <= 0) { snd('error'); return; }
-        stock[chosen]--; stage.querySelector(`.tr-cure[data-c="${chosen}"] b`).textContent = stock[chosen];
+        stock[chosen]--; stage.querySelector(`.tr-cure[data-c="${chosen}"] b`).textContent = stock[chosen]; stage.querySelector(`.tr-cure[data-c="${chosen}"]`).classList.toggle('empty', !stock[chosen]);
         if (chosen === p.ail.cure) { burst(row.querySelector('.tr-face'), { n: 12, colors: ['#ff6a8a', '#ffd0dc', '#9be860'], speed: 60, up: true }); popAt(row.querySelector('.tr-face'), 'Stable', 'g'); p.done = true; p.ok = true; row.classList.add('saved'); row.querySelector('.tr-sym').textContent = p.ail.name + ' — treated'; snd('done'); }
         else { wrongs++; shake(1); popAt(row.querySelector('.tr-face'), 'Wrong!', 'r'); p.stab = Math.max(0, p.stab - .25); row.classList.remove('wrong'); void row.offsetWidth; row.classList.add('wrong'); snd('error'); }
         stage.querySelectorAll('.tr-cure').forEach(b => b.classList.remove('on')); chosen = null; stage.classList.remove('giving');
         if (pats.every(q => q.done)) finish();
       });
     });
+    on(document, 'keydown', (e) => { const k = +e.key; if (!k || k > CURES.length || over || paused) return; const b = stage.querySelectorAll('.tr-cure')[k - 1]; if (b) b.click(); });
     stage.querySelectorAll('.tr-cure').forEach(b => on(b, 'click', () => { chosen = chosen === b.dataset.c ? null : b.dataset.c; stage.querySelectorAll('.tr-cure').forEach(x => x.classList.toggle('on', x.dataset.c === chosen)); stage.classList.toggle('giving', !!chosen); note(900, .04, 'triangle', .04); }));
     function finish() { if (over) return; over = true;
       const ok = pats.filter(p => p.ok).length, sc = Math.min(1, ok / pats.length * .85 + (ok === pats.length ? .15 * Math.max(0, 1 - t / 60) : 0));

@@ -2255,3 +2255,35 @@ body.no-anim .bs-btn, body.no-anim .fg-slot.out.made::before { animation: none !
 .rg-gun.fire { animation: rgRecoil .14s ease-out; }
 @keyframes rgRecoil { 35% { transform: translate(var(--gx, 0%), calc(var(--gy, 0%) + 8%)) rotate(calc(var(--gr, 0deg) - 7deg)); filter: brightness(1.35) drop-shadow(-4px 6px 0 rgba(0, 0, 0, .3)); } }
 body.fx-off .rg-gun.fire { animation: none; }
+
+/* ---------- minigame polish ---------- */
+/* key hints (hidden on touch screens) */
+.mg-key { position: absolute; top: 5px; left: 6px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 5px; border: 2px solid #120f18; background: #e8e2d0; color: #1c1020; font: 900 11px/14px var(--body); text-align: center; box-shadow: 0 2px 0 #120f18; pointer-events: none; }
+.so-bin, .tr-cure { position: relative; }
+@media (hover: none), (pointer: coarse) { .mg-key { display: none; } }
+/* sorting: a deeper belt so the board has no dead middle; the combo sits between belt and bins */
+.mg-sort { --belt: clamp(150px, 44%, 250px); }
+.so-belt, .so-items { height: var(--belt) !important; }
+.so-combo { top: calc(14px + var(--belt) + (100% - 14px - var(--belt) - 104px) / 2) !important; }
+.so-combo b { font-size: 44px; }
+.tr-cure .mg-key { top: -8px; left: -6px; }
+.tr-cure.empty { opacity: .45; filter: grayscale(.7); }
+.tr-cure.empty.on { opacity: .7; }
+.mg-next { margin: 2px 0 0; display: flex; align-items: center; justify-content: center; gap: 5px; font-size: 12px; font-weight: 800; color: #b8b2c6; }
+.mg-next .sp { width: 16px; height: 16px; }
+/* phones: the minigames fit one screen without scrolling */
+@media (max-width: 600px) {
+  .mg-key { display: none; }
+  .mg-titles small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .mg-triage { justify-content: space-between; gap: 8px; }
+  .tr-pats { grid-template-columns: 1fr; gap: 6px; overflow-y: auto; min-height: 0; flex: 1 1 auto; }
+  .tr-pat { flex-direction: row; flex-wrap: wrap; align-items: center; gap: 6px 8px; padding: 7px 8px; }
+  .tr-pat .tr-top { flex: 1 1 60%; min-width: 0; }
+  .tr-pat .tr-ecg { display: none; }
+  .tr-pat .tr-vit { flex: 1 1 100%; order: 3; }
+  .tr-pat .tr-ex { flex: 0 0 auto; width: auto !important; padding: 8px 10px; align-self: center !important; }
+  .tr-top { min-height: 0; }
+  .tr-tray { flex-wrap: nowrap; justify-content: flex-start; overflow-x: auto; width: 100%; padding: 8px 2px 2px; flex: none; }
+  .tr-cure { flex: none; }
+  .rg-gun { height: 44%; right: -10%; }
+}
