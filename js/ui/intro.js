@@ -8,7 +8,8 @@
  *   y 600-1300   below the hatch: a ladder shaft and dark, dusty rooms whose lights come on
  * The camera glides between shots (CSS transitions on one transform), the characters are the game's
  * own rigs (animated by DE.UI.Anim), captions type themselves at the bottom, and the sound is the game's
- * synthesiser: wind, groans, the ratchet of the wheel, a creaking door, lights clanking on, a fanfare. */
+ * synthesiser: wind, groans, the ratchet of the wheel, a creaking door, lights clanking on, a fanfare.
+ * About 33s to the title. Click / tap / Space / → cuts to the next scene, Esc or the Skip button ends it. */
 var DE = globalThis.DE = globalThis.DE || {};
 DE.UI = DE.UI || {};
 
@@ -16,11 +17,11 @@ DE.UI.Intro = (function () {
   const KEY = 'deadend_intro_v1', INK = '#1c1020';
   const S = `stroke="${INK}" stroke-width="4" stroke-linejoin="round" stroke-linecap="round"`;
   const S2 = `stroke="${INK}" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round"`;
-  let root = null, stage = null, world = null, timers = [], onEnd = null, running = false, k = 1;
+  let root = null, stage = null, world = null, onEnd = null, running = false, k = 1;
 
   function seen() { try { return localStorage.getItem(KEY) === '1'; } catch (e) { return false; } }
   function mark() { try { localStorage.setItem(KEY, '1'); } catch (e) { /* private mode: it may show again */ } }
-  const sfx = (n, gap) => { try { DE.Audio.sfx(n, gap); } catch (e) { /* no audio */ } };
+  const sfx = (n, gap) => { if (snapping) return; try { DE.Audio.sfx(n, gap); } catch (e) { /* no audio */ } };
   function rng(seed) { return () => { seed = (seed * 9301 + 49297) % 233280; return seed / 233280; }; }
 
   /* ---------- the sets ---------- */
@@ -98,9 +99,9 @@ DE.UI.Intro = (function () {
     if (!stage) return; const W = window.innerWidth, H = window.innerHeight;
     k = Math.min(W / VIEW_W, H / VIEW_H); stage.style.width = VIEW_W * k + 'px'; stage.style.height = VIEW_H * k + 'px';
     // letterboxed on a tall screen (an iPad held upright): caption and Skip sit right by the picture
-    const free = (H - VIEW_H * k) / 2, cap = root.querySelector('.in-cap'), skip = root.querySelector('.in-skip');
-    if (free > 110) { cap.style.bottom = (free - 76) + 'px'; skip.style.top = (free - 58) + 'px'; root.classList.add('tall'); }
-    else { cap.style.bottom = ''; skip.style.top = ''; root.classList.remove('tall'); }
+    const free = (H - VIEW_H * k) / 2, cap = root.querySelector('.in-cap'), top = root.querySelector('.in-top');
+    if (free > 110) { cap.style.bottom = (free - 76) + 'px'; top.style.top = (free - 58) + 'px'; root.classList.add('tall'); }
+    else { cap.style.bottom = ''; top.style.top = ''; root.classList.remove('tall'); }
     if (world && world._cam) camera(world._cam[0], world._cam[1], world._cam[2], 0);
   }
   /** Point the camera at world centre (cx, cy) with zoom z, gliding over `dur` seconds. */
@@ -114,17 +115,59 @@ DE.UI.Intro = (function () {
   function rigOf(el) { return el.querySelector('.rig'); }
   function setAnim(el, a, speed) { const r = rigOf(el); if (!r) return; Array.from(r.classList).forEach(c => { if (c.startsWith('a-')) r.classList.remove(c); }); r.classList.add('a-' + a); DE.UI.Anim.speed(r, speed || 0); }
   function move(el, dx, dy, dur, ease) { el.style.transition = `transform ${dur}s ${ease || 'linear'}`; el.style.transform = `translate(${dx}px, ${dy}px)`; }
+  /** Type a caption in; an empty text fades the caption out. While jumping ahead it appears at once. */
   function caption(text) {
-    const box = root.querySelector('.in-cap'); if (!box) return; box.classList.remove('show'); void box.offsetWidth;
-    box.textContent = ''; box.classList.add('show'); let i = 0;
-    const step = () => { if (!running) return; i++; box.textContent = text.slice(0, i); if (i < text.length) timers.push(setTimeout(step, 28)); };
+    const box = root.querySelector('.in-cap'); if (!box) return; capId++;
+    if (!text) { box.classList.remove('show'); return; }
+    box.classList.remove('show'); void box.offsetWidth; box.classList.add('show');
+    if (snapping) { box.textContent = text; return; }
+    box.textContent = ''; const id = capId; let i = 0;
+    const step = () => { if (id !== capId) return; i++; box.textContent = text.slice(0, i); if (i < text.length) after(26, step); };
     step();
   }
-  const at = (ms, fn) => timers.push(setTimeout(() => { if (running) fn(); }, ms));
+
+  /* ---------- the clock ----------
+   * Every cue runs on one film clock driven by requestAnimationFrame: it stops with the page in a
+   * background tab (the film waits for you), and jumping to the next scene just runs the cues in
+   * between at once with every CSS transition frozen, so each scene starts in the right state. */
+  let clock = 0, queue = [], seq = 0, raf = 0, last = 0, snapping = false, capId = 0, shot = -1, SHOTS = [];
+  const at = (ms, fn) => queue.push({ t: ms, fn, id: seq++ });
+  const after = (ms, fn) => at(clock + ms, fn);
+  /** Run every cue due before `until` (or at it, when `incl`), in time order. */
+  function run(until, incl) {
+    for (;;) {
+      let e = null;
+      for (const q of queue) if ((q.t < until || (incl && q.t === until)) && (!e || q.t < e.t || (q.t === e.t && q.id < e.id))) e = q;
+      if (!e) break;
+      queue.splice(queue.indexOf(e), 1); clock = e.t; e.fn(); if (!running) return;
+    }
+    clock = until;
+  }
+  function loop(now) {
+    if (!running) return;
+    run(clock + Math.min(100, now - last), true); last = now;
+    if (!running) return;
+    const s = SHOTS.filter(t => t <= clock).length - 1;
+    if (s !== shot) { shot = s; root.querySelectorAll('.in-dots i').forEach((d, i) => d.classList.toggle('on', i <= s)); }
+    raf = requestAnimationFrame(loop);
+  }
+  /** Cut straight to the next scene (or, on the title card, start the game). */
+  function next() {
+    if (!running) return;
+    const t = SHOTS.find(s => s > clock + 50);
+    if (t === undefined) { finish(false); return; }
+    snapping = true; root.classList.add('snap');
+    run(t, false);
+    if (!running) return;
+    void root.offsetWidth; root.classList.remove('snap'); snapping = false;
+    flash(.35); sfx('click');
+  }
 
   /* ---------- the film ---------- */
   function play(done) {
     if (running) return; running = true; onEnd = done || null;
+    clock = 0; queue = []; seq = 0; shot = -1; snapping = false;
+    const touch = window.matchMedia && window.matchMedia('(hover: none)').matches;
     root = document.createElement('div'); root.id = 'intro'; root.innerHTML = `<div class="in-stage"><div class="in-world">
       <svg class="in-set" style="left:0;top:0" width="1600" height="600" viewBox="0 0 1600 600">${city()}</svg>
       <svg class="in-set" style="left:1600px;top:0" width="1400" height="600" viewBox="0 0 1400 600">${road()}</svg>
@@ -133,12 +176,14 @@ DE.UI.Intro = (function () {
       <div class="in-ash">${Array.from({ length: 36 }, (_, i) => `<i style="left:${(i * 47) % 1600}px;animation-delay:${(i * .37 % 6).toFixed(2)}s;animation-duration:${(5 + (i % 5)).toFixed(1)}s"></i>`).join('')}</div>
       </div><div class="in-flash"></div><div class="in-vig"></div></div>
       <div class="in-bar top"></div><div class="in-bar bot"></div><div class="in-cap"></div>
-      <button class="in-skip" type="button">Skip ▸▸</button>
+      <div class="in-top"><span class="in-dots" aria-hidden="true"><i></i><i></i><i></i><i></i></span><button class="in-skip" type="button" title="Esc">Skip intro ▸▸</button></div>
+      <div class="in-hint">${touch ? 'Tap for the next scene' : 'Click or press Space for the next scene · Esc skips'}</div>
       <div class="in-title"><img src="assets/ui/logo.png" alt="DEAD END: Underground"><p>It’s a dead end. Make it a home.</p><button class="btn primary in-go" type="button">Begin</button></div>`;
     document.body.appendChild(root);
     stage = root.querySelector('.in-stage'); world = root.querySelector('.in-world');
-    root.querySelector('.in-skip').addEventListener('click', () => finish(true));
-    root.querySelector('.in-go').addEventListener('click', () => finish(false));
+    root.querySelector('.in-skip').addEventListener('click', (e) => { e.stopPropagation(); finish(true); });
+    root.querySelector('.in-go').addEventListener('click', (e) => { e.stopPropagation(); finish(false); });
+    root.addEventListener('click', () => { if (!root.classList.contains('titled')) next(); });
     window.addEventListener('resize', fit); document.addEventListener('keydown', onKey);
     fit();
     try { DE.Audio.ensure(); DE.Audio.ambience('snow', 1); } catch (e) { /* no audio */ }
@@ -149,78 +194,89 @@ DE.UI.Intro = (function () {
     const crew = ['engineer', 'scavenger', 'farmer', 'mechanic'], PH = 96;
     const P = crew.map((c, i) => actor(DE.Chars.crew(c, { anim: 'walk', h: PH, phase: i * .9, item: c === 'scavenger' ? 'flashlight' : undefined }), 1760 - i * 78, 500 - PH + (i % 2) * 4, 'p'));
 
-    // 1 · the city burns (0-6.8s)
-    camera(500, 300, 1, 0); setTimeout(() => camera(860, 290, 1.06, 6.8), 50);
-    Z.forEach((z, i) => { DE.UI.Anim.speed(rigOf(z), 22); move(z, -170 - i * 10, 0, 7, 'linear'); });
+    // 1 · the city burns (0-6.6s)
+    const T_ROAD = 6600, T_HILL = 12800, T_BELOW = 19400;
+    at(0, () => {
+      camera(500, 300, 1, 0); after(50, () => camera(860, 290, 1.06, 6.6));
+      Z.forEach((z, i) => { DE.UI.Anim.speed(rigOf(z), 22); move(z, -170 - i * 10, 0, 7, 'linear'); });
+    });
     at(300, () => caption('When the dead rose, the cities fell in a week.'));
     at(900, () => sfx('groanbig')); at(2600, () => sfx('groan')); at(4300, () => sfx('groan'));
-    at(3500, () => caption('Those who were left kept moving — and kept losing people.'));
-    // 2 · the road at night (6.8-13.6s)
-    at(6800, () => {
-      flash(.5); camera(1960, 300, 1.12, 0);
-      P.forEach(p => { setAnim(p, 'walk', 64); move(p, 440, 0, 6.9, 'linear'); });
-      setTimeout(() => camera(2400, 300, 1.12, 6.8, 'linear'), 40);
+    at(3400, () => caption('The ones left alive kept moving, and kept losing people.'));
+    at(5200, () => root.querySelector('.in-hint').classList.add('off'));
+    // 2 · the road at night: the camera walks with them (6.6-12.8s)
+    at(T_ROAD, () => {
+      flash(.5); camera(2060, 340, 1.2, 0);
+      P.forEach((p, i) => { p.style.transition = 'none'; p.style.left = (1900 - i * 78) + 'px'; setAnim(p, 'walk', 64); after(30, () => move(p, 460, 0, 6.5, 'linear')); });
+      after(40, () => camera(2520, 340, 1.2, 6.4, 'linear'));
       caption('Four strangers. One flashlight. No plan.');
     });
-    // 3 · the hatch in the hill (13.6-21s)
-    at(13600, () => {
-      flash(.6); camera(3600, 330, 1.25, 0);
-      P.forEach((p, i) => { p.style.transition = 'none'; p.style.left = (3330 - i * 80) + 'px'; p.style.top = (510 - PH) + 'px'; p.style.transform = 'none'; setAnim(p, 'walk', 64); });
-      setTimeout(() => P.forEach((p, i) => move(p, 170 - i * 4, 0, 3.4, 'linear')), 40);
+    // 3 · the hatch in the hill (12.8-19.4s)
+    at(T_HILL, () => {
+      flash(.6); camera(3560, 340, 1.2, 0);
+      P.forEach((p, i) => { p.style.transition = 'none'; p.style.left = (3420 - i * 72) + 'px'; p.style.top = (510 - PH) + 'px'; p.style.transform = 'none'; setAnim(p, 'walk', 64); });
+      after(40, () => P.forEach(p => move(p, 100, 0, 2.4, 'ease-out')));
       caption('Then, in a hillside: a hatch. Sealed. Untouched.');
     });
-    at(17000, () => { P.forEach((p, i) => setAnim(p, i === 0 ? 'repair' : 'idle')); camera(3600, 350, 1.55, 1.6); });
-    at(17300, () => { root.querySelector('.in-wheel').classList.add('turn'); sfx('ratchet'); });
-    at(18100, () => sfx('ratchet')); at(18800, () => sfx('clank'));
-    at(19300, () => { root.querySelector('.in-door').classList.add('open'); root.querySelector('.in-spill').classList.add('on'); root.classList.add('opened'); sfx('creak'); P.forEach(p => setAnim(p, 'idle')); });
-    // 4 · down into the dark (21-28s)
-    at(21000, () => {
+    at(T_HILL + 2500, () => { P.forEach((p, i) => setAnim(p, i === 0 ? 'repair' : 'idle')); camera(3600, 365, 1.45, 1.4); });
+    at(T_HILL + 2800, () => { root.querySelector('.in-wheel').classList.add('turn'); sfx('ratchet'); });
+    at(T_HILL + 3500, () => sfx('ratchet')); at(T_HILL + 4200, () => sfx('clank'));
+    at(T_HILL + 4700, () => { root.querySelector('.in-door').classList.add('open'); root.querySelector('.in-spill').classList.add('on'); root.classList.add('opened'); sfx('creak'); P.forEach(p => setAnim(p, 'idle')); });
+    // 4 · down into the dark (19.4s-)
+    at(T_BELOW, () => {
       caption('Below it: a shelter someone built for the end of the world.');
-      camera(3600, 640, 1.15, 2.6);
-      P.forEach((p, i) => { p.style.transition = 'opacity .4s'; p.style.opacity = '0'; });
+      camera(3600, 640, 1.15, 2.4);
+      P.forEach(p => { p.style.transition = 'opacity .4s'; p.style.opacity = '0'; });
     });
     // inside, people are drawn at room scale; one after the other they climb down the ladder, facing it,
     // hand over hand and rung by rung, step off at the bottom and spread out between the rooms
-    const FLOOR_Y = 1079, IH = 74, TOP = 640, V = 80, CLIMB = (FLOOR_Y - TOP) / V, GAP = 1350;
-    at(22600, () => {
+    const FLOOR_Y = 1079, IH = 74, TOP = 640, V = 105, CLIMB = (FLOOR_Y - TOP) / V, GAP = 850, C0 = T_BELOW + 1900;
+    at(C0 - 400, () => {
       P.forEach(p => { const r = rigOf(p); r.style.height = IH + 'px'; r.style.width = Math.round(IH * 140 / 225) + 'px'; r.dataset.h = IH; p.style.transition = 'none'; p.style.left = '3600px'; p.style.top = (TOP - IH) + 'px'; p.style.transform = 'none'; p.style.opacity = '0'; r.classList.remove('flip'); });
-      camera(3600, 760, 1.3, 1.4);
-      setTimeout(() => camera(3600, 960, 1.08, CLIMB + 1.6, 'linear'), 1500);
+      camera(3600, 760, 1.3, 1.2);
+      after(1300, () => camera(3600, 960, 1.08, CLIMB + 1.4, 'linear'));
     });
+    at(C0 + 2600, () => caption('No power. No heat. Nobody home.'));
     P.forEach((p, i) => {
-      const t0 = 23000 + i * GAP;
-      at(t0, () => { p.style.transition = 'opacity .25s'; p.style.opacity = '1'; setAnim(p, 'climb', V); setTimeout(() => move(p, 0, FLOOR_Y - TOP, CLIMB, 'linear'), 30); });
+      const t0 = C0 + i * GAP;
+      at(t0, () => { p.style.transition = 'opacity .25s'; p.style.opacity = '1'; setAnim(p, 'climb', V); after(30, () => move(p, 0, FLOOR_Y - TOP, CLIMB, 'linear')); });
       // a clink on the rungs for the first two climbers (the others are drowned out)
-      if (i < 2) for (let k = 0; k < Math.floor(CLIMB * V / 25); k += 2) at(t0 + 200 + k * 25 / V * 1000, () => sfx('rung', 60));
+      if (i < 2) for (let n = 0; n < Math.floor(CLIMB * V / 25); n += 2) at(t0 + 200 + n * 25 / V * 1000, () => sfx('rung', 60));
       at(t0 + CLIMB * 1000 + 120, () => {
         sfx('thud', 200); setAnim(p, 'idle');
-        const tx = [-300, -170, 190, 330][i];
-        setTimeout(() => { if (!running) return; setAnim(p, 'walk', 70); rigOf(p).classList.toggle('flip', tx < 0); move(p, tx, FLOOR_Y - TOP, Math.abs(tx) / 110, 'linear');
-          setTimeout(() => { if (running) setAnim(p, 'idle'); }, Math.abs(tx) / 110 * 1000); }, 350);
+        const tx = [-300, -170, 190, 330][i], dur = Math.abs(tx) / 120;
+        after(300, () => { setAnim(p, 'walk', 74); rigOf(p).classList.toggle('flip', tx < 0); move(p, tx, FLOOR_Y - TOP, dur, 'linear');
+          after(dur * 1000, () => setAnim(p, 'idle')); });
       });
     });
     // the generator coughs into life, the rooms light up one by one, the fan starts turning
-    const lit = 23000 + 3 * GAP + CLIMB * 1000 + 900;
-    at(lit, () => { sfx('powerup'); root.classList.add('powered'); });
-    root.querySelectorAll('.in-dark').forEach((d, i) => at(lit + 500 + i * 650, () => { d.classList.add('on'); sfx('clank'); }));
-    at(lit + 2600, () => say(P[1], 'Whoa...'));
-    at(lit + 3600, () => say(P[0], 'Home, sweet home.'));
+    const lit = C0 + 3 * GAP + CLIMB * 1000 + 700, T_TITLE = lit + 4400;
+    at(lit, () => { caption(''); sfx('powerup'); root.classList.add('powered'); });
+    root.querySelectorAll('.in-dark').forEach((d, i) => at(lit + 450 + i * 550, () => { d.classList.add('on'); sfx('clank'); }));
+    at(lit + 2100, () => say(P[1], 'Whoa...'));
+    at(lit + 3000, () => say(P[0], 'Home, sweet home.'));
     // 5 · title
-    at(lit + 5600, () => { caption(''); root.querySelector('.in-cap').classList.remove('show'); root.classList.add('titled'); sfx('reveal'); });
-    at(lit + 13600, () => finish(false));
+    at(T_TITLE, () => { caption(''); root.classList.add('titled'); sfx('reveal'); const go = root.querySelector('.in-go'); if (go && !snapping) go.focus({ preventScroll: true }); });
+    at(T_TITLE + 9000, () => finish(false));
+    SHOTS = [0, T_ROAD, T_HILL, T_BELOW, T_TITLE];
+    last = performance.now(); raf = requestAnimationFrame(loop);
   }
   /** A little speech bubble over one of the cast. */
-  function say(el, text) { if (!el) return; const b = document.createElement('span'); b.className = 'say good'; b.textContent = text; el.appendChild(b); void b.offsetWidth; b.classList.add('on'); setTimeout(() => b.classList.remove('on'), 2400); setTimeout(() => b.remove(), 2800); }
-  function flash(o) { const f = root && root.querySelector('.in-flash'); if (!f) return; f.style.transition = 'none'; f.style.opacity = o; void f.offsetWidth; f.style.transition = 'opacity .6s'; f.style.opacity = 0; }
-  function onKey(e) { if (e.key === 'Escape') finish(true); else if (e.key === 'Enter' && root && root.classList.contains('titled')) finish(false); }
+  function say(el, text) { if (!el || snapping) return; const b = document.createElement('span'); b.className = 'say good'; b.textContent = text; el.appendChild(b); void b.offsetWidth; b.classList.add('on'); after(2400, () => b.classList.remove('on')); after(2800, () => b.remove()); }
+  function flash(o) { const f = root && root.querySelector('.in-flash'); if (!f || snapping) return; f.style.transition = 'none'; f.style.opacity = o; void f.offsetWidth; f.style.transition = 'opacity .6s'; f.style.opacity = 0; }
+  function onKey(e) {
+    if (e.key === 'Escape') { e.preventDefault(); finish(true); }
+    else if (e.key === 'Enter' && root && root.classList.contains('titled')) { e.preventDefault(); finish(false); }
+    else if (e.key === ' ' || e.key === 'ArrowRight') { e.preventDefault(); if (root && root.classList.contains('titled')) finish(false); else next(); }
+  }
   function finish(skipped) {
     if (!running) return; running = false; mark();
-    timers.forEach(clearTimeout); timers = [];
+    cancelAnimationFrame(raf); queue = []; capId++;
     window.removeEventListener('resize', fit); document.removeEventListener('keydown', onKey);
     try { DE.Audio.ambience('', 0); } catch (e) { /* no audio */ }
     const el = root; root = stage = world = null;
     if (el) { el.classList.add('out'); setTimeout(() => el.remove(), 600); }
     const cb = onEnd; onEnd = null; if (cb) cb(!!skipped);
   }
-  return { play, seen, running: () => running, finish };
+  return { play, seen, running: () => running, finish, next };
 })();
