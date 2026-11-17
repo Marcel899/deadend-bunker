@@ -368,3 +368,39 @@ body.no-speech .bf-say { display: none; }
 .surface.incoming .ow-alarm { animation: owAlarm .5s steps(1) infinite; } @keyframes owAlarm { 50% { opacity: .95; } }
 .surface.incoming .ow-keyled { fill: #ff3a2a; animation-duration: .5s; }
 body.no-ambient .ow-smoke-exhaust circle, body.no-anim .ow-smoke-exhaust circle, body.no-anim .ow-keyled, body.no-anim .ow-alarm { animation: none; }
+
+/* bunker customisation (js/ui/customize.js, DE.Data.COSMETICS) */
+.cz { display: none; }
+.cz-emblem-trefoil { display: inline; }
+[data-cz-emblem]:not([data-cz-emblem="trefoil"]) .cz-emblem-trefoil { display: none; }
+[data-cz-emblem="skull"] .cz-emblem-skull, [data-cz-emblem="star"] .cz-emblem-star, [data-cz-emblem="wrench"] .cz-emblem-wrench,
+[data-cz-emblem="heart"] .cz-emblem-heart, [data-cz-emblem="crown"] .cz-emblem-crown,
+[data-cz-roof="dish"] .cz-roof-dish, [data-cz-roof="garden"] .cz-roof-garden, [data-cz-roof="tank"] .cz-roof-tank, [data-cz-roof="solar"] .cz-roof-solar,
+[data-cz-yard="campfire"] .cz-yard-campfire, [data-cz-yard="mailbox"] .cz-yard-mailbox, [data-cz-yard="gnomes"] .cz-yard-gnomes, [data-cz-yard="scarecrow"] .cz-yard-scarecrow { display: inline; }
+.ow-bktint rect { fill: var(--bk-tint, transparent); mix-blend-mode: multiply; opacity: .6; }
+.ow-dish { animation: czDish 9s ease-in-out infinite alternate; }
+@keyframes czDish { from { transform: rotate(-8deg); } to { transform: rotate(10deg); } }
+.ow-flame { animation: czFlame .45s ease-in-out infinite alternate; }
+@keyframes czFlame { from { transform: scale(.92, .86); } to { transform: scale(1.05, 1.08); } }
+.ow-fireglow { animation: ow-flicker 1.6s ease-in-out infinite; }
+.ow-yardsign { font: 900 10px var(--body); letter-spacing: 1px; fill: #6b3c10; }
+#scene.cz-changed .ow-bunker, #scene.cz-changed .ow-flagwrap, #scene.cz-changed .ow-roofgear, #scene.cz-changed .ow-yard { animation: czPop .6s ease-out; }
+@keyframes czPop { 0% { filter: brightness(1.8); } 100% { filter: none; } }
+body.no-anim .ow-dish, body.no-anim .ow-flame, body.no-ambient .ow-dish, body.no-ambient .ow-flame { animation: none; }
+
+/* the Customize section in the Defense drawer */
+.cz-name { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; padding: 6px 2px 10px; }
+.cz-name label { display: flex; flex-direction: column; } .cz-name small { opacity: .75; }
+.cz-name input { width: 190px; max-width: 100%; padding: 6px 10px; border-radius: 8px; border: 3px solid #1c1020; background: #e8e2d4; color: #3a3630;
+  font: 900 16px var(--body); letter-spacing: 2px; text-transform: uppercase; }
+.cz-slot { padding: 8px 0; border-top: 2px dashed rgba(255, 255, 255, .12); }
+.cz-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; margin-bottom: 6px; } .cz-head small { opacity: .7; }
+.cz-opts { display: flex; flex-wrap: wrap; gap: 6px; }
+.cz-opt { display: inline-flex; align-items: center; gap: 6px; padding: 5px 10px; border-radius: 10px; border: 3px solid #1c1020; background: #3a3040; color: #f6f0e6;
+  font: 800 13px var(--body); cursor: pointer; box-shadow: 0 3px 0 rgba(0, 0, 0, .35); transition: transform .1s; }
+.cz-opt:hover:not([disabled]) { transform: translateY(-1px); background: #4a3e52; }
+.cz-opt.on { background: #ffc531; color: #1c1020; cursor: default; }
+.cz-opt.locked { background: #2a2430; } .cz-opt.locked span { opacity: .85; }
+.cz-opt.cant { opacity: .55; cursor: not-allowed; }
+.cz-opt .cost { font-style: normal; font-size: 12px; opacity: .9; }
+.cz-sw { width: 16px; height: 16px; border-radius: 50%; border: 2px solid #1c1020; flex: none; }

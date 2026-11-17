@@ -37,6 +37,7 @@ DE.UI.Menu = (function () {
     svg.setAttribute('viewBox', `${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`); svg.setAttribute('preserveAspectRatio', 'xMinYMax slice');
     // a well-defended bunker: steel mesh fence, sandbags, manned towers, lamp posts, plated walls
     Object.assign(sc.dataset, { fence: '1', barricades: '1', towers: '1', lights: '1', road: '1', missile: '0', walltier: '1', season: 'autumn', tod: 'twilight' });
+    if (DE.UI.Customize) { const saved = DE.Save.load(); if (saved) DE.UI.Customize.apply(sc, saved); }
     world = sc.querySelector('.menu-world'); units = [];
     const zs = ['walker', 'runner', 'brute', 'walker', 'crawler', 'toxic', 'walker'];
     zs.forEach((id, i) => {

@@ -272,6 +272,7 @@ DE.UI.Bunker = (function () {
       const lv = Object.assign({}, s.overworld || {}, { walltier: d.wall.level >= 6 ? 2 : d.wall.level >= 3 ? 1 : 0 });
       for (const k in DE.Data.OVERWORLD) if (lv[k] == null) lv[k] = 0;
       for (const k in lv) { const v = String(lv[k] || 0); if (scene.dataset[k] !== v) scene.dataset[k] = v; }
+      if (DE.UI.Customize) DE.UI.Customize.apply(scene, s);
     }
     const incoming = secs < DE.Defense.warningSec(s); const fighting = now < fightUntil;
     surface.classList.toggle('incoming', incoming && !fighting);

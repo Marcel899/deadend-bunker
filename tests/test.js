@@ -3,9 +3,9 @@
 const fs = require('fs'), path = require('path'), vm = require('vm');
 const root = path.join(__dirname, '..');
 const FILES = [
-  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/finds.js', 'js/data/crafting.js', 'js/data/events.js', 'js/data/sprites.js', 'js/data/scenes.js', 'js/data/icons.js', 'js/data/room_icons.js',
+  'js/data/config.js', 'js/data/resources.js', 'js/data/rooms.js', 'js/data/research.js', 'js/data/survivors.js', 'js/data/world.js', 'js/data/overworld.js', 'js/data/cosmetics.js', 'js/data/finds.js', 'js/data/crafting.js', 'js/data/events.js', 'js/data/sprites.js', 'js/data/scenes.js', 'js/data/icons.js', 'js/data/room_icons.js',
   'js/core/util.js', 'js/core/season.js', 'js/core/effects.js', 'js/core/state.js', 'js/core/save.js', 'js/core/economy.js', 'js/core/bunker.js',
-  'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/infection.js', 'js/core/gear.js', 'js/core/minigames.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/expeditions.js',
+  'js/core/survivors.js', 'js/core/events.js', 'js/core/needs.js', 'js/core/infection.js', 'js/core/gear.js', 'js/core/minigames.js', 'js/core/research.js', 'js/core/excavation.js', 'js/core/defense.js', 'js/core/cosmetics.js', 'js/core/expeditions.js',
   'js/core/prestige.js', 'js/core/sim.js', 'js/core/offline.js',
 ];
 // minimal localStorage shim
@@ -659,6 +659,23 @@ t('minigames: a met challenge pays more and teaches more; the radio brings trade
   assert(E.events.some(ev => ev.def === 'trader' || /Traders/.test(ev.title || '')), 'it turns up: ' + JSON.stringify(E.events.map(e => e.title)));
 });
 
+console.log('Cosmetics');
+t('cosmetics: free defaults, buy once then switch free, name cleaned, save round-trip', () => {
+  const C = DE.State.create(null, now);
+  assert(DE.Cosmetics.selected(C, 'paint').id === 'concrete', 'default paint');
+  assert(DE.Cosmetics.owns(C, 'roof', 'none') && !DE.Cosmetics.owns(C, 'roof', 'dish'));
+  C.resources.scrap = 0; assert(!DE.Cosmetics.choose(C, 'roof', 'dish').ok, 'cannot afford');
+  C.resources.scrap = 1000; const r = DE.Cosmetics.choose(C, 'roof', 'dish');
+  assert(r.ok && r.bought && C.resources.scrap === 600, 'paid 400');
+  DE.Cosmetics.choose(C, 'roof', 'none'); const r2 = DE.Cosmetics.choose(C, 'roof', 'dish');
+  assert(r2.ok && !r2.bought && C.resources.scrap === 600, 're-select is free');
+  assert(DE.Cosmetics.setName(C, '  vault <b>13</b> ').name === 'VAULT B13B');
+  assert(!DE.Cosmetics.setName(C, '<<>>').ok);
+  const L = DE.Save.sanitize(JSON.parse(JSON.stringify(Object.assign({}, C, { cosmetics: Object.assign({}, C.cosmetics, { sel: { roof: 'dish', paint: 'arctic', bogus: 'x' } }) }))));
+  assert(L.cosmetics.sel.roof === 'dish' && !L.cosmetics.sel.paint && !L.cosmetics.sel.bogus, 'unowned/unknown dropped');
+  assert(L.cosmetics.name === 'VAULT B13B');
+  assert(DE.Cosmetics.selected(DE.Save.sanitize({}) || C, 'paint'));
+});
 console.log('Prestige');
 t('reset requires depth and gain', () => {
   const P = DE.State.create(null, now); assert(!DE.Prestige.canReset(P).ok);

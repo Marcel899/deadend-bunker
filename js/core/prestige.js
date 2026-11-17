@@ -38,6 +38,7 @@ DE.Prestige = (function () {
     prestige.points += c.gain; prestige.lifetime += c.gain; prestige.resets++;
     const fresh = DE.State.create(prestige, now || Date.now());
     fresh.settings = DE.Util.deepClone(state.settings);
+    if (state.cosmetics) fresh.cosmetics = DE.Util.deepClone(state.cosmetics);   // paint jobs survive the rebuild
     fresh.stats.zombiesKilled = 0;
     fresh.flags.lifetimeKills = (state.flags.lifetimeKills || 0) + state.stats.zombiesKilled;
     fresh.log.push({ t: fresh.createdAt, msg: 'Reconstruction #' + prestige.resets + ': the bunker is rebuilt from memory. +' + c.gain + ' Legacy Points.' });

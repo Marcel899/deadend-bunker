@@ -43,7 +43,8 @@ DE.UI.Overworld = (function () {
       <radialGradient id="ow-lampglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ffd36a" stop-opacity=".8"/><stop offset="1" stop-color="#ffd36a" stop-opacity="0"/></radialGradient>
       <radialGradient id="ow-redglow" cx=".5" cy=".5" r=".5"><stop offset="0" stop-color="#ff5a3c" stop-opacity=".9"/><stop offset="1" stop-color="#ff5a3c" stop-opacity="0"/></radialGradient>
       <linearGradient id="ow-beam" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#fff7c0" stop-opacity=".55"/><stop offset="1" stop-color="#fff7c0" stop-opacity="0"/></linearGradient>
-      <pattern id="ow-hazard" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="24" height="24" fill="#f0b63c"/><rect width="12" height="24" fill="#1c1020"/></pattern>
+      <pattern id="ow-hazard" width="24" height="24" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="24" height="24" fill="#f0b63c" style="fill:var(--hz-a,#f0b63c)"/><rect width="12" height="24" fill="#1c1020" style="fill:var(--hz-b,#1c1020)"/></pattern>
+      <linearGradient id="ow-bkpaint" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#c4c2bd" style="stop-color:var(--bk-a,#c4c2bd)"/><stop offset=".55" stop-color="#95928f" style="stop-color:var(--bk-b,#95928f)"/><stop offset="1" stop-color="#6c6865" style="stop-color:var(--bk-c,#6c6865)"/></linearGradient>
       <pattern id="ow-chain" width="22" height="22" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 11 H22 M11 0 V22" stroke="#2a1d2e" stroke-width="2.2" fill="none"/></pattern>
       <pattern id="ow-dirtpat" width="160" height="110" patternUnits="userSpaceOnUse">
         <ellipse cx="30" cy="28" rx="26" ry="20" fill="#7a5238" stroke="#3b2418" stroke-width="3"/><ellipse cx="105" cy="60" rx="34" ry="24" fill="#73503a" stroke="#3b2418" stroke-width="3"/>
@@ -264,11 +265,11 @@ DE.UI.Overworld = (function () {
     return `<g class="ow-bunker">
       <ellipse cx="${c}" cy="${GROUND + 8}" rx="280" ry="14" fill="#2a1a12" opacity=".45"/>
       <g stroke="${INK}" stroke-width="5" stroke-linejoin="round">
-        <path d="M${l} ${GROUND + 24} V386 Q${l} 360 ${l + 26} 358 H${r - 26} Q${r} 360 ${r} 386 V${GROUND + 24} Z" fill="url(#ow-concrete)"/>
+        <path d="M${l} ${GROUND + 24} V386 Q${l} 360 ${l + 26} 358 H${r - 26} Q${r} 360 ${r} 386 V${GROUND + 24} Z" fill="url(#ow-bkpaint)"/>
         <path d="M${l} ${GROUND + 24} V386 Q${l} 360 ${l + 26} 358 H${r - 26} Q${r} 360 ${r} 386 V${GROUND + 24} Z" fill="url(#ow-blocks)"/>
         <rect x="${l + 80}" y="372" width="338" height="30" rx="6" fill="url(#ow-concrete2)"/>
         <path d="M${l + 30} 420 H${l + 74} M${r - 74} 420 H${r - 30} M${l + 30} 456 H${l + 74} M${r - 74} 456 H${r - 30}" stroke="#4d4a48" stroke-width="3"/>
-        <rect x="${l + 18}" y="400" width="52" height="${GROUND + 24 - 400}" fill="#8d8a86"/><rect x="${r - 70}" y="400" width="52" height="${GROUND + 24 - 400}" fill="#8d8a86"/>
+        <rect x="${l + 18}" y="400" width="52" height="${GROUND + 24 - 400}" fill="#8d8a86" style="fill:var(--bk-b,#8d8a86)"/><rect x="${r - 70}" y="400" width="52" height="${GROUND + 24 - 400}" fill="#8d8a86" style="fill:var(--bk-b,#8d8a86)"/>
         <path d="M${doorL - 22} ${GROUND + 24} V428 Q${doorL - 22} 414 ${doorL - 8} 414 H${doorR + 8} Q${doorR + 22} 414 ${doorR + 22} 428 V${GROUND + 24} Z" fill="#2c2a2e"/>
         <rect x="${doorL - 30}" y="424" width="24" height="${GROUND + 24 - 424}" fill="url(#ow-hazard)"/><rect x="${doorR + 6}" y="424" width="24" height="${GROUND + 24 - 424}" fill="url(#ow-hazard)"/>
         <path d="M${doorL - 30} 424 H${doorL - 6} V${GROUND + 24} M${doorR + 6} 424 H${doorR + 30} V${GROUND + 24}" fill="none"/>
@@ -328,8 +329,10 @@ DE.UI.Overworld = (function () {
         <g stroke="${INK}" stroke-width="3" stroke-linejoin="round"><rect x="${l + 96}" y="414" width="58" height="40" fill="#a07a4a" transform="rotate(-4 ${l + 125} 434)"/><rect x="${r - 150}" y="420" width="46" height="34" fill="#8d6a40" transform="rotate(5 ${r - 127} 437)"/></g>
         <path d="M${l + 104} 424 h40 M${l + 104} 440 h40 M${r - 144} 430 h34" stroke="#6b4c2a" stroke-width="2"/><g fill="#3a2a22">${[[l + 100, 418], [l + 146, 416], [r - 146, 424], [r - 110, 426]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.4"/>`).join('')}</g>
         <path d="M${l + 60} ${GROUND + 24} l10 -26 M${l + 66} ${GROUND + 24} l12 -20 M${r - 64} ${GROUND + 24} l-8 -24" stroke="#5a4a40" stroke-width="3" stroke-linecap="round"/></g>
-      <g class="lv eq-walltier-1" stroke="${INK}" stroke-width="4"><rect x="${l + 6}" y="404" width="${doorL - 30 - l - 10}" height="${GROUND + 20 - 404}" fill="url(#ow-plate)"/><rect x="${doorR + 34}" y="404" width="${r - doorR - 40}" height="${GROUND + 20 - 404}" fill="url(#ow-plate)"/></g>
+      <g class="lv eq-walltier-1" stroke="${INK}" stroke-width="4"><rect x="${l + 6}" y="404" width="${doorL - 30 - l - 10}" height="${GROUND + 20 - 404}" fill="url(#ow-plate)"/><rect x="${doorR + 34}" y="404" width="${r - doorR - 40}" height="${GROUND + 20 - 404}" fill="url(#ow-plate)"/>
+        <g class="ow-bktint" stroke="none"><rect x="${l + 6}" y="404" width="${doorL - 30 - l - 10}" height="${GROUND + 20 - 404}"/><rect x="${doorR + 34}" y="404" width="${r - doorR - 40}" height="${GROUND + 20 - 404}"/></g></g>
       <g class="lv ge-walltier-2" stroke="${INK}" stroke-width="4" stroke-linejoin="round"><rect x="${l - 6}" y="380" width="${doorL - 24 - l + 6}" height="${GROUND + 24 - 380}" fill="url(#ow-plate)"/><rect x="${doorR + 30}" y="380" width="${r + 6 - doorR - 30}" height="${GROUND + 24 - 380}" fill="url(#ow-plate)"/>
+        <g class="ow-bktint" stroke="none"><rect x="${l - 6}" y="380" width="${doorL - 24 - l + 6}" height="${GROUND + 24 - 380}"/><rect x="${doorR + 30}" y="380" width="${r + 6 - doorR - 30}" height="${GROUND + 24 - 380}"/></g>
         <path d="M${l - 22} ${GROUND + 24} L${l - 6} 392 H${l + 8} V${GROUND + 24} Z M${r + 22} ${GROUND + 24} L${r + 6} 392 H${r - 8} V${GROUND + 24} Z" fill="url(#ow-concrete)"/>
         <rect x="${l + 10}" y="346" width="${r - l - 20}" height="16" rx="3" fill="url(#ow-concrete2)"/><g fill="#1c1020">${[0.2, 0.4, 0.6, 0.8].map(f => `<rect x="${l + (r - l) * f - 10}" y="350" width="20" height="6" rx="2" stroke="none"/>`).join('')}</g></g>
       <g class="lv ge-missile-1" stroke="${INK}" stroke-width="4"><rect x="${BK.c - 70}" y="346" width="140" height="14" rx="4" fill="#5a5f6a"/><rect x="${BK.c - 64}" y="350" width="128" height="6" fill="url(#ow-hazard)" stroke="none"/></g>`;
@@ -337,10 +340,50 @@ DE.UI.Overworld = (function () {
   function flag() {
     const x = r => BK.r - 20 + r;
     return `<g class="ow-flagwrap"><path d="M${x(0)} 340 V118" stroke="${INK}" stroke-width="8" stroke-linecap="round"/><path d="M${x(0)} 340 V118" stroke="#8a8c94" stroke-width="3" stroke-linecap="round"/><circle cx="${x(0)}" cy="114" r="8" fill="#ffd34a" stroke="${INK}" stroke-width="4"/>
-      <g class="ow-flag"><path d="M${x(4)} 126 L${x(96)} 142 L${x(90)} 198 L${x(4)} 206 Z" fill="#c7782a" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
-        <path d="M${x(4)} 186 L${x(91)} 182 L${x(90)} 198 L${x(4)} 206 Z" fill="#8a4a18" opacity=".55"/><path d="M${x(10)} 134 L${x(88)} 148" stroke="#f0b060" stroke-width="3" opacity=".6"/>
-        <circle cx="${x(48)}" cy="${166}" r="19" fill="#ffd34a" stroke="${INK}" stroke-width="3"/><circle cx="${x(48)}" cy="166" r="4.5" fill="${INK}"/>
-        <g fill="${INK}">${[0, 120, 240].map(a => { const r1 = 7, r2 = 16, a1 = (a - 30) * Math.PI / 180, a2 = (a + 30) * Math.PI / 180; return `<path d="M${(x(48) + Math.cos(a1) * r1).toFixed(1)} ${(166 + Math.sin(a1) * r1).toFixed(1)} L${(x(48) + Math.cos(a1) * r2).toFixed(1)} ${(166 + Math.sin(a1) * r2).toFixed(1)} A${r2} ${r2} 0 0 1 ${(x(48) + Math.cos(a2) * r2).toFixed(1)} ${(166 + Math.sin(a2) * r2).toFixed(1)} L${(x(48) + Math.cos(a2) * r1).toFixed(1)} ${(166 + Math.sin(a2) * r1).toFixed(1)} Z"/>`; }).join('')}</g></g></g>`;
+      <g class="ow-flag"><path d="M${x(4)} 126 L${x(96)} 142 L${x(90)} 198 L${x(4)} 206 Z" fill="#c7782a" style="fill:var(--fl-a,#c7782a)" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
+        <path d="M${x(4)} 186 L${x(91)} 182 L${x(90)} 198 L${x(4)} 206 Z" fill="#8a4a18" style="fill:var(--fl-b,#8a4a18)" opacity=".55"/><path d="M${x(10)} 134 L${x(88)} 148" stroke="#f0b060" style="stroke:var(--fl-c,#f0b060)" stroke-width="3" opacity=".6"/>
+        <circle cx="${x(48)}" cy="${166}" r="19" fill="#ffd34a" stroke="${INK}" stroke-width="3"/><g class="cz cz-emblem-trefoil"><circle cx="${x(48)}" cy="166" r="4.5" fill="${INK}"/>
+        <g fill="${INK}">${[0, 120, 240].map(a => { const r1 = 7, r2 = 16, a1 = (a - 30) * Math.PI / 180, a2 = (a + 30) * Math.PI / 180; return `<path d="M${(x(48) + Math.cos(a1) * r1).toFixed(1)} ${(166 + Math.sin(a1) * r1).toFixed(1)} L${(x(48) + Math.cos(a1) * r2).toFixed(1)} ${(166 + Math.sin(a1) * r2).toFixed(1)} A${r2} ${r2} 0 0 1 ${(x(48) + Math.cos(a2) * r2).toFixed(1)} ${(166 + Math.sin(a2) * r2).toFixed(1)} L${(x(48) + Math.cos(a2) * r1).toFixed(1)} ${(166 + Math.sin(a2) * r1).toFixed(1)} Z"/>`; }).join('')}</g></g>${emblems(x(48), 166)}</g></g>`;
+  }
+  /* Alternative flag emblems (DE.Data.COSMETICS.emblem), drawn on the yellow disc at (cx, cy). */
+  function emblems(cx, cy) {
+    const star = (r1, r2) => Array.from({ length: 10 }, (_, i) => { const a = (i * 36 - 90) * Math.PI / 180, rr = i % 2 ? r2 : r1; return `${(cx + Math.cos(a) * rr).toFixed(1)},${(cy + Math.sin(a) * rr).toFixed(1)}`; }).join(' ');
+    return `<g class="cz cz-emblem-skull" fill="${INK}"><path d="M${cx - 10} ${cy - 2} a10 10 0 1 1 20 0 v5 h-4 v5 h-12 v-5 h-4 z"/><circle cx="${cx - 4}" cy="${cy - 2}" r="3" fill="#ffd34a"/><circle cx="${cx + 4}" cy="${cy - 2}" r="3" fill="#ffd34a"/><path d="M${cx - 2} ${cy + 8} v4 M${cx + 2} ${cy + 8} v4" stroke="#ffd34a" stroke-width="1.5"/></g>
+      <g class="cz cz-emblem-star"><polygon points="${star(15, 6)}" fill="${INK}"/></g>
+      <g class="cz cz-emblem-wrench" stroke="${INK}" stroke-width="5" stroke-linecap="round" fill="none"><path d="M${cx - 9} ${cy + 9} L${cx + 9} ${cy - 9} M${cx + 9} ${cy + 9} L${cx - 9} ${cy - 9}"/><path d="M${cx + 6} ${cy - 14} a6 6 0 1 0 8 8 M${cx - 14} ${cy - 6} a6 6 0 1 0 8 -8" stroke-width="3.5"/></g>
+      <g class="cz cz-emblem-heart"><path d="M${cx} ${cy + 12} C${cx - 18} ${cy} ${cx - 12} ${cy - 14} ${cx} ${cy - 5} C${cx + 12} ${cy - 14} ${cx + 18} ${cy} ${cx} ${cy + 12} Z" fill="#c8302a" stroke="${INK}" stroke-width="2.5"/></g>
+      <g class="cz cz-emblem-crown"><path d="M${cx - 13} ${cy + 8} L${cx - 14} ${cy - 8} L${cx - 6} ${cy} L${cx} ${cy - 12} L${cx + 6} ${cy} L${cx + 14} ${cy - 8} L${cx + 13} ${cy + 8} Z" fill="${INK}"/><circle cx="${cx}" cy="${cy + 3}" r="2.5" fill="#ffd34a"/></g>`;
+  }
+  /* Cosmetic roof gear (DE.Data.COSMETICS.roof). Drawn before the shell so the roof edge hides the feet. */
+  function roofGear() {
+    const x0 = BK.l + 80, y = 364;
+    const dish = `<g class="cz cz-roof-dish" stroke="${INK}" stroke-width="4" stroke-linejoin="round"><path d="M${x0 + 40} ${y} V300" stroke-width="7"/><path d="M${x0 + 40} ${y} V300" stroke="#8a8c94" stroke-width="3"/><path d="M${x0 + 24} ${y} L${x0 + 40} 330 L${x0 + 56} ${y}" fill="none"/>
+      <g class="ow-dish" style="transform-origin:${x0 + 40}px 298px"><path d="M${x0 + 6} 278 Q${x0 + 30} 330 ${x0 + 78} 300 Z" fill="#d8dae0"/><path d="M${x0 + 14} 286 Q${x0 + 34} 318 ${x0 + 68} 302" fill="none" stroke="#a4a8b2" stroke-width="2.5"/><path d="M${x0 + 42} 296 L${x0 + 28} 266" stroke-width="3"/><circle cx="${x0 + 27}" cy="264" r="4.5" fill="#ff4a2e"/></g></g>`;
+    const plant = (x, h, c) => `<path d="M${x} 344 V${344 - h}" stroke="#3e5428" stroke-width="3"/><circle cx="${x}" cy="${344 - h}" r="${6 + h / 6}" fill="${c}" stroke="${INK}" stroke-width="3"/>`;
+    const garden = `<g class="cz cz-roof-garden"><g stroke="${INK}" stroke-width="4" stroke-linejoin="round">${[0, 1].map(i => `<rect x="${x0 + i * 62}" y="340" width="56" height="${y - 340}" rx="3" fill="url(#ow-wood)"/>`).join('')}</g>
+      ${plant(x0 + 12, 14, '#6f9a3a')}${plant(x0 + 28, 22, '#8aa64a')}${plant(x0 + 44, 12, '#e05a3a')}${plant(x0 + 74, 18, '#6f9a3a')}${plant(x0 + 92, 10, '#e0a030')}
+      <path d="M${x0 + 106} 344 V284" stroke="#3e5428" stroke-width="4"/><g stroke="${INK}" stroke-width="3"><circle cx="${x0 + 106}" cy="282" r="13" fill="#ffc83a"/><circle cx="${x0 + 106}" cy="282" r="6" fill="#6b3c10"/></g></g>`;
+    const tank = `<g class="cz cz-roof-tank" stroke="${INK}" stroke-width="4" stroke-linejoin="round"><path d="M${x0 + 10} ${y} L${x0 + 16} 318 M${x0 + 90} ${y} L${x0 + 84} 318 M${x0 + 16} 340 H${x0 + 84}" fill="none" stroke-width="5"/>
+      <rect x="${x0 + 4}" y="266" width="92" height="56" rx="10" fill="#5a8ab8"/><path d="M${x0 + 4} 284 H${x0 + 96} M${x0 + 4} 304 H${x0 + 96}" stroke="#2f5a82" stroke-width="3"/><rect x="${x0 + 14}" y="272" width="10" height="44" rx="4" fill="#9cc4e6" stroke="none" opacity=".6"/><path d="M${x0 + 30} 266 V256 H${x0 + 70} V266" fill="#4a7aa8"/></g>`;
+    const panel = (x) => `<path d="M${x} 352 L${x + 14} 312 H${x + 54} L${x + 40} 352 Z" fill="#2a4a8a"/><path d="M${x + 7} 332 H${x + 47} M${x + 20} 312 L${x + 13} 352 M${x + 34} 312 L${x + 27} 352" stroke="#7ab0ee" stroke-width="1.6"/><path d="M${x + 20} 352 V${y}" stroke-width="4"/>`;
+    const solar = `<g class="cz cz-roof-solar" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round">${panel(x0 - 6)}${panel(x0 + 46)}${panel(x0 + 98)}</g>`;
+    return `<g class="ow-roofgear">${dish}${garden}${tank}${solar}</g>`;
+  }
+  /* Cosmetic yard dressing in front of the bunker (DE.Data.COSMETICS.yard). */
+  function yard() {
+    const g = GROUND + 14;
+    const fire = (x) => `<g class="cz cz-yard-campfire"><g class="ow-fireglow"><ellipse cx="${x}" cy="${g - 6}" rx="46" ry="18" fill="#ffb040" opacity=".3" filter="url(#ow-blur6)"/></g>
+      <g stroke="${INK}" stroke-width="3">${[-14, 0, 14].map(o => `<ellipse cx="${x + o}" cy="${g}" rx="8" ry="5" fill="#8a8c94"/>`).join('')}<path d="M${x - 16} ${g - 2} L${x + 16} ${g - 10} M${x + 16} ${g - 2} L${x - 16} ${g - 10}" stroke="#6b4228" stroke-width="6"/></g>
+      <path class="ow-flame" style="transform-origin:${x}px ${g - 6}px" d="M${x - 10} ${g - 6} Q${x - 12} ${g - 24} ${x} ${g - 38} Q${x + 2} ${g - 26} ${x + 8} ${g - 30} Q${x + 14} ${g - 16} ${x + 10} ${g - 6} Z" fill="#ff8a2a" stroke="${INK}" stroke-width="3"/><path class="ow-flame" style="transform-origin:${x}px ${g - 6}px" d="M${x - 4} ${g - 6} Q${x - 4} ${g - 18} ${x + 1} ${g - 24} Q${x + 6} ${g - 16} ${x + 4} ${g - 6} Z" fill="#ffe08a"/></g>`;
+    const mailbox = (x) => `<g class="cz cz-yard-mailbox" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round"><rect x="${x - 3}" y="${g - 44}" width="6" height="44" fill="url(#ow-wood)"/><path d="M${x - 16} ${g - 44} V${g - 60} a10 10 0 0 1 10 -10 h14 a10 10 0 0 1 10 10 V${g - 44} Z" fill="#c8302a"/><path d="M${x + 18} ${g - 64} V${g - 80} h12 v8 h-12" fill="#ffd34a" stroke-width="2.5"/>
+      <rect x="${x + 22}" y="${g - 46}" width="4" height="46" fill="url(#ow-wood)"/><rect x="${x + 8}" y="${g - 62}" width="56" height="22" rx="3" fill="#e8dcc0" transform="rotate(-6 ${x + 36} ${g - 51})"/><text x="${x + 36}" y="${g - 46}" text-anchor="middle" class="ow-yardsign" transform="rotate(-6 ${x + 36} ${g - 51})" stroke="none">HOME</text></g>`;
+    const gnome = (x, hat, s) => `<g transform="translate(${x} ${g}) scale(${s})" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"><path d="M-9 0 Q-11 -16 0 -18 Q11 -16 9 0 Z" fill="#3a6ab8"/><path d="M-7 -16 Q0 -2 7 -16 Z" fill="#f6f0e6"/><circle cy="-21" r="5" fill="#f0c098"/><path d="M-7 -23 L0 -42 L7 -23 Z" fill="${hat}"/></g>`;
+    const gnomes = `<g class="cz cz-yard-gnomes">${gnome(BK.l + 10, '#d8402a', 1.1)}${gnome(BK.l + 34, '#3a8a3a', .9)}${gnome(BK.r + 30, '#d8402a', 1)}</g>`;
+    const crow = (x) => `<g class="cz cz-yard-scarecrow" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round" stroke-linecap="round"><path d="M${x} ${g} V${g - 96} M${x - 34} ${g - 70} H${x + 34}" stroke="#6b4228" stroke-width="6"/>
+      <path d="M${x - 18} ${g - 74} H${x + 18} L${x + 14} ${g - 30} H${x - 14} Z" fill="#6a5a8a"/><path d="M${x - 34} ${g - 72} L${x - 18} ${g - 74} L${x - 18} ${g - 62} Z M${x + 34} ${g - 72} L${x + 18} ${g - 74} L${x + 18} ${g - 62} Z" fill="#6a5a8a"/>
+      <circle cx="${x}" cy="${g - 88}" r="13" fill="#8aa870"/><path d="M${x - 6} ${g - 90} l4 3 M${x - 2} ${g - 90} l-4 3 M${x + 3} ${g - 91} l5 4 M${x + 8} ${g - 91} l-5 4 M${x - 6} ${g - 81} h12" stroke-width="2.5"/><path d="M${x - 18} ${g - 98} L${x + 18} ${g - 98} L${x + 6} ${g - 112} L${x - 8} ${g - 110} Z" fill="#8a6a3a"/>
+      <path d="M${x - 14} ${g - 30} l-2 10 M${x - 6} ${g - 30} l1 12 M${x + 6} ${g - 30} l-1 12 M${x + 14} ${g - 30} l2 10" stroke="#d8b06e" stroke-width="3"/></g>`;
+    return `<g class="ow-yard">${fire(BK.l + 34)}${mailbox(BK.r + 20)}${gnomes}${crow(BK.l + 30)}</g>`;
   }
   function compoundProps() {
     const crates = [[174, 442, '#3f5a44', 60], [214, 432, '#8a6a3a', 70], [712, 430, '#3f5a44', 80], [770, 440, '#8a6a3a', 70], [850, 428, '#3f5a44', 90]];
@@ -429,7 +472,7 @@ DE.UI.Overworld = (function () {
 
   function svg() {
     return `<svg class="ow-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      ${defs()}${sky()}${mountains()}${clouds()}${farLandmarks()}${skyline()}${hills()}${trees()}${road()}${wasteland()}${fence()}${flag()}${towers()}${compoundProps()}${bunker()}${barricades()}${ground()}${foliage()}${seasonal()}${dust()}
+      ${defs()}${sky()}${mountains()}${clouds()}${farLandmarks()}${skyline()}${hills()}${trees()}${road()}${wasteland()}${fence()}${flag()}${towers()}${compoundProps()}${roofGear()}${bunker()}${barricades()}${ground()}${yard()}${foliage()}${seasonal()}${dust()}
     </svg>`;
   }
 

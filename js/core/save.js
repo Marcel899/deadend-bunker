@@ -267,6 +267,7 @@ DE.Save = (function () {
       s.nextEventAt = NN(src.nextEventAt, 0);
       if (U().isObj(src.defense) && typeof src.defense.nextMut === 'string' && DE.Data.MUTATIONS.some(m => m.id === src.defense.nextMut)) s.defense.nextMut = src.defense.nextMut;
       if (U().isObj(src.overworld) && DE.Data.OVERWORLD) for (const k in DE.Data.OVERWORLD) s.overworld[k] = U().clamp(N(src.overworld[k], 0), 0, DE.Data.OVERWORLD[k].levels.length - 1);
+      if (DE.Cosmetics) s.cosmetics = DE.Cosmetics.sanitize(src.cosmetics);
       if (U().isObj(src.flags)) for (const k in src.flags) if (typeof src.flags[k] === 'boolean' || typeof src.flags[k] === 'number') s.flags[k] = src.flags[k];
       return s;
     } catch (e) {
