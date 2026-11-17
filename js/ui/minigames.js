@@ -23,7 +23,7 @@ DE.UI.MG = (function () {
     triage: ['medkit', 'syringe', 'pills', 'bandage'], range: ['crosshair', 'pistol', 'bullets'] };
   const USES = { grid: ['p_core', 'p_lamp', 'p_sw_off', 'p_sw_on', 'p_spark', 'p_broken', 'p_straight', 'p_half', 'p_elbow', 'p_hub', 'p_ok'], radio: ['knob', 'led_green', 'led_yellow', 'led_red', 'led_off', 'tower_ok', 'tower_lost', 'lock', 'static', 'dish', 'antenna'],
     sort: ['bin_green', 'bin_blue', 'crate_open', 'crate_hazard', 'box_grey', 'crate_mil', 'drum', 'box_blue'], triage: ['face0', 'face1', 'face2', 'face3', 'bandage', 'gauze', 'bottle', 'syringe', 'pills', 'ok', 'no', 'ico_heart', 'stethoscope'],
-    range: ['cartridge', 'ico_heart', 'bullets', 'burst', 'rg_gun', 'rg_z0', 'rg_z1', 'rg_z2'], common: ['star_gold', 'star_grey', 'trophy', 'ok', 'no', 'stopwatch'] };
+    range: ['cartridge', 'ico_heart', 'bullets', 'burst', 'crosshair', 'rg_gun'], common: ['star_gold', 'star_grey', 'trophy', 'ok', 'no', 'stopwatch'] };
   let root = null, shellFx = [], gameFx = [], current = null;
   const snd = (n, gap) => { try { DE.Audio.mg(n, gap); } catch (e) { /* no audio */ } };
   const note = (f, d, type, vol, glide) => { try { DE.Audio.mgTone(f, d, type, vol, glide); } catch (e) { /* no audio */ } };
@@ -74,7 +74,7 @@ DE.UI.MG = (function () {
     radio: 'Somebody is out there. <b>Drag the dial</b> to find the frequency and set the <b>gain</b> until the wave on the scope matches the signal, then <b>hold it</b> until it locks. Signals drift and static bursts come and go.',
     sort: 'The supply belt is moving. <b>Drag each item into its bin</b> — or tap the item, then the bin. <b>Hazards</b> (leaking, toxic) go in the red bin, apart from the rest. Streaks of correct sorts build a combo.',
     triage: 'Patients are coming in. <b>Examine</b> each one to see what is wrong, pick a treatment from the tray and <b>give it</b> to them. The worst cases slip fastest — treat them first. Supplies are limited.',
-    range: 'Drill on the range. <b>Tap the dead</b> as they come over the sandbags before they reach you — <b>not the civilians</b> in blue. Six rounds a magazine: <b>reload</b> (tap the button or press R) in time.',
+    range: 'Drill on the range. <b>Aim and shoot the dead</b> before they reach you. <b>Headshots</b> drop them in one; big ones take a few body shots. <b>Don\'t hit your own people</b> walking across the range. Six rounds a magazine: <b>reload</b> (button or R) in time.',
   };
   /* a challenge per run: an optional goal, different each time, worth +25% rewards and extra mastery */
   const CHAL = {
@@ -358,48 +358,86 @@ DE.UI.MG = (function () {
   }
 
   /* ================= TRAINING RANGE ================= */
+  /* The dead are the game's own zombie characters, the bystanders its own survivors (assets/chars). */
+  const RG_ZED = [   // kind, hit points, how fast it closes in (life multiplier), from which tier
+    { c: 'walker', hp: 1, sp: 1, t: 1 }, { c: 'runner', hp: 1, sp: .7, t: 1 }, { c: 'crawler', hp: 1, sp: 1.15, t: 2, low: true },
+    { c: 'toxic', hp: 2, sp: 1, t: 2 }, { c: 'brute', hp: 3, sp: 1.35, t: 3 }];
+  const RG_CIV = ['farmer', 'medic', 'cook', 'engineer', 'scout', 'mechanic', 'scavenger', 'hunter'];
   function rangeGame(stage, env) {
-    const T = env.tier, limit = 30, mag = 6, reloadT = 1.1 * (1 - env.skill), life = [3.2, 2.7, 2.2, 1.8][T - 1] * (1 + env.skill), every = [1, .85, .72, .6][T - 1], civ = [.1, .15, .2, .25][T - 1];
-    stage.innerHTML = `<div class="rg-field">${[0, 1, 2].map(r => `<div class="rg-lane l${r}"></div>`).join('')}${SP('rg_gun', 'rg-gun')}</div><div class="rg-bar"><div class="rg-ammo"></div><button class="btn small rg-reload" type="button">${SP('bullets')}Reload (R)</button><span class="rg-hearts"></span></div>`;
+    const T = env.tier, limit = 30, mag = 6, reloadT = 1.1 * (1 - env.skill), life = [3.4, 2.9, 2.4, 2].map(v => v * (1 + env.skill))[T - 1], every = [1, .85, .72, .6][T - 1], civ = [.14, .18, .22, .26][T - 1];
+    const zeds = RG_ZED.filter(z => z.t <= T);
+    stage.innerHTML = `<div class="rg-field">${[0, 1, 2].map(r => `<div class="rg-lane l${r}"></div>`).join('')}<div class="rg-holes"></div>${SP('crosshair', 'rg-cross')}<i class="rg-flash"></i>${SP('rg_gun', 'rg-gun')}</div><div class="rg-bar"><div class="rg-ammo"></div><button class="btn small rg-reload" type="button">${SP('bullets')}Reload (R)</button><span class="rg-hearts"></span></div>`;
     const field = stage.querySelector('.rg-field'), lanes = Array.from(stage.querySelectorAll('.rg-lane')), ammoEl = stage.querySelector('.rg-ammo'), hearts = stage.querySelector('.rg-hearts');
-    const gun = stage.querySelector('.rg-gun');
-    on(field, 'pointermove', (e) => { const r = field.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; gun.style.setProperty('--gx', (x * 26).toFixed(1) + '%'); gun.style.setProperty('--gy', (y * 10).toFixed(1) + '%'); gun.style.setProperty('--gr', (x * 10).toFixed(1) + 'deg'); });
-    let t = 0, next = .6, ammo = mag, reloading = 0, hits = 0, misses = 0, escaped = 0, civHit = 0, lives = 3, over = false, targets = [], streak = 0;
-    const drawAmmo = () => { ammoEl.innerHTML = Array.from({ length: mag }, (_, i) => SP('cartridge', i < ammo ? 'on' : 'off')).join('') + (reloading > 0 ? '<b>Reloading…</b>' : ''); hearts.innerHTML = [0, 1, 2].map(i => SP('ico_heart', i < lives ? 'on' : 'off')).join(''); };
+    const gun = stage.querySelector('.rg-gun'), cross = stage.querySelector('.rg-cross'), flash = stage.querySelector('.rg-flash'), holes = stage.querySelector('.rg-holes');
+    // the crosshair follows the mouse (on touch it jumps to where you tap); a touch of sway, like holding a real sight
+    let cx = .5, cy = .45, sway = 0;
+    const aim = (e) => { const r = field.getBoundingClientRect(); cx = (e.clientX - r.left) / r.width; cy = (e.clientY - r.top) / r.height; };
+    on(field, 'pointermove', aim); on(field, 'pointerdown', aim, true);
+    let t = 0, next = .6, ammo = mag, reloading = 0, hits = 0, misses = 0, escaped = 0, civHit = 0, heads = 0, lives = 3, over = false, targets = [], streak = 0;
+    const drawAmmo = () => { ammoEl.innerHTML = Array.from({ length: mag }, (_, i) => SP('cartridge', i < ammo ? 'on' : 'off')).join('') + (reloading > 0 ? '<b>Reloading…</b>' : ''); hearts.innerHTML = [0, 1, 2].map(i => SP('ico_heart', i < lives ? 'on' : 'off')).join(''); field.classList.toggle('empty', ammo === 0 || reloading > 0); };
     drawAmmo();
     const reload = () => { if (reloading > 0 || ammo === mag || over) return; reloading = reloadT; snd('ratchet'); drawAmmo(); };
     on(stage.querySelector('.rg-reload'), 'click', reload); on(document, 'keydown', (e) => { if (e.key === 'r' || e.key === 'R') reload(); });
+    const charImg = (c) => `<img src="assets/chars/${c}.png" alt="" draggable="false">`;
     function spawn() {
-      const lane = irnd(0, 2), isCiv = Math.random() < civ, el = document.createElement('div'); el.className = 'rg-t' + (isCiv ? ' civ' : '');
-      el.innerHTML = isCiv ? `<svg viewBox="0 0 40 60"><circle cx="20" cy="13" r="9" fill="#f0c8a0" stroke="#1c1020" stroke-width="2.5"/><path d="M8 58 V30 q0 -8 12 -8 q12 0 12 8 V58 Z" fill="#3a7fe8" stroke="#1c1020" stroke-width="2.5"/><path d="M8 32 l-6 -14 M32 32 l6 -14" stroke="#1c1020" stroke-width="4" stroke-linecap="round"/></svg>`
-        : SP('rg_z' + irnd(0, 2), 'rg-zed');
-      el.style.left = rnd(6, 86) + '%'; lanes[lane].appendChild(el);
-      const tg = { el, civ: isCiv, age: 0, life: life * rnd(.85, 1.15), dead: false }; targets.push(tg);
-      on(el, 'pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); shoot(tg, e); });
+      const lane = irnd(0, 2), isCiv = Math.random() < civ, el = document.createElement('div');
+      let tg;
+      if (isCiv) {   // a survivor crossing the range: they walk from one side to the other
+        const dir = Math.random() < .5 ? 1 : -1;
+        el.className = 'rg-t civ' + (dir < 0 ? ' flip' : ''); el.innerHTML = charImg(pick(RG_CIV));
+        tg = { el, civ: true, hp: 1, x: dir > 0 ? -8 : 104, dir, speed: rnd(26, 36), age: 0, dead: false };
+      } else {       // one of the dead shambling towards you; it grows as it closes in
+        const z = pick(zeds);
+        el.className = 'rg-t zed z-' + z.c + (z.low ? ' low' : ''); el.innerHTML = charImg(z.c) + (z.hp > 1 ? `<i class="rg-hp">${'<b></b>'.repeat(z.hp)}</i>` : '');
+        tg = { el, civ: false, z, hp: z.hp, x: rnd(8, 88), age: 0, life: life * z.sp * rnd(.85, 1.15), dead: false, kick: 0 };
+      }
+      el.style.left = tg.x + '%'; lanes[lane].appendChild(el); targets.push(tg);
+      on(el, 'pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); aim(e); shoot(tg, e); });
     }
-    function mark(e, hit) { if (!e) return; const r = field.getBoundingClientRect(), m = document.createElement('i'); m.className = 'rg-mark' + (hit ? ' hit' : ''); m.style.left = (e.clientX - r.left) + 'px'; m.style.top = (e.clientY - r.top) + 'px'; field.appendChild(m); later(() => m.remove(), 450); }
+    function hole(e, blood) { const r = field.getBoundingClientRect(), m = document.createElement('i'); m.className = 'rg-mark' + (blood ? ' hit' : ''); m.style.left = (e.clientX - r.left) + 'px'; m.style.top = (e.clientY - r.top) + 'px'; (blood ? field : holes).appendChild(m); later(() => m.remove(), blood ? 450 : 2600); }
     function shoot(tg, e) {
-      if (over) return; if (reloading > 0) return; if (ammo <= 0) { note(180, .05, 'square', .05); return; }
-      ammo--; mark(e, tg && !tg.dead && !tg.civ); snd('shot', 40); gun.classList.remove('fire'); void gun.offsetWidth; gun.classList.add('fire'); stage.classList.remove('kick'); void stage.offsetWidth; stage.classList.add('kick');
-      if (tg && !tg.dead) { tg.dead = true; tg.el.classList.add('hit'); later(() => tg.el.remove(), 350);
-        if (tg.civ) { civHit++; streak = 0; lives = Math.max(0, lives - 1); snd('error'); flashScr('rgba(255, 60, 40, .3)'); shake(2); popAt(tg.el, 'Civilian!', 'r'); }
-        else { hits++; streak++; note(300 + Math.min(streak, 8) * 40, .08, 'square', .05, 120); burst(tg.el, { n: 8, colors: RED, speed: 50 }); if (streak >= 3) popAt(tg.el, 'Streak ×' + streak, streak >= 6 ? 'gold big' : 'gold'); } }
-      else { misses++; streak = 0; }
+      if (over) return; if (reloading > 0) return; if (ammo <= 0) { note(180, .05, 'square', .05); cross.classList.remove('dry'); void cross.offsetWidth; cross.classList.add('dry'); return; }
+      ammo--; snd('shot', 40); cross.classList.remove('fire'); void cross.offsetWidth; cross.classList.add('fire'); gun.classList.remove('fire'); void gun.offsetWidth; gun.classList.add('fire'); flash.classList.remove('on'); void flash.offsetWidth; flash.classList.add('on'); stage.classList.remove('kick'); void stage.offsetWidth; stage.classList.add('kick');
+      sway += 1;   // recoil: the sight climbs a little after every shot
+      if (tg && !tg.dead) {
+        hole(e, !tg.civ);
+        if (tg.civ) { tg.dead = true; tg.el.classList.add('down'); later(() => tg.el.remove(), 600); civHit++; streak = 0; lives = Math.max(0, lives - 1); snd('error'); flashScr('rgba(255, 60, 40, .3)'); shake(2); popAt(tg.el, 'Civilian!', 'r'); }
+        else {
+          const r = tg.el.getBoundingClientRect(), head = (e.clientY - r.top) / r.height < (tg.z.low ? .45 : .3);
+          tg.hp -= head ? 3 : 1; const pr = root.querySelector('.mg-panel').getBoundingClientRect(); burst([e.clientX - pr.left, e.clientY - pr.top], { n: head ? 12 : 7, colors: ['#7a1a1a', '#b02a2a', '#5a8a2a'], speed: head ? 70 : 45 });
+          if (tg.hp > 0) { tg.kick = .18; tg.age = Math.max(0, tg.age - tg.life * .12); tg.el.classList.remove('flinch'); void tg.el.offsetWidth; tg.el.classList.add('flinch'); const pips = tg.el.querySelectorAll('.rg-hp b'); pips.forEach((p, i) => p.classList.toggle('off', i >= tg.hp)); note(220, .06, 'square', .05); }
+          else { tg.dead = true; tg.el.classList.add('down'); later(() => tg.el.remove(), 700); hits++; streak++; if (head) heads++;
+            note(300 + Math.min(streak, 8) * 40, .08, 'square', .05, 120);
+            if (head) popAt(tg.el, 'Headshot!', 'gold' + (streak >= 3 ? ' big' : '')); else if (streak >= 3) popAt(tg.el, 'Streak ×' + streak, streak >= 6 ? 'gold big' : 'gold'); }
+        }
+      } else { hole(e, false); misses++; streak = 0; }
       if (ammo === 0) later(reload, 150); drawAmmo();
       if (lives <= 0) finish();
     }
-    on(field, 'pointerdown', (e) => { if (e.target === field || e.target.classList.contains('rg-lane')) shoot(null, e); });
+    on(field, 'pointerdown', (e) => { if (!e.target.closest('.rg-t')) shoot(null, e); });
     function finish() { if (over) return; over = true;
-      const shotAt = hits + misses + escaped, sc = Math.max(0, Math.min(1, (shotAt ? hits / shotAt : 0) * (1 - .2 * civHit) * (lives > 0 ? 1 : .6)));
+      const shotAt = hits + misses + escaped, sc = Math.max(0, Math.min(1, ((shotAt ? hits / shotAt : 0) + Math.min(.1, heads * .015)) * (1 - .2 * civHit) * (lives > 0 ? 1 : .6)));
       const C = env.chal, chal = lives > 0 && (C.id === 'nociv' ? civHit === 0 && hits >= 5 : C.id === 'wall' ? escaped === 0 && hits >= 5 : hits >= C.n);
-      later(() => env.done(sc, { challenge: chal, headline: hits + ' hits, ' + escaped + ' got through' + (civHit ? ', ' + civHit + ' civilian' + (civHit > 1 ? 's' : '') + ' hit' : '') + '.' }), 400); }
+      later(() => env.done(sc, { challenge: chal, headline: hits + ' down' + (heads ? ' (' + heads + ' headshot' + (heads > 1 ? 's' : '') + ')' : '') + ', ' + escaped + ' got through' + (civHit ? ', ' + civHit + ' civilian' + (civHit > 1 ? 's' : '') + ' hit' : '') + '.' }), 400); }
     loop((dt) => {
       if (over) return false; t += dt; next -= dt; if (reloading > 0) { reloading -= dt; if (reloading <= 0) { ammo = mag; drawAmmo(); note(900, .05, 'triangle', .05); } }
       if (next <= 0 && t < limit - 1) { spawn(); next = every * rnd(.7, 1.3); }
-      for (const tg of targets) { if (tg.dead) continue; tg.age += dt; const k = tg.age / tg.life; tg.el.style.transform = `translateY(${(1 - Math.min(1, k * 3)) * 25}%) scale(${(.75 + .5 * k).toFixed(3)})`; tg.el.style.opacity = Math.min(1, k * 6).toFixed(2);
-        if (k >= 1) { tg.dead = true; tg.el.classList.add('gone'); later(() => tg.el.remove(), 300); if (!tg.civ) { escaped++; streak = 0; shake(1); lives = Math.max(0, lives - 1); snd('thud'); drawAmmo(); if (lives <= 0) finish(); } } }
+      sway = Math.max(0, sway - dt * 4);
+      const bx = Math.sin(t * 1.3) * .006, by = Math.sin(t * 2.1) * .005 - sway * .012;
+      cross.style.left = ((cx + bx) * 100).toFixed(2) + '%'; cross.style.top = ((cy + by) * 100).toFixed(2) + '%';
+      flash.style.left = cross.style.left; flash.style.top = cross.style.top;
+      // the hand follows the sight: it swings left and right and rises and drops with your aim, and bobs a little
+      const hx = cx + bx, hy = Math.min(1, cy + by), bob = Math.sin(t * 2.4) * 1.2 + (reloading > 0 ? 18 : 0);
+      const FW = field.clientWidth || 1, gw = gun.offsetWidth || FW * .4; gun.style.left = Math.max(FW - gw + 4, Math.min(FW - gw * .4, hx * FW - .04 * FW)).toFixed(0) + 'px';   /* the sleeve always runs off the right edge */ const lowTop = Math.max(44, 108 - 100 * (gun.offsetHeight || 0) / (field.clientHeight || 1)); gun.style.top = (Math.max(lowTop, hy * 100 + 6) + bob).toFixed(2) + '%'; gun.style.setProperty('--gr', (Math.min(0, hx * FW - .04 * FW - (FW - gw + 4)) / FW * 40).toFixed(1) + 'deg');   /* aiming further left tilts the hand instead */
+      for (const tg of targets) {
+        if (tg.dead) continue; tg.age += dt;
+        if (tg.civ) { tg.x += tg.dir * tg.speed * dt; tg.el.style.left = tg.x.toFixed(2) + '%'; if (tg.x < -12 || tg.x > 110) { tg.dead = true; tg.el.remove(); } continue; }
+        tg.kick = Math.max(0, tg.kick - dt); const k = Math.min(1, tg.age / tg.life);
+        tg.el.style.transform = `translate(-50%, ${((1 - Math.min(1, k * 3)) * 25).toFixed(1)}%) scale(${(.75 + .5 * k - tg.kick * .4).toFixed(3)})`; tg.el.style.opacity = Math.min(1, k * 6).toFixed(2);
+        if (k >= 1) { tg.dead = true; tg.el.classList.add('gone'); later(() => tg.el.remove(), 300); escaped++; streak = 0; shake(1); lives = Math.max(0, lives - 1); snd('thud'); flashScr('rgba(255, 60, 40, .22)'); drawAmmo(); if (lives <= 0) finish(); }
+      }
       targets = targets.filter(x => !x.dead || x.el.isConnected);
-      hudSet(env, `${clock(limit - t, limit)}<span>Hits ${hits}</span><span>Through ${escaped}</span>`);
+      hudSet(env, `${clock(limit - t, limit)}<span>Down ${hits}</span>${heads ? `<span class="pos">Headshots ${heads}</span>` : ''}<span>Through ${escaped}</span>`);
       if (t >= limit) finish();
     });
   }
