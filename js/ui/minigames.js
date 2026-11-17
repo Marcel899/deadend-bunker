@@ -23,7 +23,7 @@ DE.UI.MG = (function () {
     triage: ['medkit', 'syringe', 'pills', 'bandage'], range: ['crosshair', 'pistol', 'bullets'] };
   const USES = { grid: ['p_core', 'p_lamp', 'p_sw_off', 'p_sw_on', 'p_spark', 'p_broken', 'p_straight', 'p_half', 'p_elbow', 'p_hub', 'p_ok'], radio: ['knob', 'led_green', 'led_yellow', 'led_red', 'led_off', 'tower_ok', 'tower_lost', 'lock', 'static', 'dish', 'antenna'],
     sort: ['bin_green', 'bin_blue', 'crate_open', 'crate_hazard', 'box_grey', 'crate_mil', 'drum', 'box_blue'], triage: ['face0', 'face1', 'face2', 'face3', 'bandage', 'gauze', 'bottle', 'syringe', 'pills', 'ok', 'no', 'ico_heart', 'stethoscope'],
-    range: ['cartridge', 'ico_heart', 'bullets', 'burst', 'crate', 'crate2', 'crate_mil'], common: ['star_gold', 'star_grey', 'trophy', 'ok', 'no', 'stopwatch'] };
+    range: ['cartridge', 'ico_heart', 'bullets', 'burst', 'rg_gun', 'rg_z0', 'rg_z1', 'rg_z2'], common: ['star_gold', 'star_grey', 'trophy', 'ok', 'no', 'stopwatch'] };
   let root = null, shellFx = [], gameFx = [], current = null;
   const snd = (n, gap) => { try { DE.Audio.mg(n, gap); } catch (e) { /* no audio */ } };
   const note = (f, d, type, vol, glide) => { try { DE.Audio.mgTone(f, d, type, vol, glide); } catch (e) { /* no audio */ } };
@@ -356,8 +356,10 @@ DE.UI.MG = (function () {
   /* ================= TRAINING RANGE ================= */
   function rangeGame(stage, env) {
     const T = env.tier, limit = 30, mag = 6, reloadT = 1.1 * (1 - env.skill), life = [3.2, 2.7, 2.2, 1.8][T - 1] * (1 + env.skill), every = [1, .85, .72, .6][T - 1], civ = [.1, .15, .2, .25][T - 1];
-    stage.innerHTML = `<div class="rg-field">${[0, 1, 2].map(r => `<div class="rg-lane l${r}"><i class="rg-bags"></i>${SP(pick(['crate', 'crate2', 'crate_mil']), 'rg-crate c' + r)}</div>`).join('')}</div><div class="rg-bar"><div class="rg-ammo"></div><button class="btn small rg-reload" type="button">${SP('bullets')}Reload (R)</button><span class="rg-hearts"></span></div>`;
+    stage.innerHTML = `<div class="rg-field">${[0, 1, 2].map(r => `<div class="rg-lane l${r}"></div>`).join('')}${SP('rg_gun', 'rg-gun')}</div><div class="rg-bar"><div class="rg-ammo"></div><button class="btn small rg-reload" type="button">${SP('bullets')}Reload (R)</button><span class="rg-hearts"></span></div>`;
     const field = stage.querySelector('.rg-field'), lanes = Array.from(stage.querySelectorAll('.rg-lane')), ammoEl = stage.querySelector('.rg-ammo'), hearts = stage.querySelector('.rg-hearts');
+    const gun = stage.querySelector('.rg-gun');
+    on(field, 'pointermove', (e) => { const r = field.getBoundingClientRect(), x = (e.clientX - r.left) / r.width - .5, y = (e.clientY - r.top) / r.height - .5; gun.style.setProperty('--gx', (x * 26).toFixed(1) + '%'); gun.style.setProperty('--gy', (y * 10).toFixed(1) + '%'); gun.style.setProperty('--gr', (x * 10).toFixed(1) + 'deg'); });
     let t = 0, next = .6, ammo = mag, reloading = 0, hits = 0, misses = 0, escaped = 0, civHit = 0, lives = 3, over = false, targets = [], streak = 0;
     const drawAmmo = () => { ammoEl.innerHTML = Array.from({ length: mag }, (_, i) => SP('cartridge', i < ammo ? 'on' : 'off')).join('') + (reloading > 0 ? '<b>Reloading…</b>' : ''); hearts.innerHTML = [0, 1, 2].map(i => SP('ico_heart', i < lives ? 'on' : 'off')).join(''); };
     drawAmmo();
@@ -366,7 +368,7 @@ DE.UI.MG = (function () {
     function spawn() {
       const lane = irnd(0, 2), isCiv = Math.random() < civ, el = document.createElement('div'); el.className = 'rg-t' + (isCiv ? ' civ' : '');
       el.innerHTML = isCiv ? `<svg viewBox="0 0 40 60"><circle cx="20" cy="13" r="9" fill="#f0c8a0" stroke="#1c1020" stroke-width="2.5"/><path d="M8 58 V30 q0 -8 12 -8 q12 0 12 8 V58 Z" fill="#3a7fe8" stroke="#1c1020" stroke-width="2.5"/><path d="M8 32 l-6 -14 M32 32 l6 -14" stroke="#1c1020" stroke-width="4" stroke-linecap="round"/></svg>`
-        : `<svg viewBox="0 0 40 60"><circle cx="20" cy="13" r="10" fill="#8ab06a" stroke="#1c1020" stroke-width="2.5"/><circle cx="16" cy="12" r="2" fill="#ff5a4d"/><circle cx="24" cy="12" r="2" fill="#ff5a4d"/><path d="M7 58 V31 q0 -8 13 -8 q13 0 13 8 V58 Z" fill="#6a5a4a" stroke="#1c1020" stroke-width="2.5"/><path d="M7 33 l-5 6 M33 33 l6 4" stroke="#1c1020" stroke-width="4" stroke-linecap="round"/></svg>`;
+        : SP('rg_z' + irnd(0, 2), 'rg-zed');
       el.style.left = rnd(6, 86) + '%'; lanes[lane].appendChild(el);
       const tg = { el, civ: isCiv, age: 0, life: life * rnd(.85, 1.15), dead: false }; targets.push(tg);
       on(el, 'pointerdown', (e) => { e.preventDefault(); e.stopPropagation(); shoot(tg, e); });
@@ -374,7 +376,7 @@ DE.UI.MG = (function () {
     function mark(e, hit) { if (!e) return; const r = field.getBoundingClientRect(), m = document.createElement('i'); m.className = 'rg-mark' + (hit ? ' hit' : ''); m.style.left = (e.clientX - r.left) + 'px'; m.style.top = (e.clientY - r.top) + 'px'; field.appendChild(m); later(() => m.remove(), 450); }
     function shoot(tg, e) {
       if (over) return; if (reloading > 0) return; if (ammo <= 0) { note(180, .05, 'square', .05); return; }
-      ammo--; mark(e, tg && !tg.dead && !tg.civ); snd('shot', 40); stage.classList.remove('kick'); void stage.offsetWidth; stage.classList.add('kick');
+      ammo--; mark(e, tg && !tg.dead && !tg.civ); snd('shot', 40); gun.classList.remove('fire'); void gun.offsetWidth; gun.classList.add('fire'); stage.classList.remove('kick'); void stage.offsetWidth; stage.classList.add('kick');
       if (tg && !tg.dead) { tg.dead = true; tg.el.classList.add('hit'); later(() => tg.el.remove(), 350);
         if (tg.civ) { civHit++; streak = 0; lives = Math.max(0, lives - 1); snd('error'); flashScr('rgba(255, 60, 40, .3)'); shake(2); popAt(tg.el, 'Civilian!', 'r'); }
         else { hits++; streak++; note(300 + Math.min(streak, 8) * 40, .08, 'square', .05, 120); burst(tg.el, { n: 8, colors: RED, speed: 50 }); if (streak >= 3) popAt(tg.el, 'Streak ×' + streak, streak >= 6 ? 'gold big' : 'gold'); } }
@@ -382,7 +384,7 @@ DE.UI.MG = (function () {
       if (ammo === 0) later(reload, 150); drawAmmo();
       if (lives <= 0) finish();
     }
-    on(field, 'pointerdown', (e) => { if (e.target === field || e.target.classList.contains('rg-lane') || e.target.classList.contains('rg-bags')) shoot(null, e); });
+    on(field, 'pointerdown', (e) => { if (e.target === field || e.target.classList.contains('rg-lane')) shoot(null, e); });
     function finish() { if (over) return; over = true;
       const shotAt = hits + misses + escaped, sc = Math.max(0, Math.min(1, (shotAt ? hits / shotAt : 0) * (1 - .2 * civHit) * (lives > 0 ? 1 : .6)));
       const C = env.chal, chal = lives > 0 && (C.id === 'nociv' ? civHit === 0 && hits >= 5 : C.id === 'wall' ? escaped === 0 && hits >= 5 : hits >= C.n);
@@ -390,7 +392,7 @@ DE.UI.MG = (function () {
     loop((dt) => {
       if (over) return false; t += dt; next -= dt; if (reloading > 0) { reloading -= dt; if (reloading <= 0) { ammo = mag; drawAmmo(); note(900, .05, 'triangle', .05); } }
       if (next <= 0 && t < limit - 1) { spawn(); next = every * rnd(.7, 1.3); }
-      for (const tg of targets) { if (tg.dead) continue; tg.age += dt; const k = tg.age / tg.life; tg.el.style.transform = `translateY(${(1 - Math.min(1, k * 3)) * 70}%) scale(${(.75 + .5 * k).toFixed(3)})`;
+      for (const tg of targets) { if (tg.dead) continue; tg.age += dt; const k = tg.age / tg.life; tg.el.style.transform = `translateY(${(1 - Math.min(1, k * 3)) * 25}%) scale(${(.75 + .5 * k).toFixed(3)})`; tg.el.style.opacity = Math.min(1, k * 6).toFixed(2);
         if (k >= 1) { tg.dead = true; tg.el.classList.add('gone'); later(() => tg.el.remove(), 300); if (!tg.civ) { escaped++; streak = 0; shake(1); lives = Math.max(0, lives - 1); snd('thud'); drawAmmo(); if (lives <= 0) finish(); } } }
       targets = targets.filter(x => !x.dead || x.el.isConnected);
       hudSet(env, `${clock(limit - t, limit)}<span>Hits ${hits}</span><span>Through ${escaped}</span>`);
