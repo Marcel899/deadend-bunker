@@ -12,6 +12,8 @@ DE.UI.Actors = (function () {
   const WALK = 34, RIDE = 110;       // px per second (walking pace matches the stride of a 54px survivor)
   const SHAFT_X = 40;                // elevator column centre within a floor
   const WORK_LIFT = 9;               // workers stand this much higher at their station than on the floor
+  /** a box in unscaled #bunker coordinates (the view is zoomed with a transform, see camera.js) */
+  const R = (e) => DE.UI.Camera ? DE.UI.Camera.rect(e) : e.getBoundingClientRect();
   let last = 0, layer = null, snapCheck = false, layerAt = 0;
 
   function ensureLayer() {
@@ -73,8 +75,8 @@ DE.UI.Actors = (function () {
   /** Where a survivor stands at the dig site (scene x in site px, on the tunnel floor). */
   function sitePoint(sx) {
     const el = document.getElementById('dig-site'); if (!el || !layer) return null;
-    const fl = el.closest('.floor'), base = layer.getBoundingClientRect(), r = el.getBoundingClientRect();
-    const cor = fl && fl.querySelector('.corridor'), y = cor ? cor.getBoundingClientRect().bottom - base.top - 6 : r.bottom - base.top - 22;
+    const fl = el.closest('.floor'), base = R(layer), r = R(el);
+    const cor = fl && fl.querySelector('.corridor'), y = cor ? R(cor).bottom - base.top - 6 : r.bottom - base.top - 22;
     return { x: r.left - base.left + sx, y, floor: fl ? +fl.dataset.depth : 0 };
   }
   /* the jobs a room's workers do; several entries are handed out by station, so a crew does not move
@@ -101,7 +103,7 @@ DE.UI.Actors = (function () {
   /** Pixel position (within #floors) of a scene x in a room, and of the shaft on a floor. */
   function roomPoint(roomId, sx) {
     const el = document.getElementById('room-' + roomId); if (!el) return null;
-    const base = layer.getBoundingClientRect(); const r = el.getBoundingClientRect();
+    const base = R(layer); const r = R(el);
     const size = (DE.Data.ROOMS[(DE.UI.state().rooms[roomId] || {}).type] || { size: 1 }).size;
     return { x: r.left - base.left + r.width * (sx / (DE.Scenes.CELL * size)), y: r.bottom - base.top - 4, floor: +el.closest('.floor').dataset.depth };
   }
@@ -109,7 +111,7 @@ DE.UI.Actors = (function () {
    * extends from the feet towards the head on the left) is centred on the bed. */
   function bedPoint(roomId, bed) {
     const el = document.getElementById('room-' + roomId); if (!el) return null;
-    const base = layer.getBoundingClientRect(); const r = el.getBoundingClientRect();
+    const base = R(layer); const r = R(el);
     const size = (DE.Data.ROOMS[(DE.UI.state().rooms[roomId] || {}).type] || { size: 1 }).size;
     const kx = r.width / (DE.Scenes.CELL * size), ky = r.height / (180 + DE.Scenes.TOP);
     const lying = bed.upright ? 0 : 38;   // a lying figure extends left of its feet: centre it on the mattress
@@ -117,8 +119,8 @@ DE.UI.Actors = (function () {
   }
   function shaftPoint(depth) {
     const fl = document.querySelector(`.floor[data-depth="${depth}"]`); if (!fl || !layer) return null;
-    const base = layer.getBoundingClientRect(); const r = fl.getBoundingClientRect();
-    const cor = fl.querySelector('.corridor'); const cy = cor ? cor.getBoundingClientRect().bottom - base.top - 6 : r.bottom - base.top - 20;
+    const base = R(layer); const r = R(fl);
+    const cor = fl.querySelector('.corridor'); const cy = cor ? R(cor).bottom - base.top - 6 : r.bottom - base.top - 20;
     return { x: r.left - base.left + SHAFT_X, y: cy, floor: depth };
   }
 
@@ -308,7 +310,7 @@ DE.UI.Actors = (function () {
     const s = DE.UI.state(); if (!s || !ensureLayer()) return;
     const every = DE.UI.Settings && DE.UI.Settings.get('perf') ? 600 : 350;
     if (now - last < every) return; last = now;
-    const wrap = document.getElementById('bunker-wrap'); const viewTop = wrap ? wrap.scrollTop - 150 : -1e9, viewBot = wrap ? wrap.scrollTop + wrap.clientHeight + 150 : 1e9;
+    const vw = DE.UI.Camera ? DE.UI.Camera.view() : { y: -1e9, h: 2e9 }, lt = layer.offsetTop || 0; const viewTop = vw.y - lt - 150, viewBot = vw.y - lt + vw.h + 150;
     const seen = {};
     for (const id in s.survivors) {
       const sv = s.survivors[id]; const assign = sv.assignment;

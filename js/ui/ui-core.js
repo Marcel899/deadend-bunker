@@ -236,7 +236,8 @@ DE.UI = (function () {
  // notifications stack up from the bottom edge of the view, over a panel and over the bunker alike:
  // the surface scene, the wave card and a panel's header and first buttons stay clear
  root.classList.add('at-bottom'); root.classList.toggle('over-drawer', open);
- root.style.setProperty('--tb', Math.round(g.bottom - r.bottom + 12) + 'px'); root.style.top = '';
+ const vc = !open && $('#view-ctl'), lift = vc ? vc.offsetHeight + 10 : 0;   // above the view switch / zoom buttons
+ root.style.setProperty('--tb', Math.round(g.bottom - r.bottom + 12 + lift) + 'px'); root.style.top = '';
  root.style.left = Math.round(r.left - g.left + r.width / 2) + 'px';
  root.style.maxWidth = Math.max(260, Math.min(520, r.width - 24)) + 'px';
  }

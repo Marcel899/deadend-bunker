@@ -14,6 +14,9 @@ var DE = globalThis.DE = globalThis.DE || {};
 DE.UI = DE.UI || {};
 
 DE.UI.Elevator = (function () {
+  /** a box in unscaled #bunker coordinates (the view is zoomed with a transform, see camera.js) */
+  const R = (e) => DE.UI.Camera ? DE.UI.Camera.rect(e) : e.getBoundingClientRect();
+
   const SPEED = 170;          // px per second
   const DOOR_MS = 500, DWELL_MS = 1200, CAB_H = 84;
   let el = null, cabin = null, floorsSig = '', stops = {}, depths = [], measuredAt = 0;
@@ -40,9 +43,9 @@ DE.UI.Elevator = (function () {
     measuredAt = now;
     const fls = Array.from(floors.querySelectorAll('.floor[data-depth]'));
     if (!fls.length) return false;
-    const base = floors.getBoundingClientRect();
+    const base = R(floors);
     // one landing per floor, at the corridor level (where survivors walk)
-    const geo = fls.map(f => { const r = f.getBoundingClientRect(); const cor = f.querySelector('.corridor'); const y = cor ? cor.getBoundingClientRect().bottom - base.top : r.bottom - base.top - 16; return [+f.dataset.depth, Math.round(y)]; });
+    const geo = fls.map(f => { const r = R(f); const cor = f.querySelector('.corridor'); const y = cor ? R(cor).bottom - base.top : r.bottom - base.top - 16; return [+f.dataset.depth, Math.round(y)]; });
     const sig = geo.map(g => g.join(':')).join('|') + '@' + Math.round(base.height);
     if (sig !== floorsSig) {
       floorsSig = sig; stops = {}; depths = geo.map(g => g[0]);

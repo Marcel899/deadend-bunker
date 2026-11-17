@@ -20,6 +20,7 @@ node tests/test.js
 
 ## How to play
 
+- **Navigation**: the main view is a map. Drag to pan, scroll the mouse wheel or pinch to zoom; the buttons at the bottom left (or V) switch between the **Bunker** (floors) and the **Surface** (overworld). +/− zoom, 0 resets the view, arrow keys pan.
 - **Bunker view** is the centre of everything. Click a room to see its output, workers and upgrades; click an empty `+` slot to build. Rooms with 2 slots (Quarters, Cafeteria, Garage) use the clicked slot and the next one.
 - **Survivors** eat food and water. Assign them to rooms (matching profession = +25%), post them as guards, or send them on expeditions. Unstaffed rooms still run at 25% (more with Automation research).
 - **Power**: generators burn fuel. If the battery is empty and demand exceeds supply, powered rooms brown out. Build a Refinery or send a team to the Gas Station.

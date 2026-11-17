@@ -12,7 +12,7 @@ DE.UI.Bunker = (function () {
   function render() {
     const s = DE.UI.state(); const root = document.getElementById('bunker');
     // the surface scene persists across re-renders so its animations (horde, party) keep running
-    if (!root.querySelector('#surface')) { root.innerHTML = renderSurface(s) + '<div id="floors"></div>'; observe(root.querySelector('#surface')); }
+    if (!root.querySelector('#surface')) { document.querySelectorAll('#view-hud > *').forEach(e => e.remove()); root.innerHTML = renderSurface(s) + '<div id="floors"></div>'; observe(root.querySelector('#surface')); }
     let html = '';
     s.floors.forEach(f => html += renderFloor(s, f));
     html += renderDigZone(s);
@@ -105,6 +105,8 @@ DE.UI.Bunker = (function () {
   /* ---------- room output badges ----------
      They live in their own layer above the walking survivors (#actors), so someone working at a
      station never hides what the room makes. Positions are read from the rooms after a rebuild. */
+  /** a box in unscaled #bunker coordinates (the view is zoomed with a transform, see camera.js) */
+  const R = (e) => DE.UI.Camera ? DE.UI.Camera.rect(e) : e.getBoundingClientRect();
   let tagLayer = null, tagsDirty = true, tagTop = '';
   const tags = {};
   function tagFor(id) {
@@ -121,11 +123,11 @@ DE.UI.Bunker = (function () {
     const floors = document.getElementById('floors'); if (!tagLayer || !floors) return;
     const top = floors.offsetTop + 'px'; if (top !== tagTop) { tagTop = top; tagLayer.style.top = top; }
     if (!tagsDirty) return; tagsDirty = false;
-    const base = floors.getBoundingClientRect();
+    const base = R(floors);
     for (const id in tags) {
       const el = document.getElementById('room-' + id), t = tags[id];
       if (!el) { t.remove(); delete tags[id]; continue; }
-      const r = el.getBoundingClientRect();
+      const r = R(el);
       // under the room's name, in the upper part of the room: survivors walk and work along the floor,
       // so the badge never covers anyone
       t.style.left = Math.round(r.left - base.left + 12) + 'px'; t.style.top = Math.round(r.top - base.top + 32) + 'px';
@@ -269,7 +271,8 @@ DE.UI.Bunker = (function () {
       info.className = 'wave-info ' + verdict;
     }
     const surface = $('#surface'); if (!surface) return;
-    const wrap = document.getElementById('bunker-wrap'); if (wrap) { const w = wrap.clientWidth + 'px'; if (surface.style.width !== w) surface.style.width = w; }
+    if (DE.UI.Camera && surface.querySelector('.wave-info, .ev-pill, .dc-chip')) DE.UI.Camera.pinHud();
+    const wrap = document.getElementById('bunker-wrap'); if (wrap) { const C = DE.UI.Camera, w = (C && C.mode() === 'surface' ? C.surfaceWidth() : wrap.clientWidth) + 'px'; if (surface.style.width !== w) surface.style.width = w; }
     // structure levels drive which overworld artwork is visible (css/overworld.css)
     const scene = $('#scene');
     if (scene) {
@@ -359,7 +362,7 @@ DE.UI.Bunker = (function () {
   function updateDig(s, now) { DE.UI.DigSite.update(s, now); }
 
   function scrollToFloor(depth) {
-    const el = document.querySelector(`.floor[data-depth="${depth}"]`); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const el = document.querySelector(`.floor[data-depth="${depth}"]`); if (el) DE.UI.Camera.focus(el);
   }
 
   return { waveBanner, render, update, playWave, scrollToFloor, flashRoom, surfaceBurst, previewFootprint, clearFootprint, revealFloor, collectAt };

@@ -44,16 +44,17 @@ DE.UI.Placement = (function () {
     document.querySelectorAll('.floor[data-depth]:not(.dig) .cells').forEach(c => { const r = c.getBoundingClientRect(); if (ev.clientY >= r.top - 20 && ev.clientY <= r.bottom + 20 && ev.clientX >= r.left - 40 && ev.clientX <= r.right + 40) hit = { el: c, r, depth: +c.closest('.floor').dataset.depth }; });
     if (!hit) { mode.ghost.style.display = 'none'; mode.tip.style.display = 'none'; mode.valid = false; return; }
     const floor = DE.Bunker.getFloor(s, hit.depth); const cols = floor.slots.length;
-    let slot = Math.round((ev.clientX - hit.r.left) / CELL - mode.size / 2); slot = Math.max(0, Math.min(cols - mode.size, slot));
+    const k = DE.UI.Camera ? DE.UI.Camera.k() : 1;   // the view is zoomed: screen px per layout px
+    let slot = Math.round((ev.clientX - hit.r.left) / (CELL * k) - mode.size / 2); slot = Math.max(0, Math.min(cols - mode.size, slot));
     const place = DE.Bunker.canPlace(s, mode.type, hit.depth, slot, mode.roomId);
     let reason = place.ok ? '' : place.reason;
     let cost;
     if (mode.roomId) { cost = DE.Bunker.moveCost(s, s.rooms[mode.roomId]); if (place.ok && !DE.Util.canAfford(s.resources, cost)) reason = 'Not enough resources to relocate'; }
     else { cost = DE.Bunker.buildCost(s, mode.type); if (!DE.Bunker.isUnlocked(s, mode.type)) reason = DE.Bunker.lockReason(s, mode.type); else if (place.ok && !DE.Util.canAfford(s.resources, cost)) reason = 'Not enough resources'; else if (place.ok && !DE.Expeditions.hasRare(s, DE.Data.ROOMS[mode.type].rare)) reason = 'Needs rare materials from expeditions'; }
     mode.valid = !reason; mode.floor = hit.depth; mode.slot = slot;
-    const g = mode.ghost; g.style.display = ''; g.style.left = (hit.r.left - base.left + slot * CELL) + 'px'; g.style.top = (hit.r.top - base.top) + 'px'; g.style.height = hit.r.height + 'px';
+    const g = mode.ghost; g.style.display = ''; g.style.left = ((hit.r.left - base.left) / k + slot * CELL) + 'px'; g.style.top = ((hit.r.top - base.top) / k) + 'px'; g.style.height = (hit.r.height / k) + 'px';
     g.classList.toggle('valid', mode.valid); g.classList.toggle('invalid', !mode.valid);
-    const t = mode.tip; t.style.display = ''; t.style.left = g.style.left; t.style.top = (hit.r.top - base.top - 30) + 'px';
+    const t = mode.tip; t.style.display = ''; t.style.left = g.style.left; t.style.top = ((hit.r.top - base.top) / k - 30) + 'px';
     t.innerHTML = `<b>B${hit.depth} · cells ${slot + 1}–${slot + mode.size}</b> ${DE.Util.costText(cost)}${reason ? `<span class="neg"> · ${DE.Util.escapeHtml(reason)}</span>` : ''}`;
     // highlight the target cells
     hit.el.querySelectorAll('.cell').forEach(c => { const k = +c.dataset.slot; c.classList.toggle('target', k >= slot && k < slot + mode.size); c.classList.toggle('bad', !mode.valid && k >= slot && k < slot + mode.size); });
