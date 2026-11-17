@@ -342,13 +342,14 @@ DE.UI.Overworld = (function () {
     return `<g class="ow-flagwrap"><path d="M${x(0)} 340 V118" stroke="${INK}" stroke-width="8" stroke-linecap="round"/><path d="M${x(0)} 340 V118" stroke="#8a8c94" stroke-width="3" stroke-linecap="round"/><circle cx="${x(0)}" cy="114" r="8" fill="#ffd34a" stroke="${INK}" stroke-width="4"/>
       <g class="ow-flag"><path d="M${x(4)} 126 L${x(96)} 142 L${x(90)} 198 L${x(4)} 206 Z" fill="#c7782a" style="fill:var(--fl-a,#c7782a)" stroke="${INK}" stroke-width="5" stroke-linejoin="round"/>
         <path d="M${x(4)} 186 L${x(91)} 182 L${x(90)} 198 L${x(4)} 206 Z" fill="#8a4a18" style="fill:var(--fl-b,#8a4a18)" opacity=".55"/><path d="M${x(10)} 134 L${x(88)} 148" stroke="#f0b060" style="stroke:var(--fl-c,#f0b060)" stroke-width="3" opacity=".6"/>
-        <circle cx="${x(48)}" cy="${166}" r="19" fill="#ffd34a" stroke="${INK}" stroke-width="3"/><g class="cz cz-emblem-trefoil"><circle cx="${x(48)}" cy="166" r="4.5" fill="${INK}"/>
-        <g fill="${INK}">${[0, 120, 240].map(a => { const r1 = 7, r2 = 16, a1 = (a - 30) * Math.PI / 180, a2 = (a + 30) * Math.PI / 180; return `<path d="M${(x(48) + Math.cos(a1) * r1).toFixed(1)} ${(166 + Math.sin(a1) * r1).toFixed(1)} L${(x(48) + Math.cos(a1) * r2).toFixed(1)} ${(166 + Math.sin(a1) * r2).toFixed(1)} A${r2} ${r2} 0 0 1 ${(x(48) + Math.cos(a2) * r2).toFixed(1)} ${(166 + Math.sin(a2) * r2).toFixed(1)} L${(x(48) + Math.cos(a2) * r1).toFixed(1)} ${(166 + Math.sin(a2) * r1).toFixed(1)} Z"/>`; }).join('')}</g></g>${emblems(x(48), 166)}</g></g>`;
+        <circle cx="${x(48)}" cy="${166}" r="19" fill="#ffd34a" stroke="${INK}" stroke-width="3"/>${emblems(x(48), 166)}</g></g>`;
   }
   /* Alternative flag emblems (DE.Data.COSMETICS.emblem), drawn on the yellow disc at (cx, cy). */
   function emblems(cx, cy) {
     const star = (r1, r2) => Array.from({ length: 10 }, (_, i) => { const a = (i * 36 - 90) * Math.PI / 180, rr = i % 2 ? r2 : r1; return `${(cx + Math.cos(a) * rr).toFixed(1)},${(cy + Math.sin(a) * rr).toFixed(1)}`; }).join(' ');
-    return `<g class="cz cz-emblem-skull" fill="${INK}"><path d="M${cx - 10} ${cy - 2} a10 10 0 1 1 20 0 v5 h-4 v5 h-12 v-5 h-4 z"/><circle cx="${cx - 4}" cy="${cy - 2}" r="3" fill="#ffd34a"/><circle cx="${cx + 4}" cy="${cy - 2}" r="3" fill="#ffd34a"/><path d="M${cx - 2} ${cy + 8} v4 M${cx + 2} ${cy + 8} v4" stroke="#ffd34a" stroke-width="1.5"/></g>
+    return `<g class="cz cz-emblem-trefoil"><circle cx="${cx}" cy="${cy}" r="4.5" fill="${INK}"/>
+        <g fill="${INK}">${[0, 120, 240].map(a => { const r1 = 7, r2 = 16, a1 = (a - 30) * Math.PI / 180, a2 = (a + 30) * Math.PI / 180; return `<path d="M${(cx + Math.cos(a1) * r1).toFixed(1)} ${(cy + Math.sin(a1) * r1).toFixed(1)} L${(cx + Math.cos(a1) * r2).toFixed(1)} ${(cy + Math.sin(a1) * r2).toFixed(1)} A${r2} ${r2} 0 0 1 ${(cx + Math.cos(a2) * r2).toFixed(1)} ${(cy + Math.sin(a2) * r2).toFixed(1)} L${(cx + Math.cos(a2) * r1).toFixed(1)} ${(cy + Math.sin(a2) * r1).toFixed(1)} Z"/>`; }).join('')}</g></g>
+      <g class="cz cz-emblem-skull" fill="${INK}"><path d="M${cx - 10} ${cy - 2} a10 10 0 1 1 20 0 v5 h-4 v5 h-12 v-5 h-4 z"/><circle cx="${cx - 4}" cy="${cy - 2}" r="3" fill="#ffd34a"/><circle cx="${cx + 4}" cy="${cy - 2}" r="3" fill="#ffd34a"/><path d="M${cx - 2} ${cy + 8} v4 M${cx + 2} ${cy + 8} v4" stroke="#ffd34a" stroke-width="1.5"/></g>
       <g class="cz cz-emblem-star"><polygon points="${star(15, 6)}" fill="${INK}"/></g>
       <g class="cz cz-emblem-wrench" stroke="${INK}" stroke-width="5" stroke-linecap="round" fill="none"><path d="M${cx - 9} ${cy + 9} L${cx + 9} ${cy - 9} M${cx + 9} ${cy + 9} L${cx - 9} ${cy - 9}"/><path d="M${cx + 6} ${cy - 14} a6 6 0 1 0 8 8 M${cx - 14} ${cy - 6} a6 6 0 1 0 8 -8" stroke-width="3.5"/></g>
       <g class="cz cz-emblem-heart"><path d="M${cx} ${cy + 12} C${cx - 18} ${cy} ${cx - 12} ${cy - 14} ${cx} ${cy - 5} C${cx + 12} ${cy - 14} ${cx + 18} ${cy} ${cx} ${cy + 12} Z" fill="#c8302a" stroke="${INK}" stroke-width="2.5"/></g>
@@ -368,6 +369,81 @@ DE.UI.Overworld = (function () {
     const panel = (x) => `<path d="M${x} 352 L${x + 14} 312 H${x + 54} L${x + 40} 352 Z" fill="#2a4a8a"/><path d="M${x + 7} 332 H${x + 47} M${x + 20} 312 L${x + 13} 352 M${x + 34} 312 L${x + 27} 352" stroke="#7ab0ee" stroke-width="1.6"/><path d="M${x + 20} 352 V${y}" stroke-width="4"/>`;
     const solar = `<g class="cz cz-roof-solar" stroke="${INK}" stroke-width="3.5" stroke-linejoin="round">${panel(x0 - 6)}${panel(x0 + 46)}${panel(x0 + 98)}</g>`;
     return `<g class="ow-roofgear">${dish}${garden}${tank}${solar}</g>`;
+  }
+  /* Electric fence (DE.Data.OVERWORLD.electric): insulator arms on the fence posts, live strands
+   * and sparks that crackle along them. */
+  function electricFence() {
+    const posts = []; for (let x = FL + 12; x <= FR - 8; x += 112) posts.push(x);
+    const wire = (y, c) => `<path d="M${FL} ${y} ${posts.map(x => `L${x} ${y}`).join(' ')} L${FR} ${y}" fill="none" stroke="${c}" stroke-width="2"/>`;
+    const sparks = (n) => posts.slice(0, n).map((x, i) => `<path class="ow-spark" style="--d:${(-i * .37).toFixed(2)}s" d="M${x + 40} 374 l5 -7 l3 6 l5 -8 l2 7" fill="none" stroke="#bfe8ff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/>`).join('');
+    return `<g class="ow-electric">
+      <g class="lv ge-electric-1">${posts.map(x => `<rect x="${x - 3}" y="366" width="6" height="30" fill="#3a3f4a" stroke="${INK}" stroke-width="2"/><circle cx="${x}" cy="370" r="3.6" fill="#5ab0e8" stroke="${INK}" stroke-width="1.6"/><circle cx="${x}" cy="384" r="3.6" fill="#5ab0e8" stroke="${INK}" stroke-width="1.6"/>`).join('')}
+        ${wire(370, '#2a2a30')}${wire(384, '#2a2a30')}<g class="ow-sparks">${sparks(4)}</g>
+        <g transform="translate(${FL + 128} 398)"><rect width="30" height="22" rx="3" fill="#f0b63c" stroke="${INK}" stroke-width="2.5"/><path d="M17 3 l-6 9 h6 l-4 8" fill="none" stroke="${INK}" stroke-width="2.5" stroke-linejoin="round"/></g></g>
+      <g class="lv ge-electric-2">${wire(377, '#2a2a30')}${posts.filter((_, i) => i % 3 === 1).map(x => `<g stroke="${INK}" stroke-width="2.5"><rect x="${x - 5}" y="336" width="10" height="34" fill="#4e5058"/><circle cx="${x}" cy="332" r="7" fill="#7ad0ff"/></g><circle class="ow-arcglow" cx="${x}" cy="332" r="11" fill="#9adcff" opacity=".25"/>`).join('')}
+        <g class="ow-sparks">${sparks(9).replace(/374/g, '381')}</g></g></g>`;
+  }
+  /* Mortar pit on the roof's right side (DE.Data.OVERWORLD.mortar); smoke puffs while a wave is on. */
+  function mortarPit() {
+    const x0 = BK.r - 140, y = 362;
+    const tube = (x, a) => `<g transform="rotate(${a} ${x} ${y - 14})"><rect x="${x - 6}" y="${y - 58}" width="12" height="46" rx="3" fill="#4f6a3a" stroke="${INK}" stroke-width="3"/><rect x="${x - 8}" y="${y - 60}" width="16" height="6" rx="2" fill="#3e5530" stroke="${INK}" stroke-width="2.5"/></g>
+      <path d="M${x - 14} ${y} L${x} ${y - 14} L${x + 14} ${y}" fill="none" stroke="${INK}" stroke-width="3.5"/><ellipse cx="${x}" cy="${y - 2}" rx="16" ry="5" fill="#5a5f6a" stroke="${INK}" stroke-width="2.5"/>`;
+    const puff = (x, a, k) => { const r = a * Math.PI / 180; const px = x + Math.sin(r) * 48, py = y - 14 - Math.cos(r) * 48; return `<g class="ow-mortarpuff" style="--k:${k}">${[0, 1, 2].map(j => `<circle cx="${px.toFixed(0)}" cy="${py.toFixed(0)}" r="${6 + j * 4}"/>`).join('')}</g>`; };
+    const crate = (x) => `<use href="#ow-crate" x="${x}" y="${y - 22}" width="28" height="22" style="color:#4f6a3a"/>`;
+    return `<g class="ow-mortar"><g class="lv eq-mortar-1">${tube(x0 + 40, 32)}${crate(x0 + 64)}${puff(x0 + 40, 32, 0)}</g>
+      <g class="lv ge-mortar-2">${tube(x0 + 22, 28)}${tube(x0 + 70, 36)}${crate(x0 + 92)}${puff(x0 + 22, 28, 0)}${puff(x0 + 70, 36, 1)}</g></g>`;
+  }
+  /* Trench line out in the approach (DE.Data.OVERWORLD.trench): stakes, then flames when burning. */
+  function trench() {
+    const a = 1196, b = 1336, y = GROUND + 4;
+    let stakes = ''; for (let x = a + 8; x < b - 4; x += 13) stakes += `<path d="M${x} ${y + 4} l${(x % 3) - 1 + 4} -24 l4 24" fill="#c8a070" stroke="${INK}" stroke-width="2.4" stroke-linejoin="round"/>`;
+    const flames = Array.from({ length: 9 }, (_, i) => { const x = a + 14 + i * 14; return `<path class="ow-tflame" style="--d:${(-i * .13).toFixed(2)}s;transform-origin:${x}px ${y}px" d="M${x - 7} ${y} Q${x - 8} ${y - 18} ${x} ${y - 30} Q${x + 2} ${y - 18} ${x + 7} ${y - 22} Q${x + 10} ${y - 10} ${x + 7} ${y} Z" fill="${i % 2 ? '#ff8a2a' : '#ffb03a'}" stroke="${INK}" stroke-width="2"/>`; }).join('');
+    return `<g class="ow-trench"><g class="lv ge-trench-1"><path d="M${a - 10} ${y - 2} Q${a} ${y + 14} ${(a + b) / 2} ${y + 16} Q${b} ${y + 14} ${b + 10} ${y - 2} Z" fill="#2a1a12" stroke="${INK}" stroke-width="3.5"/>
+        <path d="M${a - 14} ${y - 3} q8 -8 18 -2 M${b + 14} ${y - 3} q-8 -8 -18 -2" fill="#6a4530" stroke="${INK}" stroke-width="3"/><g>${stakes}</g></g>
+      <g class="lv ge-trench-2"><ellipse cx="${(a + b) / 2}" cy="${y}" rx="80" ry="14" fill="#ffb040" opacity=".35" filter="url(#ow-blur6)"/><g class="ow-tflames">${flames}</g>
+        <use href="#ow-barrel" x="${b + 16}" y="${y - 38}" width="26" height="35" style="color:#c8302a"/></g></g>`;
+  }
+  /* Front wall & gate (DE.Data.OVERWORLD.gate): a low forecourt wall in the foreground, in front of
+   * the blast door, with a gate on the door path. Timber (1), brick + iron bars (2), concrete +
+   * sliding blast gate (3, kept at 4), crenellations and an armoured gatehouse (4). */
+  function frontWall() {
+    const B = GROUND + 20, L0 = BK.l - 44, GL = BK.doorL - 36, GR = BK.doorR + 36, R0 = BK.r + 44;
+    const segs = [[L0, GL], [GR, R0]];
+    // 1: palisade
+    let logs = ''; segs.forEach(([a, b]) => { for (let x = a, i = 0; x < b - 6; x += 15, i++) { const h = 44 + ((i * 7) % 3) * 4; logs += `<path d="M${x} ${B} V${B - h} l7 -10 l7 10 V${B} Z" fill="${i % 3 ? '#8d5b36' : '#7a4c2c'}"/>`; } });
+    const leaf1 = (x, dir) => `<path d="M${x} ${B} V${B - 50} l${dir * 46} 8 V${B + 4} Z" fill="url(#ow-wood2)"/><path d="M${x} ${B - 40} l${dir * 46} 8 M${x} ${B - 12} l${dir * 46} 8 M${x} ${B - 12} l${dir * 46} -24" stroke="#4f3020" stroke-width="3" fill="none"/>`;
+    const pal = `<g class="lv eq-gate-1" stroke="${INK}" stroke-width="3" stroke-linejoin="round">${logs}
+      <path d="M${L0} ${B - 26} H${GL} M${GR} ${B - 26} H${R0}" stroke="#4f3020" stroke-width="5"/>
+      ${leaf1(GL + 8, 1)}${leaf1(GR - 8, -1)}
+      ${[GL, GR].map(x => `<rect x="${x - 9}" y="${B - 66}" width="18" height="66" rx="4" fill="url(#ow-wood2)"/><path d="M${x - 9} ${B - 66} l9 -10 l9 10" fill="#7a4c2c"/>`).join('')}
+      <g fill="#c9ccd4" stroke="none">${[GL, GR].map(x => `<circle cx="${x}" cy="${B - 50}" r="2.4"/><circle cx="${x}" cy="${B - 20}" r="2.4"/>`).join('')}</g></g>`;
+    // 2: brick wall, iron bar gate (closed), lamp globes on the pillars
+    const bars = []; for (let x = GL + 16; x < GR - 8; x += 16) bars.push(x);
+    const brick = `<g class="lv eq-gate-2"><defs><pattern id="ow-brick" width="36" height="16" patternUnits="userSpaceOnUse"><rect width="36" height="16" fill="#a8523a"/><path d="M0 0.5 H36 M0 8 H36 M18 0 V8 M0 8 V16 M36 8 V16" stroke="#6a2e22" stroke-width="2"/><rect x="2" y="2" width="12" height="3" fill="#c46a4c" opacity=".6"/></pattern></defs>
+      <g stroke="${INK}" stroke-width="4" stroke-linejoin="round">${segs.map(([a, b]) => `<rect x="${a}" y="${B - 46}" width="${b - a}" height="46" fill="url(#ow-brick)"/><rect x="${a - 4}" y="${B - 52}" width="${b - a + 8}" height="9" rx="2" fill="#b8b5ae"/>`).join('')}
+        <path d="M${GL} ${B - 58} H${GR}" stroke="#2d2f36" stroke-width="5"/><path d="M${GL} ${B - 30} H${GR} M${GL} ${B - 8} H${GR}" stroke="#2d2f36" stroke-width="4"/>
+        <g stroke="#2d2f36" stroke-width="4">${bars.map(x => `<path d="M${x} ${B} V${B - 62}"/>`).join('')}</g>
+        <g fill="#4e5058" stroke-width="2.5">${bars.map(x => `<path d="M${x - 4} ${B - 62} L${x} ${B - 72} L${x + 4} ${B - 62} Z"/>`).join('')}</g>
+        <path d="M${BK.c} ${B} V${B - 62}" stroke="#2d2f36" stroke-width="6"/>
+        ${[GL, GR].map(x => `<rect x="${x - 14}" y="${B - 74}" width="28" height="74" fill="url(#ow-brick)"/><rect x="${x - 18}" y="${B - 80}" width="36" height="9" rx="2" fill="#b8b5ae"/><circle class="ow-gatelamp" cx="${x}" cy="${B - 90}" r="9" fill="url(#ow-lamp)" stroke-width="3"/>`).join('')}</g>
+      <g fill="#c9ccd4" opacity=".5">${bars.map(x => `<rect x="${x - 1}" y="${B - 60}" width="1.6" height="56"/>`).join('')}</g></g>`;
+    // 3+: reinforced concrete, hazard band, sliding steel gate parked open over the right wall, rail
+    const conc = `<g class="lv ge-gate-3" stroke="${INK}" stroke-width="4" stroke-linejoin="round">
+      ${segs.map(([a, b]) => `<rect x="${a}" y="${B - 52}" width="${b - a}" height="52" fill="url(#ow-concrete)"/><rect x="${a}" y="${B - 14}" width="${b - a}" height="10" fill="url(#ow-hazard)" stroke-width="3"/>
+        <path d="${Array.from({ length: Math.floor((b - a) / 48) }, (_, k) => `M${a + 48 * (k + 1)} ${B - 52} V${B - 14}`).join(' ')}" stroke="#6c6865" stroke-width="2.5"/>`).join('')}
+      <rect x="${GL}" y="${B - 6}" width="${GR - GL}" height="6" fill="#4e5058"/><g fill="#2d2f36" stroke="none">${Array.from({ length: 12 }, (_, k) => `<rect x="${GL + 8 + k * ((GR - GL - 16) / 12)}" y="${B - 5}" width="8" height="3"/>`).join('')}</g>
+      <g class="ow-slidegate"><rect x="${GR + 14}" y="${B - 66}" width="132" height="62" rx="3" fill="url(#ow-steel)"/><rect x="${GR + 14}" y="${B - 30}" width="132" height="12" fill="url(#ow-hazard)" stroke-width="3"/>
+        <path d="M${GR + 14} ${B - 46} H${GR + 146} M${GR + 58} ${B - 66} V${B - 4} M${GR + 102} ${B - 66} V${B - 4}" stroke="#2d2f36" stroke-width="3"/><circle cx="${GR + 28}" cy="${B - 2}" r="6" fill="#3a3c44"/><circle cx="${GR + 132}" cy="${B - 2}" r="6" fill="#3a3c44"/></g>
+      ${[GL, GR].map(x => `<rect x="${x - 16}" y="${B - 78}" width="32" height="78" fill="url(#ow-concrete2)"/><rect x="${x - 16}" y="${B - 78}" width="32" height="10" fill="#6c6865"/><circle class="ow-gatebeacon" cx="${x}" cy="${B - 84}" r="6" fill="#ffb13a" stroke-width="3"/>`).join('')}</g>`;
+    // 4: crenellations and the gatehouse towers with a lookout slit and a red lamp
+    const cren = (a, b, y) => { let o = ''; for (let x = a; x + 16 <= b; x += 28) o += `<rect x="${x}" y="${y - 14}" width="16" height="16" fill="url(#ow-concrete2)"/>`; return o; };
+    const house = (x) => `<rect x="${x - 26}" y="${B - 132}" width="52" height="132" fill="url(#ow-concrete)"/><rect x="${x - 26}" y="${B - 132}" width="52" height="132" fill="url(#ow-blocks)"/>
+      ${cren(x - 30, x + 32, B - 132)}<rect x="${x - 30}" y="${B - 134}" width="60" height="8" fill="#8d8a86"/>
+      <rect x="${x - 14}" y="${B - 112}" width="28" height="9" rx="2" fill="#1c1020"/><rect class="ow-gateslit" x="${x - 11}" y="${B - 110}" width="22" height="5" rx="1" fill="#ffb13a" stroke="none"/>
+      <rect x="${x - 26}" y="${B - 60}" width="52" height="10" fill="url(#ow-hazard)" stroke-width="3"/><path d="M${x} ${B - 148} V${B - 134}" stroke-width="4"/><circle class="ow-redlight" cx="${x}" cy="${B - 152}" r="6" fill="#ff4a2e" stroke-width="3"/>`;
+    const keep = `<g class="lv ge-gate-4" stroke="${INK}" stroke-width="4" stroke-linejoin="round">${segs.map(([a, b]) => cren(a + 4, b - 30, B - 52)).join('')}${house(GL - 6)}${house(GR + 6)}
+      <rect x="${GR + 40}" y="${B - 46}" width="30" height="14" rx="3" fill="#2a1a28"/><path d="M${GR + 70} ${B - 40} h16" stroke-width="5"/></g>`;
+    return `<g class="ow-frontwall">${pal}${brick}${conc}${keep}</g>`;
   }
   /* Cosmetic yard dressing in front of the bunker (DE.Data.COSMETICS.yard). */
   function yard() {
@@ -472,12 +548,27 @@ DE.UI.Overworld = (function () {
 
   function svg() {
     return `<svg class="ow-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
-      ${defs()}${sky()}${mountains()}${clouds()}${farLandmarks()}${skyline()}${hills()}${trees()}${road()}${wasteland()}${fence()}${flag()}${towers()}${compoundProps()}${roofGear()}${bunker()}${barricades()}${ground()}${yard()}${foliage()}${seasonal()}${dust()}
+      ${defs()}${sky()}${mountains()}${clouds()}${farLandmarks()}${skyline()}${hills()}${trees()}${road()}${wasteland()}${fence()}${electricFence()}${flag()}${towers()}${compoundProps()}${roofGear()}${mortarPit()}${bunker()}${barricades()}${ground()}${trench()}${frontWall()}${yard()}${foliage()}${seasonal()}${dust()}
     </svg>`;
   }
 
   /** Percent positions of key points, for the HTML overlays. */
   const LAYOUT = { roofY: 358, fenceX: FR, wallR: BK.r, bunkerC: BK.c, doorX: BK.c, towerL: TL + 75, towerR: TR + 75,
     bunkerL: BK.l / W, bunkerR: BK.r / W, doorL: BK.doorL / W, doorR: BK.doorR / W, center: BK.c / W, fenceR: FR / W };
-  return { svg, W, H, GROUND, LAYOUT };
+  /** The compound only, with its own ids (pv-ow-*), for the Customize preview. Built once. */
+  let pvCache = null;
+  function previewSvg() {
+    if (!pvCache) pvCache = `<svg class="ow-svg cz-pvsvg" viewBox="140 96 660 440" preserveAspectRatio="xMidYMax slice" aria-hidden="true">${defs()}${sky()}${hills()}${fence()}${electricFence()}${flag()}${towers()}${compoundProps()}${roofGear()}${mortarPit()}${bunker()}${barricades()}${ground()}${frontWall()}${yard()}</svg>`
+      .replace(/id="ow-/g, 'id="pv-ow-').replace(/#ow-/g, '#pv-ow-');
+    return pvCache;
+  }
+  /** Small pictures of single cosmetic parts for the option cards (they use the scene's defs). */
+  const THUMB = { roof: [BK.l + 50, 236, 150, 140], yard: { campfire: [BK.l - 6, GROUND - 46, 80, 70], mailbox: [BK.r - 10, GROUND - 80, 104, 104], gnomes: [BK.l - 10, GROUND - 40, 70, 60], scarecrow: [BK.l - 30, GROUND - 106, 120, 124] } };
+  function thumb(slot, id) {
+    if (slot === 'emblem') return `<svg viewBox="-24 -24 48 48"><circle r="20" fill="#ffd34a" stroke="${INK}" stroke-width="3"/>${emblems(0, 0)}</svg>`;
+    if (slot === 'roof') { const v = THUMB.roof; return `<svg viewBox="${v.join(' ')}"><rect x="${BK.l + 40}" y="358" width="170" height="30" fill="#95928f" stroke="${INK}" stroke-width="4"/>${roofGear()}</svg>`; }
+    if (slot === 'yard' && THUMB.yard[id]) return `<svg viewBox="${THUMB.yard[id].join(' ')}">${yard()}</svg>`;
+    return '';
+  }
+  return { svg, W, H, GROUND, LAYOUT, previewSvg, thumb };
 })();

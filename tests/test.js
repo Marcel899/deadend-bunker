@@ -666,6 +666,16 @@ t('minigames: a met challenge pays more and teaches more; the radio brings trade
   assert(E.events.some(ev => ev.def === 'trader' || /Traders/.test(ev.title || '')), 'it turns up: ' + JSON.stringify(E.events.map(e => e.title)));
 });
 
+t('perimeter: gate, trench, electric fence and mortars add defense', () => {
+  const D = DE.State.create(null, now); D.resources.scrap = 1e6; D.resources.concrete = 1e6; D.resources.fuel = 1e6; D._fx = null;
+  const before = DE.Defense.defensePower(D).total, hp0 = DE.Effects.compute(D).wallHpMult;
+  assert(DE.Defense.upgradeStructure(D, 'electric').ok === false, 'electric needs a fence');
+  for (const k of ['fence', 'gate', 'gate', 'trench', 'towers', 'electric', 'mortar', 'mortar']) { const r = DE.Defense.upgradeStructure(D, k); assert(r.ok, k + ': ' + r.reason); }
+  D._fx = null; const fx = DE.Effects.compute(D); D._fx = fx;
+  assert(fx.defenseFlat >= 150 + 1200, 'flat damage ' + fx.defenseFlat); assert(fx.bossWeaken >= 0.1); assert(fx.wallHpMult > hp0);
+  assert(DE.Defense.defensePower(D).total > before + 1000);
+  const L = DE.Save.sanitize(JSON.parse(JSON.stringify(D))); assert(L.overworld.gate === 2 && L.overworld.mortar === 2 && L.overworld.electric === 1);
+});
 console.log('Cosmetics');
 t('cosmetics: free defaults, buy once then switch free, name cleaned, save round-trip', () => {
   const C = DE.State.create(null, now);

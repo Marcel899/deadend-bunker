@@ -76,7 +76,7 @@ DE.Economy = (function () {
     for (const r in quarry) production[r] += quarry[r];
 
     // turrets draw power
-    const turretPower = state.defense.turrets * C().TURRET_POWER + ((state.overworld && state.overworld.missile) || 0) * 1;
+    const turretPower = state.defense.turrets * C().TURRET_POWER + ((state.overworld && state.overworld.missile) || 0) * 1 + ((state.overworld && state.overworld.electric) || 0) * 0.5;
     powerUse += turretPower;
 
     // brownout: when the battery is empty and demand exceeds supply, powered rooms slow down

@@ -77,6 +77,8 @@ DE.Effects = (function () {
       case 'expeditionSafety': fx.expeditionSafety += v; break;
       case 'turretCap': fx.turretCap += v; break;
       case 'missileDps': fx.missileDps += v; break;
+      case 'defenseFlat': fx.defenseFlat += v; break;
+      case 'bossWeaken': fx.bossWeaken = (fx.bossWeaken || 0) + v; break;
       case 'noiseMult': fx.noiseMult += v; break;
       case 'lootBonusAdd': fx.lootBonus += v; break;
       default: break;
